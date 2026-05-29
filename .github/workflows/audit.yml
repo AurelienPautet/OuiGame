@@ -1,0 +1,42 @@
+name: Dependency Audit
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+  push:
+    branches: [master]
+  schedule:
+    # Daily, 05:00 UTC — surfaces newly-published advisories against deps
+    # that haven't changed, complementing Dependabot.
+    - cron: '0 5 * * *'
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: pnpm audit (root)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Matches lockfileVersion 9.0 in pnpm-lock.yaml.
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      # Fails the job on high/critical advisories in the root dependency tree.
+      # Lower the threshold to `moderate` once the tree is clean if you want a
+      # stricter gate.
+      - name: Audit root dependencies
+        run: pnpm audit --audit-level high
