@@ -4,8 +4,8 @@
   "description": "",
   "main": "Server/server.js",
   "engines": {
-    "node": "23.3.0",
-    "npm": "10.9.0"
+    "node": "24.x",
+    "npm": "11.x"
   },
   "scripts": {
     "dev:tailwind": "npx tailwindcss -i Public/src/css/styles.css -o Public/src/css/tails.css --watch",
