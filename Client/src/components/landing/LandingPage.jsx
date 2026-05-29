@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Github,
   Paintbrush,
+  Swords,
 } from "lucide-react";
 import { useModal, useAuth, MODALS } from "../../contexts";
 import { TANK_COLORS as COLORS } from "../../constants/tankColors";
@@ -104,6 +105,19 @@ export const LandingPage = () => {
         </div>
       </div>
 
+      {/* My Campaigns Button - Left (above Level Editor) */}
+      <div className="absolute w-44 left-5 bottom-44 z-50">
+        <div className="flex w-full justify-center items-center flex-col">
+          <button
+            className="btn btn-ghost btn-circle btn-lg"
+            onClick={() => openModal(MODALS.MY_CAMPAIGNS)}
+          >
+            <Swords className="w-12 h-12 text-primary" />
+          </button>
+          <h3 className="font-bold text-white mt-2">Campaigns</h3>
+        </div>
+      </div>
+
       {/* Rankings Button - Top Right */}
       <div className="absolute w-44 h-56 right-5 top-5 z-50">
         <div className="flex w-full h-full justify-center items-center flex-col">
@@ -198,6 +212,12 @@ export const LandingPage = () => {
           onClick={() => openModal(MODALS.LEVEL_SELECTOR)}
         >
           Play Solo
+        </button>
+        <button
+          className="btn btn-secondary h-14 px-8 text-lg font-extrabold"
+          onClick={() => openModal(MODALS.CAMPAIGN_SELECTOR)}
+        >
+          Play Campaign
         </button>
       </div>
     </div>

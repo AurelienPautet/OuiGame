@@ -19,12 +19,14 @@ const SOLO_SELECTOR_STATE_KEY = "soloLevelSelectorState";
  * LevelSelector - Reusable level selection component
  *
  * @param {Object} props
- * @param {"solo" | "room" | "myLevels"} props.mode - Selection mode
+ * @param {"solo" | "room" | "myLevels" | "pick"} props.mode - Selection mode
  * @param {Function} props.onSelect - Called with levelId when level is selected (solo mode)
  * @param {Function} props.onMultiSelect - Called with array of levelIds (room mode)
  * @param {Function} props.onEdit - Called with levelId for editing (myLevels mode)
  * @param {Function} props.onDelete - Called with levelId for deletion (myLevels mode)
  * @param {Function} props.onCreate - Called when "Create New" is clicked (myLevels mode)
+ * @param {Function} props.onPick - Called with the full level object when a solo level is picked (pick mode)
+ * @param {number[]} props.pickedIds - Already-picked level ids, shown as "Added" (pick mode)
  */
 export function LevelSelector({
   mode = "solo",
@@ -33,6 +35,8 @@ export function LevelSelector({
   onEdit,
   onDelete,
   onCreate,
+  onPick,
+  pickedIds = [],
 }) {
   const listRef = useRef(null);
 
@@ -80,11 +84,12 @@ export function LevelSelector({
   }, [mode, searchName, sortBy, sortOrder]);
 
   // Determine API parameters based on mode
+  const isPick = mode === "pick";
   const showPlayerFilter = mode === "room" || mode === "myLevels";
   const isMultiSelect = mode === "room";
   const showActions = mode === "myLevels";
-  const levelType = mode === "solo" ? "solo" : "online";
-  const showSoloFilters = mode === "solo";
+  const levelType = mode === "solo" || isPick ? "solo" : "online";
+  const showSoloFilters = mode === "solo" || isPick;
 
   // Use appropriate hook based on mode
   const levelsQuery =
@@ -132,15 +137,22 @@ export function LevelSelector({
     });
   }, [rawLevels, sortBy, sortOrder, showSoloFilters]);
 
-  const handleCardClick = (levelId) => {
+  const handleCardClick = (level) => {
     if (showActions) return; // myLevels mode uses buttons instead
 
+    if (isPick) {
+      // Campaign editor: clicking a card adds it (pass full level for its name)
+      onPick?.(level);
+      return;
+    }
+
+    const levelId = level.level_id;
     if (isMultiSelect) {
       // Toggle selection for room mode
       setSelectedIds((prev) =>
         prev.includes(levelId)
           ? prev.filter((id) => id !== levelId)
-          : [...prev, levelId],
+          : [...prev, levelId]
       );
     } else {
       // Single select for solo mode
@@ -264,7 +276,7 @@ export function LevelSelector({
             };
             localStorage.setItem(
               SOLO_SELECTOR_STATE_KEY,
-              JSON.stringify(state),
+              JSON.stringify(state)
             );
           }
         }}
@@ -291,14 +303,26 @@ export function LevelSelector({
                 levelJson={level.level_json?.data || []}
                 rating={level.level_rating || 0}
                 thumbnailSrc={hexToDataUrl(level.level_img)}
-                onClick={() => handleCardClick(level.level_id)}
-                selected={selectedIds.includes(level.level_id)}
+                onClick={() => handleCardClick(level)}
+                selected={
+                  isPick
+                    ? pickedIds.includes(level.level_id)
+                    : selectedIds.includes(level.level_id)
+                }
                 author={level.level_creator_name}
-                isSolo={mode === "solo"}
+                isSolo={mode === "solo" || isPick}
                 soloTimesPlayed={level.solo_times_played || 0}
                 soloSuccessRate={level.solo_success_rate || 0}
                 soloBestTimeMs={level.solo_best_time_ms}
               />
+
+              {/* "Added" badge for pick mode */}
+              {isPick && pickedIds.includes(level.level_id) && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 badge badge-primary gap-1">
+                  <Plus className="w-3 h-3" />
+                  Added
+                </div>
+              )}
 
               {/* Action buttons for myLevels mode */}
               {showActions && (

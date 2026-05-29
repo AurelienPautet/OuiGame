@@ -14,7 +14,7 @@ import { QueryProvider } from "./providers/QueryProvider";
 import { ToastContainer, OnlineIndicator } from "./components/ui";
 import { LandingPage, CANVAS_WIDTH, CANVAS_HEIGHT } from "./components/landing";
 import { GameCanvas } from "./components/game";
-import { LevelEditor } from "./pages";
+import { LevelEditor, CampaignEditor } from "./pages";
 
 // Modals are split into their own chunks and only fetched when first opened.
 const named = (importer, name) =>
@@ -28,6 +28,8 @@ const CreateRoomModal = named(() => import("./components/modals/CreateRoomModal"
 const LevelSelectorModal = named(() => import("./components/modals/LevelSelectorModal"), "LevelSelectorModal");
 const MyLevelsModal = named(() => import("./components/modals/MyLevelsModal"), "MyLevelsModal");
 const TankSelectModal = named(() => import("./components/modals/TankSelectModal"), "TankSelectModal");
+const CampaignSelectorModal = named(() => import("./components/modals/CampaignSelectorModal"), "CampaignSelectorModal");
+const MyCampaignsModal = named(() => import("./components/modals/MyCampaignsModal"), "MyCampaignsModal");
 
 // Modal renderer component
 const ModalRenderer = () => {
@@ -43,6 +45,8 @@ const ModalRenderer = () => {
       {activeModal === MODALS.LEVEL_SELECTOR && <LevelSelectorModal />}
       {activeModal === MODALS.MY_LEVELS && <MyLevelsModal />}
       {activeModal === MODALS.TANK_SELECT && <TankSelectModal />}
+      {activeModal === MODALS.CAMPAIGN_SELECTOR && <CampaignSelectorModal />}
+      {activeModal === MODALS.MY_CAMPAIGNS && <MyCampaignsModal />}
     </Suspense>
   );
 };
@@ -130,8 +134,8 @@ const MainContent = () => {
   );
 };
 
-// Level Editor Page with its own scaling
-const EditorContent = () => {
+// Editor pages with their own scaling
+const ScaledPage = ({ children }) => {
   const scale = useWindowScale();
 
   return (
@@ -145,7 +149,7 @@ const EditorContent = () => {
           transformOrigin: "center center",
         }}
       >
-        <LevelEditor />
+        {children}
       </div>
     </div>
   );
@@ -156,7 +160,22 @@ const AppRouter = () => {
   return (
     <Routes>
       <Route path="/" element={<MainContent />} />
-      <Route path="/editor" element={<EditorContent />} />
+      <Route
+        path="/editor"
+        element={
+          <ScaledPage>
+            <LevelEditor />
+          </ScaledPage>
+        }
+      />
+      <Route
+        path="/campaign-editor"
+        element={
+          <ScaledPage>
+            <CampaignEditor />
+          </ScaledPage>
+        }
+      />
     </Routes>
   );
 };

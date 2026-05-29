@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import path from "path";
+import fs from "node:fs";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,25 +18,34 @@ export default defineConfig(({ command }) => {
       react(),
       tailwindcss(),
       viteStaticCopy({
-        targets: [
-          // Copy Shared folder contents to dist/shared (lowercase)
-          {
-            src: normalizePath(path.resolve(__dirname, "../shared")) + "/*",
-            dest: "shared",
-          },
-          // Copy public assets (excluding Shared symlink) to dist
-          ...(isBuild
-            ? [
-                {
-                  src:
-                    normalizePath(path.resolve(__dirname, "public")) +
-                    "/!(*Shared)",
-                  dest: ".",
-                },
-              ]
-            : []),
-        ],
+        // Only the public assets, which live inside the Vite root. The sibling
+        // `shared/` folder is copied separately below — vite-plugin-static-copy
+        // (tinyglobby) won't glob paths outside the root.
+        targets: isBuild
+          ? [
+              {
+                src:
+                  normalizePath(path.resolve(__dirname, "public")) +
+                  "/!(*Shared)",
+                dest: ".",
+              },
+            ]
+          : [],
       }),
+      // Copy the sibling `shared/` folder into dist/shared on build. It lives
+      // outside the Vite root, so glob-based copying is unreliable (it works
+      // with the lockfile-pinned plugin but a fresh npm install on CI/Heroku
+      // resolves a newer vite-plugin-static-copy that refuses out-of-root
+      // globs). Copying directly with fs is robust across versions.
+      {
+        name: "copy-shared-to-dist",
+        apply: "build",
+        closeBundle() {
+          const src = path.resolve(__dirname, "../shared");
+          const dest = path.resolve(__dirname, "dist/shared");
+          fs.cpSync(src, dest, { recursive: true });
+        },
+      },
       {
         name: "serve-shared-dev",
         configureServer(server) {
