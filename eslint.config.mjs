@@ -59,4 +59,26 @@ export default defineConfig([
       globals: { ...globals.node },
     },
   },
+
+  // Jest test suite and the CommonJS Jest config files: Node + Jest globals
+  // (describe/test/expect/beforeEach/...). Listed last so it layers on top of
+  // the Server/** block for files under Server/__tests__/.
+  {
+    files: [
+      "Server/__tests__/**/*.js",
+      "jest.config.js",
+      "jest.setup.js",
+      "jest.afterEnv.js",
+      "jest.globalSetup.js",
+    ],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "commonjs",
+      globals: { ...globals.node, ...globals.jest },
+    },
+    rules: {
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
+  },
 ]);

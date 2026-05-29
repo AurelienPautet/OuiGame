@@ -8,7 +8,6 @@
     "node": "24.x",
     "npm": "11.x"
   },
-  "packageManager": "pnpm@10.23.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
@@ -19,7 +18,8 @@
     "dev": "nodemon Server/server.js",
     "start": "npm run build && node Server/server.js",
     "build": "cd Client && npm install --include=dev && npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -65,8 +65,10 @@
     "eslint": "^9.12.0",
     "globals": "^15.11.0",
     "husky": "^9.1.7",
+    "jest": "^30.4.2",
     "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
+    "supertest": "^7.2.2",
     "tailwindcss": "^3.4.13"
   }
 }
