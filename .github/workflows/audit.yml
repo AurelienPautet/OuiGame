@@ -24,11 +24,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Version comes from the "packageManager" field in package.json.
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
-        with:
-          # Matches lockfileVersion 9.0 in pnpm-lock.yaml.
-          version: 9
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
