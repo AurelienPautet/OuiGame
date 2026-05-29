@@ -25,9 +25,9 @@ const players = pgTable(
       sql`
     (${table.type} = 'google' AND ${table.googleId} IS NOT NULL) OR
     (${table.type} = 'db' AND ${table.passwordHash} IS NOT NULL)
-  `,
+  `
     ),
-  }),
+  })
 );
 
 const playerSessions = pgTable("OuiTank-player_sessions", {
@@ -37,7 +37,7 @@ const playerSessions = pgTable("OuiTank-player_sessions", {
     .references(() => players.id),
   sessionToken: varchar("session_token", { length: 120 }).notNull().unique(),
   expirationTimestamp: timestamp("expiration_timestamp").default(
-    sql`NOW() + INTERVAL '7 days'`,
+    sql`NOW() + INTERVAL '7 days'`
   ),
 });
 

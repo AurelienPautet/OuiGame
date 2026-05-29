@@ -124,7 +124,7 @@ export const RankingsModal = () => {
                 <div
                   key={player.username}
                   className={`flex items-center rounded-lg p-3 ${getRankBgClass(
-                    player.rank,
+                    player.rank
                   )} ${getRankTextClass(player.rank)}`}
                 >
                   <span className="text-2xl w-12 text-center font-bold">
@@ -149,7 +149,7 @@ export const RankingsModal = () => {
           {user && personalRank ? (
             <div
               className={`flex items-center rounded-lg p-3 ${getRankBgClass(
-                personalRank.rank,
+                personalRank.rank
               )} ${getRankTextClass(personalRank.rank)}`}
             >
               <span className="text-2xl w-12 text-center font-bold">

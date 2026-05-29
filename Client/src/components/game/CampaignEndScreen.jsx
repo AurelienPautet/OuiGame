@@ -1,4 +1,12 @@
-import { Trophy, Skull, Clock, Layers, Heart, RotateCcw, LogOut } from "lucide-react";
+import {
+  Trophy,
+  Skull,
+  Clock,
+  Layers,
+  Heart,
+  RotateCcw,
+  LogOut,
+} from "lucide-react";
 
 function formatTime(ms) {
   if (!ms) return "0:00";
@@ -17,7 +25,12 @@ function formatTime(ms) {
  * @param {Function} props.onReplay - restart the campaign from level 1
  * @param {Function} props.onQuit
  */
-export const CampaignEndScreen = ({ result, totalLevels, onReplay, onQuit }) => {
+export const CampaignEndScreen = ({
+  result,
+  totalLevels,
+  onReplay,
+  onQuit,
+}) => {
   if (!result) return null;
   const { completed, levelsCleared, livesLeft, timeMs } = result;
 

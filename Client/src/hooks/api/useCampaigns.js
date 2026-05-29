@@ -29,7 +29,9 @@ export const useSaveCampaign = () => {
 
   return useMutation({
     mutationFn: ({ id, ...data }) =>
-      id ? campaignsApi.updateCampaign(id, data) : campaignsApi.createCampaign(data),
+      id
+        ? campaignsApi.updateCampaign(id, data)
+        : campaignsApi.createCampaign(data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["campaigns"],

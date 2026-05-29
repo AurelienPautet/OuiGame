@@ -11,7 +11,7 @@ async function get_level_rating_from_player(level_id, player_id) {
       .select({ stars: ratings.stars })
       .from(ratings)
       .where(
-        and(eq(ratings.levelId, level_id), eq(ratings.playerId, player_id)),
+        and(eq(ratings.levelId, level_id), eq(ratings.playerId, player_id))
       );
 
     return res.length > 0 ? res[0].stars : false;
@@ -28,7 +28,7 @@ async function rate_lvl(rate, level_id, socket) {
     "rate:",
     rate,
     "level_id:",
-    level_id,
+    level_id
   );
   console.log("users[socket.id]:", users[socket.id]);
 
@@ -47,7 +47,7 @@ async function rate_lvl(rate, level_id, socket) {
       .select()
       .from(ratings)
       .where(
-        and(eq(ratings.playerId, player_id), eq(ratings.levelId, level_id)),
+        and(eq(ratings.playerId, player_id), eq(ratings.levelId, level_id))
       );
 
     if (existing.length === 0) {
@@ -63,7 +63,7 @@ async function rate_lvl(rate, level_id, socket) {
         .update(ratings)
         .set({ stars: rate })
         .where(
-          and(eq(ratings.playerId, player_id), eq(ratings.levelId, level_id)),
+          and(eq(ratings.playerId, player_id), eq(ratings.levelId, level_id))
         );
     }
 

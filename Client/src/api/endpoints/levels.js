@@ -3,12 +3,12 @@ import { apiClient } from "../client";
 export const levelsApi = {
   getLevels: ({ name = "", players = 0, type = "online" }) =>
     apiClient.get(
-      `/levels?name=${encodeURIComponent(name)}&players=${players}&type=${type}`,
+      `/levels?name=${encodeURIComponent(name)}&players=${players}&type=${type}`
     ),
 
   getMyLevels: ({ name = "", players = 0 }) =>
     apiClient.get(
-      `/levels/my?name=${encodeURIComponent(name)}&players=${players}`,
+      `/levels/my?name=${encodeURIComponent(name)}&players=${players}`
     ),
 
   getLevel: (id) => apiClient.get(`/levels/${id}`),

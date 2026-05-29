@@ -17,11 +17,11 @@ function assertEnv() {
   const hasDbConfig =
     !!process.env.DATABASE_URL ||
     ["DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME"].every(
-      (k) => process.env[k],
+      (k) => process.env[k]
     );
   if (!hasDbConfig) {
     console.error(
-      "Missing database configuration: set DATABASE_URL or all of DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME.",
+      "Missing database configuration: set DATABASE_URL or all of DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME."
     );
     process.exit(1);
   }
@@ -55,7 +55,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  }),
+  })
 );
 
 const limiter = rateLimit({
@@ -89,10 +89,10 @@ const { makeid } = require(__dirname + "/../shared/scripts/commons.js");
 const Room = require(__dirname + "/../shared/class/Room.js");
 
 const { get_level_rating_from_player } = require(
-  __dirname + "/database/db_levels_ratings.js",
+  __dirname + "/database/db_levels_ratings.js"
 );
 const { get_max_players, get_json_from_id, get_level_from_id } = require(
-  __dirname + "/database/db_level.js",
+  __dirname + "/database/db_level.js"
 );
 const { add_round } = require(__dirname + "/database/db_stats.js");
 
@@ -188,7 +188,7 @@ io.on("connect", (socket) => {
       if (users[socket.id]) {
         get_level_rating_from_player(
           room.levels[room.levelid], // Use level ID directly if possible, but room.levels contains IDs
-          users[socket.id].id,
+          users[socket.id].id
         ).then((stars) => {
           socket.emit("your_level_rating", stars ? stars : 0);
         });
@@ -267,7 +267,7 @@ const tickTockInterval = setTimeout(function toocking() {
           add_round(
             socketid,
             room.levels[room.levelid],
-            player.round_stats.stats,
+            player.round_stats.stats
           );
         } else {
           add_round(null, room.levels[room.levelid], player.round_stats.stats);
@@ -282,7 +282,7 @@ const tickTockInterval = setTimeout(function toocking() {
         get_level_from_id(
           room.levels[room.levelid],
           room.io.to(room.id),
-          "level_change_info",
+          "level_change_info"
         );
 
         room.respawn_the_room();
@@ -302,7 +302,7 @@ const tickTockInterval = setTimeout(function toocking() {
           if (users[socketid]) {
             const stars = await get_level_rating_from_player(
               room.levels[room.levelid].id,
-              users[socketid].id,
+              users[socketid].id
             );
             io.to(socketid).emit("your_level_rating", stars ? stars : 0);
           }
@@ -333,7 +333,7 @@ function room_list(socket) {
       room_names,
       room_creator_name,
       room_players,
-      room_players_max,
+      room_players_max
     );
   } else {
     io.to("lobby" + serverid).emit(
@@ -342,7 +342,7 @@ function room_list(socket) {
       room_names,
       room_creator_name,
       room_players,
-      room_players_max,
+      room_players_max
     );
   }
 }

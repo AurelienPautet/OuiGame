@@ -57,7 +57,7 @@ async function getImagesByLevelId(levelIds) {
     .from(levelsImg)
     .where(inArray(levelsImg.levelId, levelIds));
   return new Map(
-    rows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null]),
+    rows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null])
   );
 }
 
@@ -106,7 +106,7 @@ async function getSoloStatsByLevelId(levelIds) {
           best_time_ms: r.bestTimeMs ? Number(r.bestTimeMs) : null,
         },
       ];
-    }),
+    })
   );
 }
 
@@ -178,8 +178,8 @@ router.get("/", async (req, res) => {
           like(levels.name, sql`'%' || ${name} || '%'`),
           eq(levels.type, type),
           eq(levels.status, "up"),
-          maxPlayers !== 0 ? eq(levels.maxPlayers, maxPlayers) : undefined,
-        ),
+          maxPlayers !== 0 ? eq(levels.maxPlayers, maxPlayers) : undefined
+        )
       )
       .groupBy(levels.id)
       .orderBy(desc(sql`rating`));
@@ -215,8 +215,8 @@ router.get("/my", authMiddleware, async (req, res) => {
           like(levels.name, sql`'%' || ${name} || '%'`),
           eq(levels.creatorId, playerId),
           eq(levels.status, "up"),
-          maxPlayers !== 0 ? eq(levels.maxPlayers, maxPlayers) : undefined,
-        ),
+          maxPlayers !== 0 ? eq(levels.maxPlayers, maxPlayers) : undefined
+        )
       )
       .groupBy(levels.id)
       .orderBy(sql`rating`);
@@ -433,7 +433,7 @@ router.post("/:id/rate", authMiddleware, async (req, res) => {
         .update(ratings)
         .set({ stars })
         .where(
-          and(eq(ratings.playerId, playerId), eq(ratings.levelId, levelId)),
+          and(eq(ratings.playerId, playerId), eq(ratings.levelId, levelId))
         );
     }
 

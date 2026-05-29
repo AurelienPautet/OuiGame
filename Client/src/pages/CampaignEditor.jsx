@@ -34,7 +34,7 @@ export const CampaignEditor = () => {
 
   const saveCampaign = useSaveCampaign();
   const { data: campaignData } = useCampaign(
-    campaignId ? parseInt(campaignId) : null,
+    campaignId ? parseInt(campaignId) : null
   );
 
   // Prefill when editing an existing campaign
@@ -46,7 +46,7 @@ export const CampaignEditor = () => {
         (campaignData.levels || []).map((l) => ({
           id: l.level_id,
           name: l.level_name,
-        })),
+        }))
       );
     }
   }, [campaignData]);
@@ -58,7 +58,7 @@ export const CampaignEditor = () => {
     setPicked((prev) =>
       prev.some((p) => p.id === level.level_id)
         ? prev.filter((p) => p.id !== level.level_id)
-        : [...prev, { id: level.level_id, name: level.level_name }],
+        : [...prev, { id: level.level_id, name: level.level_name }]
     );
   };
 
@@ -132,7 +132,7 @@ export const CampaignEditor = () => {
               : err?.data?.error || "Failed to save campaign.";
           addToast(TOAST_TYPES.ERROR, "Campaign", msg);
         },
-      },
+      }
     );
   };
 
@@ -140,7 +140,9 @@ export const CampaignEditor = () => {
     return (
       <div className="w-full h-full bg-base-300 text-white flex flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Campaign Editor</h1>
-        <p className="text-base-content/70">Please log in to create campaigns.</p>
+        <p className="text-base-content/70">
+          Please log in to create campaigns.
+        </p>
         <button className="btn" onClick={() => navigate("/")}>
           Back
         </button>
