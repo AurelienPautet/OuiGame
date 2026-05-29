@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "../../api";
+import { notifyAuthChange } from "../../api/authEvents";
 
 export const useVerifySession = () => {
   return useQuery({
@@ -21,6 +22,7 @@ export const useLogin = () => {
         username: data.username,
         email: data.email,
       });
+      notifyAuthChange();
     },
   });
 };
@@ -37,6 +39,7 @@ export const useSignup = () => {
         username: data.username,
         email: data.email,
       });
+      notifyAuthChange();
     },
   });
 };
@@ -53,6 +56,7 @@ export const useGoogleLogin = () => {
         username: data.username,
         email: data.email,
       });
+      notifyAuthChange();
     },
   });
 };
@@ -65,12 +69,17 @@ export const useLogout = () => {
     onSuccess: () => {
       localStorage.removeItem("session_id");
       queryClient.setQueryData(["auth", "session"], null);
-      queryClient.invalidateQueries();
+      // Only refresh user-scoped data; leave shared lists (rooms/levels) cached.
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+      queryClient.invalidateQueries({ queryKey: ["myLevels"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      notifyAuthChange();
     },
     onError: () => {
       // Even if logout fails on server, clear local session
       localStorage.removeItem("session_id");
       queryClient.setQueryData(["auth", "session"], null);
+      notifyAuthChange();
     },
   });
 };

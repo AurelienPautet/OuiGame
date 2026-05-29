@@ -1,18 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useModal } from "../../contexts";
-
-const COLORS = [
-  "blue",
-  "orange",
-  "red",
-  "green",
-  "violet",
-  "yellow",
-  "blueF",
-  "turquoise",
-  "violetF",
-];
+import { TANK_COLORS as COLORS } from "../../constants/tankColors";
 
 export const TankSelectModal = () => {
   const { closeModal } = useModal();

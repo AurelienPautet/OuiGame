@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import { colorFromIndex } from "../constants/tankColors";
 
 const GameContext = createContext(null);
 
@@ -23,19 +30,6 @@ export const GameProvider = ({ children }) => {
   const startSoloGame = useCallback((levelId) => {
     // Load player name and colors from localStorage
     const playerName = localStorage.getItem("playerName") || "Player";
-    const bodyIdx = parseInt(localStorage.getItem("body"), 10);
-    const turretIdx = parseInt(localStorage.getItem("turret"), 10);
-    const COLORS = [
-      "blue",
-      "orange",
-      "red",
-      "green",
-      "violet",
-      "yellow",
-      "blueF",
-      "turquoise",
-      "violetF",
-    ];
 
     setGameState({
       isPlaying: true,
@@ -45,8 +39,8 @@ export const GameProvider = ({ children }) => {
       roomId: null,
       playerName,
       tankColors: {
-        body: !isNaN(bodyIdx) ? COLORS[bodyIdx] : "orange",
-        turret: !isNaN(turretIdx) ? COLORS[turretIdx] : "orange",
+        body: colorFromIndex(localStorage.getItem("body")),
+        turret: colorFromIndex(localStorage.getItem("turret")),
       },
     });
   }, []);
@@ -54,19 +48,6 @@ export const GameProvider = ({ children }) => {
   // Start online game by joining a room
   const startOnlineGame = useCallback((roomId) => {
     const playerName = localStorage.getItem("playerName") || "Player";
-    const bodyIdx = parseInt(localStorage.getItem("body"), 10);
-    const turretIdx = parseInt(localStorage.getItem("turret"), 10);
-    const COLORS = [
-      "blue",
-      "orange",
-      "red",
-      "green",
-      "violet",
-      "yellow",
-      "blueF",
-      "turquoise",
-      "violetF",
-    ];
 
     setGameState({
       isPlaying: true,
@@ -76,8 +57,8 @@ export const GameProvider = ({ children }) => {
       roomId,
       playerName,
       tankColors: {
-        body: !isNaN(bodyIdx) ? COLORS[bodyIdx] : "orange",
-        turret: !isNaN(turretIdx) ? COLORS[turretIdx] : "orange",
+        body: colorFromIndex(localStorage.getItem("body")),
+        turret: colorFromIndex(localStorage.getItem("turret")),
       },
     });
   }, []);
@@ -109,19 +90,26 @@ export const GameProvider = ({ children }) => {
     }));
   }, []);
 
-  return (
-    <GameContext.Provider
-      value={{
-        ...gameState,
-        startSoloGame,
-        startOnlineGame,
-        pauseGame,
-        resumeGame,
-        quitGame,
-        cycleTheme,
-      }}
-    >
-      {children}
-    </GameContext.Provider>
+  const value = useMemo(
+    () => ({
+      ...gameState,
+      startSoloGame,
+      startOnlineGame,
+      pauseGame,
+      resumeGame,
+      quitGame,
+      cycleTheme,
+    }),
+    [
+      gameState,
+      startSoloGame,
+      startOnlineGame,
+      pauseGame,
+      resumeGame,
+      quitGame,
+      cycleTheme,
+    ],
   );
+
+  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };
