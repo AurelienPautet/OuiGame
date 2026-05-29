@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 
@@ -6,21 +7,53 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const apiRoutes = require("./routes");
 const { setRoomsRef } = require("./routes/rooms.routes");
+const { verifySession } = require("./auth/session");
+
+// Fail fast if critical configuration is missing rather than crashing later
+// with a cryptic error mid-request.
+function assertEnv() {
+  // The DB connection needs either a full DATABASE_URL (Heroku) or the
+  // discrete DB_* vars (local dev).
+  const hasDbConfig =
+    !!process.env.DATABASE_URL ||
+    ["DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME"].every(
+      (k) => process.env[k],
+    );
+  if (!hasDbConfig) {
+    console.error(
+      "Missing database configuration: set DATABASE_URL or all of DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME.",
+    );
+    process.exit(1);
+  }
+  // Google sign-in is optional locally; warn instead of failing so the rest of
+  // the app can still run without it.
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    console.warn("GOOGLE_CLIENT_ID is not set — Google sign-in will not work.");
+  }
+}
+assertEnv();
+
+// Single source of truth for allowed origins. Extra origins can be supplied
+// via the CORS_ORIGINS env var (comma-separated) without code changes.
+const allowedOrigins = [
+  "http://localhost:7000",
+  "https://wiitank-2aacc4abc5cb.herokuapp.com",
+  "https://wiitank.pautet.net",
+  "http://localhost:8000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://html-classic.itch.zone",
+  "https://itch.io",
+  ...(process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim())
+    : []),
+];
 
 app.use(express.json({ limit: "10mb" }));
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:7000",
-      "https://wiitank-2aacc4abc5cb.herokuapp.com",
-      "https://wiitank.pautet.net",
-      "http://localhost:8000",
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://html-classic.itch.zone",
-      "https://itch.io",
-    ],
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
@@ -45,16 +78,7 @@ const expressServer = app.listen(PORT);
 const socketio = require("socket.io");
 const io = socketio(expressServer, {
   cors: {
-    origin: [
-      "http://localhost:7000",
-      "https://wiitank-2aacc4abc5cb.herokuapp.com",
-      "https://wiitank.pautet.net",
-      "http://localhost:8000",
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://html-classic.itch.zone",
-      "https://itch.io",
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
   },
 });
@@ -72,12 +96,45 @@ const { get_max_players, get_json_from_id, get_level_from_id } = require(
 );
 const { add_round } = require(__dirname + "/database/db_stats.js");
 
+// Resolve a session token to an in-memory user record keyed by socket id.
+async function authenticateSocket(socket, token) {
+  try {
+    const user = await verifySession(token);
+    if (user) {
+      users[socket.id] = {
+        id: user.playerId,
+        username: user.username,
+        email: user.email,
+      };
+      return true;
+    }
+  } catch (err) {
+    console.error("Socket auth error:", err);
+  }
+  delete users[socket.id];
+  return false;
+}
+
 io.on("connect", (socket) => {
   room_list(socket);
   socket.join("lobby" + serverid);
 
-  console.log(socket.id, "has joined our server!");
-  console.log("with ip adress", socket.request.connection.remoteAddress);
+  // Authenticate from the token supplied in the handshake (set on initial
+  // connect and on every reconnect). This populates `users[socket.id]` so
+  // gameplay stats and level ratings are attributed to the logged-in player.
+  if (socket.handshake.auth?.token) {
+    authenticateSocket(socket, socket.handshake.auth.token);
+  }
+
+  // Re-authenticate when the user logs in/out without reconnecting.
+  socket.on("authenticate", async (token) => {
+    const ok = await authenticateSocket(socket, token);
+    socket.emit("authenticated", ok);
+  });
+  socket.on("deauthenticate", () => {
+    delete users[socket.id];
+  });
+
   socket.emit("welcome", socket.id + "has joinded the server");
   socket.emit("serverid", serverid);
   socket.emit("socketid", socket.id);
@@ -150,40 +207,51 @@ io.on("connect", (socket) => {
   });
 
   socket.on("tock", (data) => {
-    const room = rooms[data.room_id];
-    //console.log("tock", data);
-    if ((data.serverid = serverid)) {
-      if (
-        room != undefined &&
-        room.players != undefined &&
-        room.players[data.mysocketid] != undefined &&
-        room.players[data.mysocketid].position != undefined
-      ) {
-        // Skip input processing during countdown
-        if (room.countdownActive) {
-          return;
-        }
+    if (isFlooding(socket)) return;
+    if (!data || typeof data !== "object") return;
 
-        room.players[data.mysocketid].mytick = data.mytick;
-        if (data.direction != undefined) {
-          room.players[data.mysocketid].direction = data.direction;
-        }
-        if (data.aim != undefined) {
-          room.players[data.mysocketid].aim = data.aim;
-        }
-        // players[data.playerid].update();
-        if (data.click) {
-          room.players[data.mysocketid].shoot(room);
-        }
-        if (data.plant) {
-          room.players[data.mysocketid].plant(room);
-        }
-      }
-    } else {
+    // Compare (not assign) the server id, and only ever act on the player that
+    // belongs to *this* socket — never a socket-id supplied in the payload.
+    if (data.serverid !== serverid) {
       socket.emit("wrongserver");
+      return;
     }
+
+    const room = rooms[data.room_id];
+    const player = room?.players?.[socket.id];
+    if (!player || player.position == undefined) return;
+    if (room.countdownActive) return; // can see, but not act, during countdown
+
+    if (Number.isFinite(data.mytick)) player.mytick = data.mytick;
+    if (isVector(data.direction)) player.direction = data.direction;
+    if (isVector(data.aim)) player.aim = data.aim;
+    if (data.click) player.shoot(room);
+    if (data.plant) player.plant(room);
   });
 });
+
+// {x, y} with finite numeric components.
+function isVector(v) {
+  return (
+    v != null &&
+    typeof v === "object" &&
+    Number.isFinite(v.x) &&
+    Number.isFinite(v.y)
+  );
+}
+
+// Lightweight per-socket flood guard. Normal play sends ~60 tock/s; anything
+// past MAX_EVENTS_PER_WINDOW is dropped to blunt event spam.
+const MAX_EVENTS_PER_WINDOW = 150;
+const RATE_WINDOW_MS = 1000;
+function isFlooding(socket) {
+  const now = performance.now();
+  if (!socket._rl || now - socket._rl.start > RATE_WINDOW_MS) {
+    socket._rl = { start: now, count: 0 };
+  }
+  socket._rl.count += 1;
+  return socket._rl.count > MAX_EVENTS_PER_WINDOW;
+}
 
 const tickTockInterval = setTimeout(function toocking() {
   const func = setTimeout(toocking, 16.67);
@@ -321,10 +389,9 @@ setTimeout(() => {
 
 function disconnect_socket(socket, io) {
   console.log(socket.id, "Got disconnect!");
-  // Logout user on actual disconnect
-  if (users[socket.id]) {
-    logout(socket);
-  }
+  // Drop the in-memory auth record for this socket. The persisted session
+  // (HTTP) stays valid so the user remains logged in across reconnects.
+  delete users[socket.id];
   // Also leave game room
   leave_game(socket, io);
 }

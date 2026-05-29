@@ -9,23 +9,11 @@ import {
   Paintbrush,
 } from "lucide-react";
 import { useModal, useAuth, MODALS } from "../../contexts";
+import { TANK_COLORS as COLORS } from "../../constants/tankColors";
 
 // Fixed dimensions matching original
 const CANVAS_WIDTH = 1150;
 const CANVAS_HEIGHT = 800;
-
-// Default colors
-const COLORS = [
-  "blue",
-  "orange",
-  "red",
-  "green",
-  "violet",
-  "yellow",
-  "blueF",
-  "turquoise",
-  "violetF",
-];
 
 export const LandingPage = () => {
   const { openModal, activeModal } = useModal();

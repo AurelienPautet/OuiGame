@@ -10,11 +10,16 @@ const {
   sql,
   count,
   sum,
-  min,
   desc,
-  asc,
+  inArray,
 } = require("drizzle-orm");
 const { authMiddleware } = require("../middleware/auth.middleware");
+
+// Parse a positive-integer path/query param, or null if it isn't one.
+function parseId(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
 
 async function getCreatorName(creatorId) {
   const res = await db
@@ -33,9 +38,34 @@ async function getImgFromLevelId(levelId) {
   return res[0].img.toString("hex");
 }
 
-async function getStatsFromLevelId(levelId) {
-  const res = await db
+// --- Batched lookups used by formatLevels (avoids N+1 over a list) ---
+
+async function getCreatorNames(creatorIds) {
+  const ids = [...new Set(creatorIds.filter((id) => id != null))];
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ id: players.id, username: players.username })
+    .from(players)
+    .where(inArray(players.id, ids));
+  return new Map(rows.map((r) => [r.id, r.username]));
+}
+
+async function getImagesByLevelId(levelIds) {
+  if (levelIds.length === 0) return new Map();
+  const rows = await db
+    .select({ levelId: levelsImg.levelId, img: levelsImg.img })
+    .from(levelsImg)
+    .where(inArray(levelsImg.levelId, levelIds));
+  return new Map(
+    rows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null]),
+  );
+}
+
+async function getStatsByLevelId(levelIds) {
+  if (levelIds.length === 0) return new Map();
+  const rows = await db
     .select({
+      levelId: rounds.levelId,
       rounds_played: count(rounds.id),
       kills: sum(rounds.kills),
       deaths: sum(rounds.deaths),
@@ -46,72 +76,82 @@ async function getStatsFromLevelId(levelId) {
       blocks_destroyed: sum(rounds.blocksDestroyed),
     })
     .from(rounds)
-    .where(eq(rounds.levelId, levelId));
-  return res.length > 0 ? res[0] : null;
+    .where(inArray(rounds.levelId, levelIds))
+    .groupBy(rounds.levelId);
+  return new Map(rows.map((r) => [r.levelId, r]));
 }
 
-async function getSoloStatsFromLevelId(levelId) {
-  const res = await db
+async function getSoloStatsByLevelId(levelIds) {
+  if (levelIds.length === 0) return new Map();
+  const rows = await db
     .select({
+      levelId: soloRounds.levelId,
       timesPlayed: count(soloRounds.id),
       totalWins: sum(sql`CASE WHEN ${soloRounds.success} THEN 1 ELSE 0 END`),
       bestTimeMs: sql`MIN(CASE WHEN ${soloRounds.success} THEN ${soloRounds.timeMs} END)`,
     })
     .from(soloRounds)
-    .where(eq(soloRounds.levelId, levelId));
-
-  if (res.length === 0) return null;
-
-  const stats = res[0];
-  const timesPlayed = Number(stats.timesPlayed) || 0;
-  const totalWins = Number(stats.totalWins) || 0;
-
-  return {
-    times_played: timesPlayed,
-    success_rate:
-      timesPlayed > 0 ? Math.round((totalWins / timesPlayed) * 100) : 0,
-    best_time_ms: stats.bestTimeMs ? Number(stats.bestTimeMs) : null,
-  };
+    .where(inArray(soloRounds.levelId, levelIds))
+    .groupBy(soloRounds.levelId);
+  return new Map(
+    rows.map((r) => {
+      const timesPlayed = Number(r.timesPlayed) || 0;
+      const totalWins = Number(r.totalWins) || 0;
+      return [
+        r.levelId,
+        {
+          times_played: timesPlayed,
+          success_rate:
+            timesPlayed > 0 ? Math.round((totalWins / timesPlayed) * 100) : 0,
+          best_time_ms: r.bestTimeMs ? Number(r.bestTimeMs) : null,
+        },
+      ];
+    }),
+  );
 }
 
 async function formatLevels(rows) {
-  const results = [];
-  for (const row of rows) {
-    const cname = await getCreatorName(row.creatorId);
-    const img = await getImgFromLevelId(row.id);
-    const stats = await getStatsFromLevelId(row.id);
+  if (rows.length === 0) return [];
 
-    // Fetch solo stats for solo levels
-    let soloStats = null;
-    if (row.type === "solo") {
-      soloStats = await getSoloStatsFromLevelId(row.id);
-    }
+  const levelIds = rows.map((r) => r.id);
+  const soloLevelIds = rows.filter((r) => r.type === "solo").map((r) => r.id);
+  const creatorIds = rows.map((r) => r.creatorId);
 
-    results.push({
+  // Four batched queries instead of ~4 per row.
+  const [creators, images, stats, soloStats] = await Promise.all([
+    getCreatorNames(creatorIds),
+    getImagesByLevelId(levelIds),
+    getStatsByLevelId(levelIds),
+    getSoloStatsByLevelId(soloLevelIds),
+  ]);
+
+  return rows.map((row) => {
+    const s = stats.get(row.id);
+    const solo = soloStats.get(row.id);
+    return {
       level_id: row.id,
       level_name: row.name,
       level_max_players: row.maxPlayers,
       level_rating: row.rating,
-      level_creator_name: cname,
+      level_creator_name: creators.get(row.creatorId) || "Unknown",
       level_json: row.content,
-      level_img: img,
+      level_img: images.get(row.id) ?? null,
       level_type: row.type,
       level_status: row.status,
-      level_rounds_played: stats?.rounds_played || 0,
-      level_kills: stats?.kills || 0,
-      level_deaths: stats?.deaths || 0,
-      level_wins: stats?.wins || 0,
-      level_shots: stats?.shots || 0,
-      level_hits: stats?.hits || 0,
-      level_plants: stats?.plants || 0,
-      level_blocks_destroyed: stats?.blocks_destroyed || 0,
+      level_rounds_played: s?.rounds_played || 0,
+      level_kills: s?.kills || 0,
+      level_deaths: s?.deaths || 0,
+      level_wins: s?.wins || 0,
+      level_shots: s?.shots || 0,
+      level_hits: s?.hits || 0,
+      level_plants: s?.plants || 0,
+      level_blocks_destroyed: s?.blocks_destroyed || 0,
       // Solo-specific stats
-      solo_times_played: soloStats?.times_played || 0,
-      solo_success_rate: soloStats?.success_rate || 0,
-      solo_best_time_ms: soloStats?.best_time_ms || null,
-    });
-  }
-  return results;
+      solo_times_played: solo?.times_played || 0,
+      solo_success_rate: solo?.success_rate || 0,
+      solo_best_time_ms: solo?.best_time_ms || null,
+    };
+  });
 }
 
 // GET /api/levels?name=&players=&type=solo|online
@@ -191,7 +231,10 @@ router.get("/my", authMiddleware, async (req, res) => {
 
 // GET /api/levels/:id
 router.get("/:id", async (req, res) => {
-  const levelId = parseInt(req.params.id);
+  const levelId = parseId(req.params.id);
+  if (levelId === null) {
+    return res.status(400).json({ error: "Invalid level id" });
+  }
 
   try {
     const rows = await db
@@ -223,7 +266,10 @@ router.get("/:id", async (req, res) => {
 
 // GET /api/levels/:id/json
 router.get("/:id/json", async (req, res) => {
-  const levelId = parseInt(req.params.id);
+  const levelId = parseId(req.params.id);
+  if (levelId === null) {
+    return res.status(400).json({ error: "Invalid level id" });
+  }
 
   try {
     const result = await db
@@ -290,7 +336,10 @@ router.post("/", authMiddleware, async (req, res) => {
 
 // PUT /api/levels/:id
 router.put("/:id", authMiddleware, async (req, res) => {
-  const levelId = parseInt(req.params.id);
+  const levelId = parseId(req.params.id);
+  if (levelId === null) {
+    return res.status(400).json({ error: "Invalid level id" });
+  }
   const { levelData, hexData, levelName, maxPlayers, type } = req.body;
   const playerId = req.user.playerId;
 
@@ -330,7 +379,10 @@ router.put("/:id", authMiddleware, async (req, res) => {
 
 // DELETE /api/levels/:id
 router.delete("/:id", authMiddleware, async (req, res) => {
-  const levelId = parseInt(req.params.id);
+  const levelId = parseId(req.params.id);
+  if (levelId === null) {
+    return res.status(400).json({ error: "Invalid level id" });
+  }
   const playerId = req.user.playerId;
 
   try {
@@ -358,8 +410,14 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 
 // POST /api/levels/:id/rate
 router.post("/:id/rate", authMiddleware, async (req, res) => {
-  const levelId = parseInt(req.params.id);
+  const levelId = parseId(req.params.id);
+  if (levelId === null) {
+    return res.status(400).json({ error: "Invalid level id" });
+  }
   const { stars } = req.body;
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+    return res.status(400).json({ error: "stars must be an integer 1-5" });
+  }
   const playerId = req.user.playerId;
 
   try {

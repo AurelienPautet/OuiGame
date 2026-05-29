@@ -72,60 +72,6 @@ class Bot extends Player {
     this.opposit_dir_coef = 0.1;
 
     this.mytick = Math.floor(Math.random() * this.min_interval_shoot);
-
-    /*     this.min_interval_shoot = 5;
-    this.max_rotation_speed = Math.PI / 120;
-    this.max_bulletcount = 200;
-    this.shoot_speed = 4;
-    this.precision = 0.1; //default 0.2
-    this.number_of_rays = 50;
-    this.bullet_size = {
-      w: 7,
-      h: 7,
-    };
-    this.size_of_rays = 10;
-    this.steps_of_rays = 10;
-    this.shoot_max_bounce = 2;
-    this.can = {
-      move: true,
-      shoot: true,
-      plant: true,
-      spam: false,
-    }; */
-    // Bot parameters
-    /*    
-    TURRRET HIGH SHOOTS
-this.min_interval_shoot = 8;
-    this.max_rotation_speed = Math.PI / 200;
-    this.max_bulletcount = 30;
-    this.shoot_speed = 4;
-    this.precision = 0.8; //default 0.2
-    this.number_of_rays = 50;
-    this.size_of_rays = 10;
-    this.steps_of_rays = 10;
-    this.shoot_max_bounce = 1;
-    this.can = {
-      move: false,
-      shoot: true,
-      plant: true,
-      spam: false,
-    }; */
-
-    //PRECISE SNIPER
-    /*     this.min_interval_shoot = 40;
-    this.max_rotation_speed = Math.PI / 120;
-    this.max_bulletcount = 1;
-    this.shoot_speed = 7;
-    this.precision = 0.5; //default 0.2
-    this.number_of_rays = 50;
-    this.size_of_rays = 10;
-    this.steps_of_rays = 10;
-    this.can = {
-      move: false,
-      shoot: true,
-      plant: true,
-      spam: false,
-    }; */
   }
 
   update(room, fps_corector) {
@@ -321,12 +267,6 @@ this.min_interval_shoot = 8;
         }
       }
       if (i < this.killing_aims.length) {
-        /*           console.log(
-          "Bot1 is aiming at",
-          this.killing_aims[i].angle,
-          "with distance",
-          this.killing_aims[i].distance
-        ); */
         const closestTarget = this.killing_aims[i];
 
         this.desired_angle = closestTarget.angle;

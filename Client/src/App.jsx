@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect, useState, lazy, Suspense } from "react";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import {
   SocketProvider,
   AuthProvider,
@@ -13,25 +13,28 @@ import {
 import { QueryProvider } from "./providers/QueryProvider";
 import { ToastContainer, OnlineIndicator } from "./components/ui";
 import { LandingPage, CANVAS_WIDTH, CANVAS_HEIGHT } from "./components/landing";
-import {
-  AuthModal,
-  ProfileModal,
-  RankingsModal,
-  RoomSelectorModal,
-  CreateRoomModal,
-  LevelSelectorModal,
-  MyLevelsModal,
-  TankSelectModal,
-} from "./components/modals";
 import { GameCanvas } from "./components/game";
 import { LevelEditor } from "./pages";
+
+// Modals are split into their own chunks and only fetched when first opened.
+const named = (importer, name) =>
+  lazy(() => importer().then((m) => ({ default: m[name] })));
+
+const AuthModal = named(() => import("./components/modals/AuthModal"), "AuthModal");
+const ProfileModal = named(() => import("./components/modals/ProfileModal"), "ProfileModal");
+const RankingsModal = named(() => import("./components/modals/RankingsModal"), "RankingsModal");
+const RoomSelectorModal = named(() => import("./components/modals/RoomSelectorModal"), "RoomSelectorModal");
+const CreateRoomModal = named(() => import("./components/modals/CreateRoomModal"), "CreateRoomModal");
+const LevelSelectorModal = named(() => import("./components/modals/LevelSelectorModal"), "LevelSelectorModal");
+const MyLevelsModal = named(() => import("./components/modals/MyLevelsModal"), "MyLevelsModal");
+const TankSelectModal = named(() => import("./components/modals/TankSelectModal"), "TankSelectModal");
 
 // Modal renderer component
 const ModalRenderer = () => {
   const { activeModal } = useModal();
 
   return (
-    <>
+    <Suspense fallback={null}>
       {activeModal === MODALS.AUTH && <AuthModal />}
       {activeModal === MODALS.PROFILE && <ProfileModal />}
       {activeModal === MODALS.RANKINGS && <RankingsModal />}
@@ -40,7 +43,7 @@ const ModalRenderer = () => {
       {activeModal === MODALS.LEVEL_SELECTOR && <LevelSelectorModal />}
       {activeModal === MODALS.MY_LEVELS && <MyLevelsModal />}
       {activeModal === MODALS.TANK_SELECT && <TankSelectModal />}
-    </>
+    </Suspense>
   );
 };
 

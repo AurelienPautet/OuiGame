@@ -11,7 +11,12 @@ const connectionString =
 
 const pool = new Pool({
   connectionString,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  // Heroku Postgres presents a self-signed certificate, so verification is
+  // disabled in that environment (the standard Heroku workaround). Set
+  // DB_SSL_STRICT=true once a CA bundle is configured to enforce verification.
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: process.env.DB_SSL_STRICT === "true" }
+    : undefined,
 });
 
 pool.on("connect", () => {

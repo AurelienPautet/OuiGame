@@ -3,11 +3,34 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const path = require("path");
 const { db, schema } = require(path.join(__dirname, "..", "db"));
-const { players, playerSessions, logings } = schema;
-const { eq, and, gt } = require("drizzle-orm");
-const { makeid } = require("../../shared/scripts/commons.js");
+const { players, logings } = schema;
+const { eq } = require("drizzle-orm");
 const { verifyToken } = require("../auth_server.js");
 const { authMiddleware } = require("../middleware/auth.middleware");
+const { createSession, deleteSession } = require("../auth/session");
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Returns an error message string if the credentials are invalid, else null.
+function validateCredentials({ username, email, password }) {
+  if (email !== undefined) {
+    if (typeof email !== "string" || !EMAIL_RE.test(email) || email.length > 60)
+      return "A valid email is required";
+  }
+  if (username !== undefined) {
+    if (
+      typeof username !== "string" ||
+      username.length < 3 ||
+      username.length > 30
+    )
+      return "Username must be between 3 and 30 characters";
+  }
+  if (password !== undefined) {
+    if (typeof password !== "string" || password.length < 8)
+      return "Password must be at least 8 characters";
+  }
+  return null;
+}
 
 async function logAttempt(email, ipAddress, status) {
   try {
@@ -26,19 +49,15 @@ async function logAttempt(email, ipAddress, status) {
   }
 }
 
-async function createSession(playerId) {
-  const sessionToken = makeid(120);
-  await db.insert(playerSessions).values({
-    playerId: playerId,
-    sessionToken: sessionToken,
-  });
-  return sessionToken;
-}
-
 // POST /api/auth/signup
 router.post("/signup", async (req, res) => {
   const { username, email, password } = req.body;
   const ipAddress = req.ip;
+
+  const invalid = validateCredentials({ username, email, password });
+  if (invalid) {
+    return res.status(400).json({ error: "validation", message: invalid });
+  }
 
   try {
     let result = await db
@@ -87,6 +106,11 @@ router.post("/signup", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const ipAddress = req.ip;
+
+  const invalid = validateCredentials({ email, password });
+  if (invalid) {
+    return res.status(400).json({ error: "validation", message: invalid });
+  }
 
   try {
     const result = await db
@@ -194,9 +218,7 @@ router.get("/verify-session", authMiddleware, (req, res) => {
 router.post("/logout", authMiddleware, async (req, res) => {
   try {
     const sessionToken = req.headers.authorization?.replace("Bearer ", "");
-    await db
-      .delete(playerSessions)
-      .where(eq(playerSessions.sessionToken, sessionToken));
+    await deleteSession(sessionToken);
     await logAttempt(req.user.email, req.ip, "logout_success");
     res.json({ success: true });
   } catch (err) {

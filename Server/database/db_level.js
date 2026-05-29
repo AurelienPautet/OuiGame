@@ -214,21 +214,61 @@ async function get_creator_name(creator_id) {
 }
 
 async function format_and_send_levels(rows, socket, response_event) {
-  const levelsResult = [];
+  if (rows.length === 0) {
+    socket.emit(response_event, []);
+    return [];
+  }
 
-  for (const row of rows) {
-    const cname = await get_creator_name(row.creatorId);
-    const img = await get_img_from_level_id(row.id);
-    const stats = await get_statsfrom_level_id(row.id);
+  const levelIds = rows.map((r) => r.id);
+  const creatorIds = [
+    ...new Set(rows.map((r) => r.creatorId).filter((id) => id != null)),
+  ];
 
-    levelsResult.push({
+  // Batched lookups instead of one round-trip per level (was N+1).
+  const [creatorRows, imgRows, statRows] = await Promise.all([
+    creatorIds.length
+      ? db
+          .select({ id: players.id, username: players.username })
+          .from(players)
+          .where(inArray(players.id, creatorIds))
+      : [],
+    db
+      .select({ levelId: levelsImg.levelId, img: levelsImg.img })
+      .from(levelsImg)
+      .where(inArray(levelsImg.levelId, levelIds)),
+    db
+      .select({
+        levelId: rounds.levelId,
+        rounds_played: count(rounds.id),
+        kills: sum(rounds.kills),
+        deaths: sum(rounds.deaths),
+        wins: sum(rounds.wins),
+        shots: sum(rounds.shots),
+        hits: sum(rounds.hits),
+        plants: sum(rounds.plants),
+        blocks_destroyed: sum(rounds.blocksDestroyed),
+      })
+      .from(rounds)
+      .where(inArray(rounds.levelId, levelIds))
+      .groupBy(rounds.levelId),
+  ]);
+
+  const creators = new Map(creatorRows.map((r) => [r.id, r.username]));
+  const images = new Map(
+    imgRows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null]),
+  );
+  const statsByLevel = new Map(statRows.map((r) => [r.levelId, r]));
+
+  const levelsResult = rows.map((row) => {
+    const stats = statsByLevel.get(row.id);
+    return {
       level_id: row.id,
       level_name: row.name,
       level_max_players: row.maxPlayers,
       level_rating: row.rating,
-      level_creator_name: cname,
+      level_creator_name: creators.get(row.creatorId) || "Unknown",
       level_json: row.content,
-      level_img: img,
+      level_img: images.get(row.id) ?? null,
       level_type: row.type,
       level_status: row.status,
       level_rounds_played: stats ? stats.rounds_played : 0,
@@ -239,8 +279,8 @@ async function format_and_send_levels(rows, socket, response_event) {
       level_hits: stats ? stats.hits : 0,
       level_plants: stats ? stats.plants : 0,
       level_blocks_destroyed: stats ? stats.blocks_destroyed : 0,
-    });
-  }
+    };
+  });
 
   socket.emit(response_event, levelsResult);
   return levelsResult;

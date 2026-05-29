@@ -1,9 +1,20 @@
 /.env
 /.vscode/
 /node_modules/
+node_modules/
 /package-lock.json
 /command.md
 .env
 tailwind.config.js
-.github/
 .DS_Store
+
+# Design source files — keep them out of the app folders, but the curated
+# originals under design-source/ are tracked on purpose (see the negations).
+*.psd
+*.pdn
+*.ai
+*.xcf
+!design-source/**/*.psd
+!design-source/**/*.pdn
+!design-source/**/*.ai
+!design-source/**/*.xcf

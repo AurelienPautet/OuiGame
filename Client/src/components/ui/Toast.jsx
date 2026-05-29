@@ -38,6 +38,8 @@ export const Toast = ({ type, title, text, exiting }) => {
 
   return (
     <div
+      role="alert"
+      aria-live="polite"
       className={`w-full min-h-16 p-3 rounded-lg flex flex-col gap-1 backdrop-blur-md border shadow-lg ${colorClass} ${
         exiting
           ? "animate-[slideOutRight_0.5s_ease-in_forwards]"

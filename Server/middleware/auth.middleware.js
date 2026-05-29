@@ -1,35 +1,22 @@
-const { db, schema } = require("../db");
-const { playerSessions, players } = schema;
-const { eq, and, gt } = require("drizzle-orm");
+const { verifySession } = require("../auth/session");
 
+function getToken(req) {
+  return req.headers.authorization?.replace("Bearer ", "");
+}
+
+// Rejects the request with 401 unless a valid session token is present.
 async function authMiddleware(req, res, next) {
-  const sessionToken = req.headers.authorization?.replace("Bearer ", "");
-
-  if (!sessionToken) {
+  const token = getToken(req);
+  if (!token) {
     return res.status(401).json({ error: "No session token provided" });
   }
 
   try {
-    const result = await db
-      .select({
-        playerId: players.id,
-        username: players.username,
-        email: players.email,
-      })
-      .from(playerSessions)
-      .innerJoin(players, eq(players.id, playerSessions.playerId))
-      .where(
-        and(
-          eq(playerSessions.sessionToken, sessionToken),
-          gt(playerSessions.expirationTimestamp, new Date()),
-        ),
-      );
-
-    if (result.length === 0) {
+    const user = await verifySession(token);
+    if (!user) {
       return res.status(401).json({ error: "Invalid or expired session" });
     }
-
-    req.user = result[0];
+    req.user = user;
     next();
   } catch (err) {
     console.error("Auth middleware error:", err);
@@ -37,33 +24,18 @@ async function authMiddleware(req, res, next) {
   }
 }
 
+// Attaches req.user when a valid token is present, but never blocks the request.
 async function optionalAuth(req, res, next) {
-  const sessionToken = req.headers.authorization?.replace("Bearer ", "");
-  if (!sessionToken) return next();
+  const token = getToken(req);
+  if (!token) return next();
 
   try {
-    const result = await db
-      .select({
-        playerId: players.id,
-        username: players.username,
-        email: players.email,
-      })
-      .from(playerSessions)
-      .innerJoin(players, eq(players.id, playerSessions.playerId))
-      .where(
-        and(
-          eq(playerSessions.sessionToken, sessionToken),
-          gt(playerSessions.expirationTimestamp, new Date()),
-        ),
-      );
-
-    if (result.length > 0) {
-      req.user = result[0];
-    }
-    next();
+    const user = await verifySession(token);
+    if (user) req.user = user;
   } catch (err) {
-    next();
+    console.error("optionalAuth error:", err);
   }
+  next();
 }
 
 module.exports = { authMiddleware, optionalAuth };

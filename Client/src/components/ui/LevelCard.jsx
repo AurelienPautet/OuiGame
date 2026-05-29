@@ -82,6 +82,9 @@ export function LevelCard({
         <img
           src={thumbnailSrc || "ressources/image/minia/test.png"}
           alt={`Level ${levelId} preview`}
+          loading="lazy"
+          width={128}
+          height={96}
           className="w-32 h-24 object-cover rounded border-2 border-base-content/20"
         />
       </div>
