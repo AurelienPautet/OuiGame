@@ -15,6 +15,9 @@ const {
   logings,
   rounds,
   soloRounds,
+  campaigns,
+  campaignLevels,
+  campaignRuns,
 } = schema;
 
 // Derive the physical table names from the schema itself so adding/renaming a
@@ -146,6 +149,44 @@ async function createSoloRound(playerId, levelId, overrides = {}) {
   return row;
 }
 
+// A campaign plus its ordered campaign_levels rows (order_index = array index).
+async function createCampaign(creatorId, levelIds = [], overrides = {}) {
+  userCounter += 1;
+  const [row] = await db
+    .insert(campaigns)
+    .values({
+      name: overrides.name || `campaign${userCounter}`,
+      creatorId,
+      description: overrides.description ?? "desc",
+    })
+    .returning();
+  if (levelIds.length) {
+    await db.insert(campaignLevels).values(
+      levelIds.map((levelId, i) => ({
+        campaignId: row.id,
+        levelId,
+        orderIndex: i,
+      }))
+    );
+  }
+  return row;
+}
+
+async function createCampaignRun(playerId, campaignId, overrides = {}) {
+  const [row] = await db
+    .insert(campaignRuns)
+    .values({
+      playerId,
+      campaignId,
+      levelsCleared: overrides.levelsCleared ?? 0,
+      livesLeft: overrides.livesLeft ?? 0,
+      completed: overrides.completed ?? false,
+      timeMs: overrides.timeMs ?? 0,
+    })
+    .returning();
+  return row;
+}
+
 module.exports = {
   db,
   schema,
@@ -156,5 +197,7 @@ module.exports = {
   createLevel,
   createRound,
   createSoloRound,
+  createCampaign,
+  createCampaignRun,
   tables: { ratings, logings },
 };
