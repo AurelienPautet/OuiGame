@@ -1,6 +1,6 @@
 const { players, playerSessions } = require("./players");
 const { levels, levelsImg } = require("./levels");
-const { campaigns, campaignLevels } = require("./campaigns");
+const { campaigns, campaignLevels, campaignRuns } = require("./campaigns");
 const { ratings, logings, rounds, soloRounds } = require("./stats");
 
 module.exports = {
@@ -10,6 +10,7 @@ module.exports = {
   levelsImg,
   campaigns,
   campaignLevels,
+  campaignRuns,
   ratings,
   logings,
   rounds,

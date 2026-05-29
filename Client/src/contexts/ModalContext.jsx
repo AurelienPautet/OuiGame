@@ -14,6 +14,8 @@ export const MODALS = {
   LEVEL_SELECTOR: "levelSelector",
   MY_LEVELS: "myLevels",
   TANK_SELECT: "tankSelect",
+  CAMPAIGN_SELECTOR: "campaignSelector",
+  MY_CAMPAIGNS: "myCampaigns",
 };
 
 export const ModalProvider = ({ children }) => {

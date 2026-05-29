@@ -6,3 +6,5 @@ export { CreateRoomModal } from "./CreateRoomModal";
 export { LevelSelectorModal } from "./LevelSelectorModal";
 export { MyLevelsModal } from "./MyLevelsModal";
 export { TankSelectModal } from "./TankSelectModal";
+export { CampaignSelectorModal } from "./CampaignSelectorModal";
+export { MyCampaignsModal } from "./MyCampaignsModal";
