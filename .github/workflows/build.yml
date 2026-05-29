@@ -1,0 +1,35 @@
+name: Build Verification
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+  push:
+    branches: [master]
+
+# Cancel in-progress runs for the same ref when a new commit is pushed.
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build client bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Mirror the engine declared in package.json / used by Heroku.
+          node-version: 24.x
+
+      # Replicates the exact command Heroku runs at deploy time:
+      #   npm run build  ->  cd Client && npm install --include=dev && npm run build
+      # Catching a broken build here turns a failed deploy into a failed PR check.
+      - name: Build
+        run: npm run build
