@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "Server/server.js",
+  "packageManager": "pnpm@10.23.0",
   "engines": {
     "node": "23.3.0",
     "npm": "10.9.0"
