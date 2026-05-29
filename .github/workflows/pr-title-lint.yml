@@ -4,7 +4,9 @@ name: PR Title Lint
 # request titles. PRs are squash-merged and the squash commit on master is
 # generated from the PR title, so a conventional title keeps the master history
 # conventional too. The allowed types below mirror the prefixes already used in
-# this repo's git log (feat, fix, refactor, test, chore, build, ...).
+# this repo's git log (feat, fix, refactor, test, chore, build, ...). A scope is
+# required (e.g. feat(front): ...) — its presence is enforced, but any scope
+# name is accepted.
 
 on:
   pull_request_target:
@@ -35,6 +37,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Require a scope on every title (e.g. feat(front): ...). No `scopes`
+          # allowlist is set, so any scope name is accepted — only its presence
+          # is enforced.
+          requireScope: true
           # Allowed type prefixes (commitlint conventional defaults, listed
           # explicitly as documentation of what this repo accepts).
           types: |
