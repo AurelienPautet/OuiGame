@@ -5,6 +5,11 @@ on:
     branches: [master]
   pull_request:
 
+# Cancel in-progress runs for the same ref when a new commit is pushed.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Lint jobs only need to read the checked-out code.
 permissions:
   contents: read
