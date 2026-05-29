@@ -49,9 +49,9 @@ export default defineConfig([
     },
   },
 
-  // Root tooling configs (eslint.config.js, drizzle.config.js) are ES modules.
+  // Root tooling configs (eslint.config.mjs, drizzle.config.js) are ES modules.
   {
-    files: ["*.config.js"],
+    files: ["*.config.{js,mjs,cjs}"],
     extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",

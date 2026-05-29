@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+# Lint jobs only need to read the checked-out code.
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint (server + shared)
