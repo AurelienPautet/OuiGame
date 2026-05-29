@@ -4,6 +4,7 @@ const app = express();
 
 const path = require("path");
 const cors = require("cors");
+const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const apiRoutes = require("./routes");
 const { setRoomsRef } = require("./routes/rooms.routes");
@@ -49,6 +50,18 @@ const allowedOrigins = [
     : []),
 ];
 
+// Security headers. CSP is left off because the client loads inline/external
+// scripts (Google Identity, the shared game <script> tags); cross-origin
+// resource/embedder policies are relaxed so the itch.io build and other
+// allowed origins can consume the API and shared assets cross-origin.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
 app.use(express.json({ limit: "10mb" }));
 
 app.use(
@@ -68,7 +81,7 @@ app.use("/api", limiter, apiRoutes);
 app.use(express.static(path.join(__dirname, "../web/dist")));
 app.use(express.static(path.join(__dirname, "../../shared")));
 
-app.get("*", limiter, (req, res) => {
+app.get("/*splat", limiter, (req, res) => {
   res.sendFile(path.join(__dirname, "../web/dist/index.html"));
 });
 
