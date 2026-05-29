@@ -7,6 +7,7 @@ import { LivesHud } from "./LivesHud";
 import { CampaignEndScreen } from "./CampaignEndScreen";
 import { CampaignInterstitial } from "./CampaignInterstitial";
 import { useSubmitSoloRound, useSubmitCampaignRun } from "../../hooks/api";
+import { LIFE_EVERY } from "../../constants/campaign";
 
 export const GameCanvas = ({ scale = 1 }) => {
   const canvasRef = useRef(null);
@@ -147,7 +148,7 @@ export const GameCanvas = ({ scale = 1 }) => {
           setIsEndGameVisible(true);
         } else {
           // Non-terminal: pause on the interstitial; commit advance on continue.
-          const gainedLife = clearedCount % 5 === 0;
+          const gainedLife = clearedCount % LIFE_EVERY === 0;
           setInterstitial({
             type: "win",
             commit: "advance",
@@ -197,7 +198,7 @@ export const GameCanvas = ({ scale = 1 }) => {
       submitCampaignRunMutation,
       campaignAdvance,
       campaignLoseLife,
-    ],
+    ]
   );
 
   // Continue from the between-level screen: commit the deferred transition,
@@ -223,7 +224,7 @@ export const GameCanvas = ({ scale = 1 }) => {
         engineRef.current?.pause();
       }
     },
-    [isPaused, pauseGame, resumeGame],
+    [isPaused, pauseGame, resumeGame]
   );
 
   // Handle quit
@@ -283,7 +284,7 @@ export const GameCanvas = ({ scale = 1 }) => {
       const engine = new GameEngine(
         canvasRef.current,
         fadingCanvasRef.current,
-        socket,
+        socket
       );
       engineRef.current = engine;
 
@@ -342,7 +343,7 @@ export const GameCanvas = ({ scale = 1 }) => {
     const engine = new GameEngine(
       canvasRef.current,
       fadingCanvasRef.current,
-      socket,
+      socket
     );
     engineRef.current = engine;
 
@@ -354,13 +355,13 @@ export const GameCanvas = ({ scale = 1 }) => {
           await engine.startSolo(
             levelId,
             playerNameRef.current,
-            tankColorsRef.current,
+            tankColorsRef.current
           );
         } else if (mode === "online" && roomId) {
           await engine.startOnline(
             roomId,
             playerNameRef.current,
-            tankColorsRef.current,
+            tankColorsRef.current
           );
         }
       } catch (err) {

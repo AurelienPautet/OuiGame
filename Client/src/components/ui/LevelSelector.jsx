@@ -25,7 +25,7 @@ const SOLO_SELECTOR_STATE_KEY = "soloLevelSelectorState";
  * @param {Function} props.onEdit - Called with levelId for editing (myLevels mode)
  * @param {Function} props.onDelete - Called with levelId for deletion (myLevels mode)
  * @param {Function} props.onCreate - Called when "Create New" is clicked (myLevels mode)
- * @param {Function} props.onPick - Called with levelId when a solo level is picked (pick mode)
+ * @param {Function} props.onPick - Called with the full level object when a solo level is picked (pick mode)
  * @param {number[]} props.pickedIds - Already-picked level ids, shown as "Added" (pick mode)
  */
 export function LevelSelector({
@@ -152,7 +152,7 @@ export function LevelSelector({
       setSelectedIds((prev) =>
         prev.includes(levelId)
           ? prev.filter((id) => id !== levelId)
-          : [...prev, levelId],
+          : [...prev, levelId]
       );
     } else {
       // Single select for solo mode
@@ -276,7 +276,7 @@ export function LevelSelector({
             };
             localStorage.setItem(
               SOLO_SELECTOR_STATE_KEY,
-              JSON.stringify(state),
+              JSON.stringify(state)
             );
           }
         }}
@@ -310,7 +310,7 @@ export function LevelSelector({
                     : selectedIds.includes(level.level_id)
                 }
                 author={level.level_creator_name}
-                isSolo={mode === "solo"}
+                isSolo={mode === "solo" || isPick}
                 soloTimesPlayed={level.solo_times_played || 0}
                 soloSuccessRate={level.solo_success_rate || 0}
                 soloBestTimeMs={level.solo_best_time_ms}

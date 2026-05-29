@@ -4,7 +4,16 @@ const path = require("path");
 const { db, schema } = require(path.join(__dirname, "..", "db"));
 const { campaigns, campaignLevels, campaignRuns, levels, levelsImg, players } =
   schema;
-const { eq, like, and, sql, count, asc, desc, inArray } = require("drizzle-orm");
+const {
+  eq,
+  like,
+  and,
+  sql,
+  count,
+  asc,
+  desc,
+  inArray,
+} = require("drizzle-orm");
 const {
   authMiddleware,
   optionalAuth,
@@ -35,7 +44,7 @@ async function getImagesByLevelId(levelIds) {
     .from(levelsImg)
     .where(inArray(levelsImg.levelId, levelIds));
   return new Map(
-    rows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null]),
+    rows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null])
   );
 }
 
@@ -51,8 +60,8 @@ async function getLevelCounts(campaignIds) {
     .where(
       and(
         inArray(campaignLevels.campaignId, campaignIds),
-        eq(levels.status, "up"),
-      ),
+        eq(levels.status, "up")
+      )
     )
     .groupBy(campaignLevels.campaignId);
   return new Map(rows.map((r) => [r.campaignId, Number(r.cnt) || 0]));
@@ -72,15 +81,15 @@ async function getCompletionByCampaign(campaignIds, playerId) {
     .where(
       and(
         eq(campaignRuns.playerId, playerId),
-        inArray(campaignRuns.campaignId, campaignIds),
-      ),
+        inArray(campaignRuns.campaignId, campaignIds)
+      )
     )
     .groupBy(campaignRuns.campaignId);
   return new Map(
     rows.map((r) => [
       r.campaignId,
       { maxCleared: Number(r.maxCleared) || 0, anyCompleted: !!r.anyCompleted },
-    ]),
+    ])
   );
 }
 
@@ -125,7 +134,7 @@ async function getCampaignLevels(campaignId) {
     .from(campaignLevels)
     .innerJoin(levels, eq(campaignLevels.levelId, levels.id))
     .where(
-      and(eq(campaignLevels.campaignId, campaignId), eq(levels.status, "up")),
+      and(eq(campaignLevels.campaignId, campaignId), eq(levels.status, "up"))
     )
     .orderBy(asc(campaignLevels.orderIndex));
   if (rows.length === 0) return [];
@@ -157,8 +166,8 @@ async function filterSoloLevelIds(levelIds) {
       and(
         inArray(levels.id, [...new Set(candidates)]),
         eq(levels.type, "solo"),
-        eq(levels.status, "up"),
-      ),
+        eq(levels.status, "up")
+      )
     );
   const valid = new Set(rows.map((r) => r.id));
   const seen = new Set();
@@ -183,7 +192,7 @@ async function insertCampaignLevels(campaignId, orderedLevelIds) {
       campaignId,
       levelId,
       orderIndex: index,
-    })),
+    }))
   );
 }
 
@@ -226,8 +235,8 @@ router.get("/my", authMiddleware, async (req, res) => {
       .where(
         and(
           like(campaigns.name, sql`'%' || ${name} || '%'`),
-          eq(campaigns.creatorId, playerId),
-        ),
+          eq(campaigns.creatorId, playerId)
+        )
       )
       .orderBy(desc(campaigns.creationTimestamp));
 
@@ -270,7 +279,12 @@ router.get("/:id", optionalAuth, async (req, res) => {
 
 // POST /api/campaigns  { name, description, levelIds: [] }
 router.post("/", authMiddleware, async (req, res) => {
-  const { name, description = "", levelIds } = req.body;
+  const { name, levelIds } = req.body;
+  // Coerce to a string: the destructuring default only covers `undefined`, so a
+  // null/number `description` would otherwise skip validation and hit the
+  // NOT NULL column at insert time (500).
+  const description =
+    typeof req.body.description === "string" ? req.body.description : "";
   const playerId = req.user.playerId;
 
   if (typeof name !== "string" || name.trim().length === 0) {
@@ -279,7 +293,7 @@ router.post("/", authMiddleware, async (req, res) => {
   if (name.length > 30) {
     return res.status(400).json({ error: "Campaign name too long (max 30)" });
   }
-  if (typeof description === "string" && description.length > 300) {
+  if (description.length > 300) {
     return res
       .status(400)
       .json({ error: "Campaign description too long (max 300)" });
@@ -316,7 +330,9 @@ router.put("/:id", authMiddleware, async (req, res) => {
   if (campaignId === null) {
     return res.status(400).json({ error: "Invalid campaign id" });
   }
-  const { name, description = "", levelIds } = req.body;
+  const { name, levelIds } = req.body;
+  const description =
+    typeof req.body.description === "string" ? req.body.description : "";
   const playerId = req.user.playerId;
 
   if (typeof name !== "string" || name.trim().length === 0) {
@@ -325,7 +341,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
   if (name.length > 30) {
     return res.status(400).json({ error: "Campaign name too long (max 30)" });
   }
-  if (typeof description === "string" && description.length > 300) {
+  if (description.length > 300) {
     return res
       .status(400)
       .json({ error: "Campaign description too long (max 300)" });
@@ -336,7 +352,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
       .select({ id: campaigns.id })
       .from(campaigns)
       .where(
-        and(eq(campaigns.id, campaignId), eq(campaigns.creatorId, playerId)),
+        and(eq(campaigns.id, campaignId), eq(campaigns.creatorId, playerId))
       );
     if (existing.length === 0) {
       return res.status(403).json({ error: "Not your campaign" });
@@ -384,7 +400,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       .select({ id: campaigns.id })
       .from(campaigns)
       .where(
-        and(eq(campaigns.id, campaignId), eq(campaigns.creatorId, playerId)),
+        and(eq(campaigns.id, campaignId), eq(campaigns.creatorId, playerId))
       );
     if (existing.length === 0) {
       return res.status(403).json({ error: "Not your campaign" });
@@ -415,12 +431,16 @@ router.post("/:id/runs", optionalAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid campaign id" });
   }
   const { levelsCleared, livesLeft, completed, timeMs } = req.body;
+  // Validate types/ranges explicitly rather than coercing, so bad input (e.g.
+  // completed: "false", negative counts) can't be silently recorded as truthy.
+  const isNonNegInt = (v) => Number.isInteger(v) && v >= 0;
   if (
-    levelsCleared === undefined ||
-    completed === undefined ||
-    timeMs === undefined
+    !isNonNegInt(levelsCleared) ||
+    typeof completed !== "boolean" ||
+    !isNonNegInt(timeMs) ||
+    (livesLeft !== undefined && !isNonNegInt(livesLeft))
   ) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return res.status(400).json({ error: "Invalid or missing run fields" });
   }
 
   try {
@@ -436,10 +456,10 @@ router.post("/:id/runs", optionalAuth, async (req, res) => {
     await db.insert(campaignRuns).values({
       playerId,
       campaignId,
-      levelsCleared: levelsCleared || 0,
-      livesLeft: livesLeft || 0,
-      completed: !!completed,
-      timeMs: timeMs || 0,
+      levelsCleared,
+      livesLeft: livesLeft ?? 0,
+      completed,
+      timeMs,
     });
 
     res.json({ success: true });

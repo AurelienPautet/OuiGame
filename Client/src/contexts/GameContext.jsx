@@ -6,13 +6,11 @@ import {
   useMemo,
 } from "react";
 import { colorFromIndex } from "../constants/tankColors";
+import { STARTING_LIVES, LIFE_EVERY } from "../constants/campaign";
 
 const GameContext = createContext(null);
 
 export const useGame = () => useContext(GameContext);
-
-const STARTING_LIVES = 3;
-const LIFE_EVERY = 5; // gain a life after clearing every Nth level
 
 const initialState = {
   isPlaying: false,
@@ -154,7 +152,11 @@ export const GameProvider = ({ children }) => {
         livesLeft: 0,
         timeMs: Date.now() - runStartTime,
       };
-      setGameState((prev) => ({ ...prev, lives: 0, campaignRunResult: result }));
+      setGameState((prev) => ({
+        ...prev,
+        lives: 0,
+        campaignRunResult: result,
+      }));
       return { type: "over", ...result };
     }
     setGameState((prev) => ({
@@ -208,7 +210,7 @@ export const GameProvider = ({ children }) => {
       resumeGame,
       quitGame,
       cycleTheme,
-    ],
+    ]
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

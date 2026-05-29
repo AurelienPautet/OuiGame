@@ -108,6 +108,16 @@ describe("POST /api/campaigns", () => {
       .send({ name: "Taken", levelIds: [lvl.id] });
     expect(res.status).toBe(409);
   });
+
+  test("coerces a null description instead of 500ing", async () => {
+    const { player, authHeader } = await createUserWithSession();
+    const [lvl] = await makeSoloLevels(player.id, 1);
+    const res = await request(app)
+      .post("/api/campaigns")
+      .set("Authorization", authHeader)
+      .send({ name: "NullDesc", description: null, levelIds: [lvl.id] });
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("GET /api/campaigns", () => {
@@ -403,5 +413,24 @@ describe("POST /api/campaigns/:id/runs", () => {
       .post("/api/campaigns/999999/runs")
       .send({ levelsCleared: 0, completed: false, timeMs: 0 });
     expect(missing.status).toBe(404);
+  });
+
+  test("rejects malformed run fields (400)", async () => {
+    const { player, authHeader } = await createUserWithSession();
+    const [lvl] = await makeSoloLevels(player.id, 1);
+    const campaign = await createCampaign(player.id, [lvl.id]);
+    const bad = [
+      { levelsCleared: -1, completed: false, timeMs: 0 },
+      { levelsCleared: 1, completed: "false", timeMs: 0 },
+      { levelsCleared: 1, completed: true, timeMs: -5 },
+      { levelsCleared: 1.5, completed: true, timeMs: 0 },
+    ];
+    for (const body of bad) {
+      const res = await request(app)
+        .post(`/api/campaigns/${campaign.id}/runs`)
+        .set("Authorization", authHeader)
+        .send(body);
+      expect(res.status).toBe(400);
+    }
   });
 });
