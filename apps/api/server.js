@@ -65,11 +65,11 @@ const limiter = rateLimit({
 
 app.use("/api", limiter, apiRoutes);
 
-app.use(express.static(path.join(__dirname, "../Client/dist")));
-app.use(express.static(path.join(__dirname, "../shared")));
+app.use(express.static(path.join(__dirname, "../web/dist")));
+app.use(express.static(path.join(__dirname, "../../shared")));
 
 app.get("*", limiter, (req, res) => {
-  res.sendFile(path.join(__dirname, "../Client/dist/index.html"));
+  res.sendFile(path.join(__dirname, "../web/dist/index.html"));
 });
 
 const PORT = process.env.PORT || 8000;
@@ -83,10 +83,12 @@ const io = socketio(expressServer, {
   },
 });
 
-const { loadlevel } = require(__dirname + "/../shared/scripts/level_loader.js");
-const { makeid } = require(__dirname + "/../shared/scripts/commons.js");
+const { loadlevel } = require(
+  __dirname + "/../../shared/scripts/level_loader.js"
+);
+const { makeid } = require(__dirname + "/../../shared/scripts/commons.js");
 
-const Room = require(__dirname + "/../shared/class/Room.js");
+const Room = require(__dirname + "/../../shared/class/Room.js");
 
 const { get_level_rating_from_player } = require(
   __dirname + "/database/db_levels_ratings.js"

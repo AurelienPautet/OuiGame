@@ -7,7 +7,7 @@ const {
   colliderect,
   distance,
   rectanglesSeTouchent,
-} = require("../../../shared/scripts/check_collision.js");
+} = require("../../../../shared/scripts/check_collision.js");
 
 describe("rectRect (AABB overlap incl. touching edges)", () => {
   test("detects overlapping rectangles", () => {

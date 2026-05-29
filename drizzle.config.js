@@ -2,8 +2,8 @@ import { defineConfig } from "drizzle-kit";
 import "dotenv/config";
 
 export default defineConfig({
-  schema: "./Server/db/schema/*.js",
-  out: "./Server/db/migrations",
+  schema: "./apps/api/db/schema/*.js",
+  out: "./apps/api/db/migrations",
   dialect: "postgresql",
   dbCredentials: {
     url:

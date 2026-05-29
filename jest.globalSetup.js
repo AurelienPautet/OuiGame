@@ -19,7 +19,7 @@ const {
   applyTestEnv,
   adminConnectionConfig,
   testDbName,
-} = require("./Server/__tests__/helpers/testEnv");
+} = require("./apps/api/__tests__/helpers/testEnv");
 
 async function recreateTestDatabase() {
   const name = testDbName();

@@ -1,7 +1,7 @@
 module.exports = {
   testEnvironment: "node",
   // Only the backend has tests for now.
-  roots: ["<rootDir>/Server"],
+  roots: ["<rootDir>/apps/api"],
   testMatch: ["**/__tests__/**/*.test.js"],
   globalSetup: "<rootDir>/jest.globalSetup.js",
   setupFiles: ["<rootDir>/jest.setup.js"],

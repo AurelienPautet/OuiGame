@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => {
         name: "copy-shared-to-dist",
         apply: "build",
         closeBundle() {
-          const src = path.resolve(__dirname, "../shared");
+          const src = path.resolve(__dirname, "../../shared");
           const dest = path.resolve(__dirname, "dist/shared");
           fs.cpSync(src, dest, { recursive: true });
         },
@@ -52,7 +52,7 @@ export default defineConfig(({ command }) => {
           server.middlewares.use((req, res, next) => {
             // Match lowercase /shared/ requests from index.html
             if (req.url.startsWith("/shared/")) {
-              const sharedPath = path.resolve(__dirname, "../shared");
+              const sharedPath = path.resolve(__dirname, "../../shared");
               const filePath = req.url.replace("/shared", "");
               // Rewrite to use Vite's internal FS serving
               req.url = `/@fs${sharedPath}${filePath}`;
@@ -64,12 +64,12 @@ export default defineConfig(({ command }) => {
     ],
     resolve: {
       alias: {
-        "@shared": path.resolve(__dirname, "../shared"),
+        "@shared": path.resolve(__dirname, "../../shared"),
       },
     },
     server: {
       fs: {
-        allow: [".."],
+        allow: ["../.."],
       },
     },
     // Disable default publicDir copy during build to prevent EISDIR error on Shared symlink
