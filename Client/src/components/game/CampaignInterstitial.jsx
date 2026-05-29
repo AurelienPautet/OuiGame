@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Heart,
   HeartCrack,
@@ -7,7 +8,6 @@ import {
   Target,
   Hammer,
   CheckCircle2,
-  ArrowRight,
 } from "lucide-react";
 
 function formatTime(ms) {
@@ -29,7 +29,26 @@ function formatTime(ms) {
  * }
  * @param {Function} props.onContinue
  */
+// How long the between-level screen stays up before auto-advancing (ms).
+function durationFor(data) {
+  if (!data) return 2200;
+  return data.type === "win" ? (data.gainedLife ? 2800 : 2200) : 2200;
+}
+
 export const CampaignInterstitial = ({ data, onContinue }) => {
+  // Keep the latest onContinue without restarting the timer.
+  const onContinueRef = useRef(onContinue);
+  useEffect(() => {
+    onContinueRef.current = onContinue;
+  }, [onContinue]);
+
+  // Auto-advance after a short delay — no click needed.
+  useEffect(() => {
+    if (!data) return undefined;
+    const t = setTimeout(() => onContinueRef.current?.(), durationFor(data));
+    return () => clearTimeout(t);
+  }, [data]);
+
   if (!data) return null;
   const {
     type,
@@ -41,6 +60,7 @@ export const CampaignInterstitial = ({ data, onContinue }) => {
     stats = {},
     timeMs,
   } = data;
+  const delayMs = durationFor(data);
 
   const isWin = type === "win";
   const accuracy =
@@ -63,6 +83,7 @@ export const CampaignInterstitial = ({ data, onContinue }) => {
           30% { transform: scale(1.3) rotate(-12deg); opacity: 1; }
           100% { transform: scale(0.4) rotate(18deg); opacity: 0; }
         }
+        @keyframes campaign-timer { from { width: 100%; } to { width: 0%; } }
         .campaign-life-gain { animation: campaign-life-gain 0.7s ease-out both; }
         .campaign-life-loss { animation: campaign-life-loss 0.9s ease-in both 0.2s; }
       `}</style>
@@ -113,19 +134,49 @@ export const CampaignInterstitial = ({ data, onContinue }) => {
 
         {/* Level stats */}
         <div className="w-full grid grid-cols-2 gap-2">
-          <Stat icon={<Clock className="w-4 h-4 text-info" />} label="Time" value={formatTime(timeMs)} />
-          <Stat icon={<Skull className="w-4 h-4 text-primary" />} label="Kills" value={stats.kills || 0} />
-          <Stat icon={<Target className="w-4 h-4 text-success" />} label="Accuracy" value={`${accuracy}%`} />
-          <Stat icon={<Crosshair className="w-4 h-4 text-warning" />} label="Shots" value={stats.shots || 0} />
+          <Stat
+            icon={<Clock className="w-4 h-4 text-info" />}
+            label="Time"
+            value={formatTime(timeMs)}
+          />
+          <Stat
+            icon={<Skull className="w-4 h-4 text-primary" />}
+            label="Kills"
+            value={stats.kills || 0}
+          />
+          <Stat
+            icon={<Target className="w-4 h-4 text-success" />}
+            label="Accuracy"
+            value={`${accuracy}%`}
+          />
+          <Stat
+            icon={<Crosshair className="w-4 h-4 text-warning" />}
+            label="Shots"
+            value={stats.shots || 0}
+          />
           {(stats.blocksDestroyed || 0) > 0 && (
-            <Stat icon={<Hammer className="w-4 h-4 text-base-content/70" />} label="Blocks" value={stats.blocksDestroyed} />
+            <Stat
+              icon={<Hammer className="w-4 h-4 text-base-content/70" />}
+              label="Blocks"
+              value={stats.blocksDestroyed}
+            />
           )}
         </div>
 
-        <button className="btn btn-primary w-full gap-2 mt-2" onClick={onContinue} autoFocus>
-          {isWin ? "Next Level" : "Try Again"}
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        {/* Auto-advance timer cue */}
+        <div className="w-full mt-2">
+          <div className="h-1.5 w-full bg-base-300 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary"
+              style={{
+                animation: `campaign-timer ${delayMs}ms linear forwards`,
+              }}
+            />
+          </div>
+          <p className="text-center text-xs text-base-content/40 mt-1.5">
+            {isWin ? "Next level…" : "Retrying…"}
+          </p>
+        </div>
       </div>
     </div>
   );
