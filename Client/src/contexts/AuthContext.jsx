@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   useVerifySession,
   useLogin,
@@ -15,11 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [needsGoogleUsername, setNeedsGoogleUsername] = useState(false);
   const [pendingGoogleToken, setPendingGoogleToken] = useState(null);
 
-  const {
-    data: sessionData,
-    isLoading,
-    error: sessionError,
-  } = useVerifySession();
+  const { data: sessionData, isLoading } = useVerifySession();
   const loginMutation = useLogin();
   const signupMutation = useSignup();
   const googleLoginMutation = useGoogleLogin();
