@@ -9,12 +9,15 @@ const { verifyToken } = require("../auth_server.js");
 const { authMiddleware } = require("../middleware/auth.middleware");
 const { createSession, deleteSession } = require("../auth/session");
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear (non-backtracking) email check: domain labels exclude '.', so there
+// is no overlapping-quantifier ambiguity and no polynomial-time worst case.
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 // Returns an error message string if the credentials are invalid, else null.
 function validateCredentials({ username, email, password }) {
   if (email !== undefined) {
-    if (typeof email !== "string" || !EMAIL_RE.test(email) || email.length > 60)
+    // Length is checked first so the regex never runs on oversized input.
+    if (typeof email !== "string" || email.length > 60 || !EMAIL_RE.test(email))
       return "A valid email is required";
   }
   if (username !== undefined) {
