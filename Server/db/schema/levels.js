@@ -33,7 +33,7 @@ const levels = pgTable(
   },
   (table) => ({
     creatorIdx: index("levels_creator_id_idx").on(table.creatorId),
-  }),
+  })
 );
 
 const levelsImg = pgTable(
@@ -47,7 +47,7 @@ const levelsImg = pgTable(
   },
   (table) => ({
     levelIdx: index("levels_img_level_id_idx").on(table.levelId),
-  }),
+  })
 );
 
 module.exports = { levels, levelsImg };

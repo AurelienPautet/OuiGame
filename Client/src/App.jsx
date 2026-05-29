@@ -20,16 +20,46 @@ import { LevelEditor, CampaignEditor } from "./pages";
 const named = (importer, name) =>
   lazy(() => importer().then((m) => ({ default: m[name] })));
 
-const AuthModal = named(() => import("./components/modals/AuthModal"), "AuthModal");
-const ProfileModal = named(() => import("./components/modals/ProfileModal"), "ProfileModal");
-const RankingsModal = named(() => import("./components/modals/RankingsModal"), "RankingsModal");
-const RoomSelectorModal = named(() => import("./components/modals/RoomSelectorModal"), "RoomSelectorModal");
-const CreateRoomModal = named(() => import("./components/modals/CreateRoomModal"), "CreateRoomModal");
-const LevelSelectorModal = named(() => import("./components/modals/LevelSelectorModal"), "LevelSelectorModal");
-const MyLevelsModal = named(() => import("./components/modals/MyLevelsModal"), "MyLevelsModal");
-const TankSelectModal = named(() => import("./components/modals/TankSelectModal"), "TankSelectModal");
-const CampaignSelectorModal = named(() => import("./components/modals/CampaignSelectorModal"), "CampaignSelectorModal");
-const MyCampaignsModal = named(() => import("./components/modals/MyCampaignsModal"), "MyCampaignsModal");
+const AuthModal = named(
+  () => import("./components/modals/AuthModal"),
+  "AuthModal"
+);
+const ProfileModal = named(
+  () => import("./components/modals/ProfileModal"),
+  "ProfileModal"
+);
+const RankingsModal = named(
+  () => import("./components/modals/RankingsModal"),
+  "RankingsModal"
+);
+const RoomSelectorModal = named(
+  () => import("./components/modals/RoomSelectorModal"),
+  "RoomSelectorModal"
+);
+const CreateRoomModal = named(
+  () => import("./components/modals/CreateRoomModal"),
+  "CreateRoomModal"
+);
+const LevelSelectorModal = named(
+  () => import("./components/modals/LevelSelectorModal"),
+  "LevelSelectorModal"
+);
+const MyLevelsModal = named(
+  () => import("./components/modals/MyLevelsModal"),
+  "MyLevelsModal"
+);
+const TankSelectModal = named(
+  () => import("./components/modals/TankSelectModal"),
+  "TankSelectModal"
+);
+const CampaignSelectorModal = named(
+  () => import("./components/modals/CampaignSelectorModal"),
+  "CampaignSelectorModal"
+);
+const MyCampaignsModal = named(
+  () => import("./components/modals/MyCampaignsModal"),
+  "MyCampaignsModal"
+);
 
 // Modal renderer component
 const ModalRenderer = () => {

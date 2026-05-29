@@ -17,7 +17,7 @@ export const MyLevelsModal = () => {
   const handleDelete = (levelId) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this level? This cannot be undone.",
+        "Are you sure you want to delete this level? This cannot be undone."
       )
     ) {
       deleteLevel.mutate(levelId);

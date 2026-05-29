@@ -151,7 +151,7 @@ export class GameEngine {
     // Check if Room class is available globally (loaded via script tag)
     if (typeof Room === "undefined") {
       console.error(
-        "Room class not loaded. Make sure Shared scripts are included.",
+        "Room class not loaded. Make sure Shared scripts are included."
       );
       throw new Error("Room class not available");
     }
@@ -180,7 +180,7 @@ export class GameEngine {
             999,
             [levelId],
             playerName,
-            new LocalIO(this.particles, this.sounds),
+            new LocalIO(this.particles, this.sounds)
           );
           this.localRoom.maxplayernb = 100;
 
@@ -194,7 +194,7 @@ export class GameEngine {
             playerName,
             tankColors.turret,
             tankColors.body,
-            this.mysocketid,
+            this.mysocketid
           );
 
           // Spawn bots
@@ -203,7 +203,7 @@ export class GameEngine {
           // Count initial bots/enemies to determine win condition
           // Players object uses socketid as key
           this.initialBotCount = Object.entries(this.localRoom.players).filter(
-            ([socketid, _player]) => socketid !== this.mysocketid,
+            ([socketid, _player]) => socketid !== this.mysocketid
           ).length;
 
           // Start loops
@@ -233,7 +233,7 @@ export class GameEngine {
       playerName,
       tankColors.turret,
       tankColors.body,
-      roomId,
+      roomId
     );
 
     // Wait for 'id' event confirming we joined
@@ -340,7 +340,7 @@ export class GameEngine {
       // 2. Check for Win (All bots/enemies died)
       // Players are stored with socketid as key. Filter out our player by key.
       const enemyEntries = Object.entries(this.localRoom.players).filter(
-        ([socketid, _player]) => socketid !== this.mysocketid,
+        ([socketid, _player]) => socketid !== this.mysocketid
       );
 
       // Check if any enemy is alive
@@ -495,7 +495,7 @@ export class GameEngine {
                 (Math.sin(bullet.angle) * bullet.size.h) / 2,
             },
             bullet.angle,
-            10,
+            10
           );
         }
       });

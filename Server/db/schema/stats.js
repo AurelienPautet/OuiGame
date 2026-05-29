@@ -25,7 +25,7 @@ const ratings = pgTable(
   },
   (table) => ({
     uniqueRating: unique().on(table.levelId, table.playerId),
-  }),
+  })
 );
 
 const logings = pgTable("OuiTank-logings", {
@@ -58,7 +58,7 @@ const rounds = pgTable(
   (table) => ({
     levelIdx: index("rounds_level_id_idx").on(table.levelId),
     playerIdx: index("rounds_player_id_idx").on(table.playerId),
-  }),
+  })
 );
 
 const soloRounds = pgTable(
@@ -82,7 +82,7 @@ const soloRounds = pgTable(
   (table) => ({
     levelIdx: index("solo_rounds_level_id_idx").on(table.levelId),
     playerIdx: index("solo_rounds_player_id_idx").on(table.playerId),
-  }),
+  })
 );
 
 module.exports = { ratings, logings, rounds, soloRounds };

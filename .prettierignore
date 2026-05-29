@@ -5,3 +5,9 @@ Public
 pnpm-lock.yaml
 **/migrations/**
 *.sql
+
+# claude-code-action validates these workflow files are byte-identical to the
+# version on the default branch (a secrets-exfiltration guard), so reformatting
+# them breaks its run. Keep them out of Prettier's reach.
+.github/workflows/claude.yml
+.github/workflows/claude-code-review.yml

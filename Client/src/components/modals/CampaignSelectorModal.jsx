@@ -19,7 +19,7 @@ export const CampaignSelectorModal = () => {
         addToast(
           TOAST_TYPES.ERROR,
           "Campaign",
-          "This campaign has no playable levels.",
+          "This campaign has no playable levels."
         );
         setLoadingId(null);
         return;

@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
           setNeedsGoogleUsername(false);
           setPendingGoogleToken(null);
         },
-      },
+      }
     );
   };
 

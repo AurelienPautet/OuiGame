@@ -17,7 +17,7 @@ export const MyCampaignsModal = () => {
   const handleDelete = (campaignId) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this campaign? This cannot be undone.",
+        "Are you sure you want to delete this campaign? This cannot be undone."
       )
     ) {
       deleteCampaign.mutate(campaignId);

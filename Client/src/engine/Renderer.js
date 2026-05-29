@@ -43,19 +43,19 @@ export class Renderer {
     // Load tank images
     colors.forEach((color) => {
       this.images[`body_${color}`] = this._loadImage(
-        `ressources/image/tank_player/body_${color}.png`,
+        `ressources/image/tank_player/body_${color}.png`
       );
       this.images[`turret_${color}`] = this._loadImage(
-        `ressources/image/tank_player/turret_${color}.png`,
+        `ressources/image/tank_player/turret_${color}.png`
       );
     });
 
     // Load other images
     this.images.body_tracks = this._loadImage(
-      "ressources/image/tank_player/body_tracks.png",
+      "ressources/image/tank_player/body_tracks.png"
     );
     this.images.turret_decalc_bot = this._loadImage(
-      "ressources/image/tank_player/turret_decalc_bot.png",
+      "ressources/image/tank_player/turret_decalc_bot.png"
     );
     this.images.dead = this._loadImage("ressources/image/dead.png");
     this.images.hole = this._loadImage("ressources/image/block/hole.png");
@@ -73,13 +73,13 @@ export class Renderer {
 
   _loadThemeImages(theme) {
     this.images.block1 = this._loadImage(
-      `ressources/image/block/Cube${theme}-1.png`,
+      `ressources/image/block/Cube${theme}-1.png`
     );
     this.images.block2 = this._loadImage(
-      `ressources/image/block/Cube${theme}-2.png`,
+      `ressources/image/block/Cube${theme}-2.png`
     );
     this.images.bullet = this._loadImage(
-      `ressources/image/bullet/bullet-${theme}.png`,
+      `ressources/image/bullet/bullet-${theme}.png`
     );
     this.images.bg = this._loadImage(`ressources/image/bg${theme}.png`);
   }
@@ -158,7 +158,7 @@ export class Renderer {
       h.position.x,
       h.position.y,
       h.size.w,
-      h.size.h,
+      h.size.h
     );
 
     if (this.debugVisual) {
@@ -178,7 +178,7 @@ export class Renderer {
       block.position.x,
       block.position.y,
       block.size.w,
-      block.size.h,
+      block.size.h
     );
   }
 
@@ -209,7 +209,7 @@ export class Renderer {
       bullet.position.y,
       bullet.size.w,
       bullet.size.h,
-      bullet.angle,
+      bullet.angle
     );
 
     this.c.restore();
@@ -222,7 +222,7 @@ export class Renderer {
         bullet.position.x,
         bullet.position.y,
         bullet.size.w,
-        bullet.size.h,
+        bullet.size.h
       );
       this.c.fill();
       this.c.stroke();
@@ -241,7 +241,7 @@ export class Renderer {
           player.position.y,
           player.size.w,
           player.size.h,
-          (player.rotation * Math.PI) / 180,
+          (player.rotation * Math.PI) / 180
         );
       }
 
@@ -254,7 +254,7 @@ export class Renderer {
           player.position.y,
           player.size.w,
           player.size.h,
-          (player.rotation * Math.PI) / 180,
+          (player.rotation * Math.PI) / 180
         );
       }
 
@@ -267,7 +267,7 @@ export class Renderer {
           player.position.y,
           player.turretsize.w,
           player.turretsize.h,
-          player.angle,
+          player.angle
         );
       }
 
@@ -279,7 +279,7 @@ export class Renderer {
           player.position.y,
           player.turretsize.w,
           player.turretsize.h,
-          player.angle,
+          player.angle
         );
       }
     } else {
@@ -292,7 +292,7 @@ export class Renderer {
           player.position.y,
           player.size.w,
           player.size.h,
-          (player.rotation * Math.PI) / 180,
+          (player.rotation * Math.PI) / 180
         );
       }
     }
@@ -305,7 +305,7 @@ export class Renderer {
         player.position.x,
         player.position.y,
         player.size.w,
-        player.size.h,
+        player.size.h
       );
       this.c.fill();
       this.c.stroke();

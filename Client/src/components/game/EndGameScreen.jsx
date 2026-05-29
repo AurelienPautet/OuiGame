@@ -69,7 +69,7 @@ export const EndGameScreen = ({
   // Fetch level leaderboard for solo mode (best times)
   const { data: levelLeaderboard = [] } = useLevelLeaderboard(
     externalResult ? levelId : null,
-    10,
+    10
   );
 
   // Find current user's rank in leaderboard
@@ -130,13 +130,13 @@ export const EndGameScreen = ({
       setResultName(winnerName);
 
       const highestWins = Math.max(
-        ...Object.values(player_scores).map((s) => s.wins),
+        ...Object.values(player_scores).map((s) => s.wins)
       );
       const highestKills = Math.max(
-        ...Object.values(player_scores).map((s) => s.kills),
+        ...Object.values(player_scores).map((s) => s.kills)
       );
       const highestDeaths = Math.max(
-        ...Object.values(player_scores).map((s) => s.deaths),
+        ...Object.values(player_scores).map((s) => s.deaths)
       );
 
       const sortedScores = Object.entries(player_scores)
@@ -166,7 +166,7 @@ export const EndGameScreen = ({
     const handleYourRating = (serverStars) => {
       if (typeof serverStars === "number" && serverStars > 0) {
         const starsArray = [0, 1, 2, 3, 4].map((i) =>
-          i < serverStars ? 1 : 0,
+          i < serverStars ? 1 : 0
         );
         setStars(starsArray);
       } else if (Array.isArray(serverStars)) {
@@ -190,14 +190,14 @@ export const EndGameScreen = ({
       addToast(
         TOAST_TYPES.SUCCESS,
         "Success",
-        `You rated the level with ${rate} stars`,
+        `You rated the level with ${rate} stars`
       );
     }
     if (rateLevelMutation.isError) {
       addToast(
         TOAST_TYPES.ERROR,
         "Error",
-        `Can't rate: ${rateLevelMutation.error?.message || "Unknown error"}`,
+        `Can't rate: ${rateLevelMutation.error?.message || "Unknown error"}`
       );
     }
   }, [rateLevelMutation.isSuccess, rateLevelMutation.isError, addToast]);
@@ -207,7 +207,7 @@ export const EndGameScreen = ({
       if (!user) return;
       setHoveredStar(index);
     },
-    [user],
+    [user]
   );
 
   const handleStarClick = useCallback(
@@ -216,7 +216,7 @@ export const EndGameScreen = ({
         addToast(
           TOAST_TYPES.ERROR,
           "Error",
-          "You need to be logged in to rate a level",
+          "You need to be logged in to rate a level"
         );
         return;
       }
@@ -228,7 +228,7 @@ export const EndGameScreen = ({
       setStars(newStars);
       rateLevelMutation.mutate({ levelId: levelInfo.id, stars: index + 1 });
     },
-    [user, levelInfo.id, rateLevelMutation, addToast],
+    [user, levelInfo.id, rateLevelMutation, addToast]
   );
 
   const getDisplayedStars = useCallback(() => {
@@ -403,7 +403,7 @@ export const EndGameScreen = ({
                       </div>
                       <span className="font-mono text-yellow-400">
                         {formatTime(
-                          Math.floor(myLeaderboardEntry.timeMs / 1000),
+                          Math.floor(myLeaderboardEntry.timeMs / 1000)
                         )}
                       </span>
                     </div>

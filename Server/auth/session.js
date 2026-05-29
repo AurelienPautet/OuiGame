@@ -11,14 +11,9 @@ const path = require("path");
 const { db, schema } = require(path.join(__dirname, "..", "db"));
 const { playerSessions, players } = schema;
 const { eq, and, gt } = require("drizzle-orm");
-const { makeid } = require(path.join(
-  __dirname,
-  "..",
-  "..",
-  "shared",
-  "scripts",
-  "commons.js",
-));
+const { makeid } = require(
+  path.join(__dirname, "..", "..", "shared", "scripts", "commons.js")
+);
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
@@ -49,8 +44,8 @@ async function verifySession(token) {
     .where(
       and(
         eq(playerSessions.sessionToken, hashToken(token)),
-        gt(playerSessions.expirationTimestamp, new Date()),
-      ),
+        gt(playerSessions.expirationTimestamp, new Date())
+      )
     );
   return result.length > 0 ? result[0] : null;
 }

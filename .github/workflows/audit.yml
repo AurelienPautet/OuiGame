@@ -8,7 +8,7 @@ on:
   schedule:
     # Daily, 05:00 UTC — surfaces newly-published advisories against deps
     # that haven't changed, complementing Dependabot.
-    - cron: '0 5 * * *'
+    - cron: "0 5 * * *"
 
 concurrency:
   group: audit-${{ github.ref }}

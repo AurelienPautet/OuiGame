@@ -128,7 +128,7 @@ export const LevelEditor = () => {
       console.error("Save failed:", saveLevelMutation.error);
       alert(
         "Failed to save level: " +
-          (saveLevelMutation.error?.message || "Unknown error"),
+          (saveLevelMutation.error?.message || "Unknown error")
       );
     }
   }, [
@@ -184,7 +184,7 @@ export const LevelEditor = () => {
           break;
       }
     },
-    [images],
+    [images]
   );
 
   // Canvas render loop
@@ -220,7 +220,7 @@ export const LevelEditor = () => {
           ctx,
           selectedBlock,
           mouseGridPos.x * CELL_SIZE,
-          mouseGridPos.y * CELL_SIZE,
+          mouseGridPos.y * CELL_SIZE
         );
         ctx.globalAlpha = 1.0;
       }
@@ -264,7 +264,7 @@ export const LevelEditor = () => {
         }
       }
     },
-    [selectedBlock],
+    [selectedBlock]
   );
 
   // Mouse event handlers
@@ -325,7 +325,7 @@ export const LevelEditor = () => {
     if (newMode === "online") {
       // Remove bot spawns when switching to online (players only, no bots)
       setLayout((prev) =>
-        prev.map((block) => (block >= 10 ? BLOCKS.EMPTY : block)),
+        prev.map((block) => (block >= 10 ? BLOCKS.EMPTY : block))
       );
     }
     // When selecting a bot in online mode, reset to wall

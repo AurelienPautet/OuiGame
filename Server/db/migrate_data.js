@@ -20,7 +20,7 @@ async function migrateData() {
       SELECT id, username, email, type, password_hash, google_id, creation_timestamp FROM players 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-players_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-players") + 1)`,
+      sql`SELECT setval('"OuiTank-players_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-players") + 1)`
     );
 
     console.log("2. Migrating player_sessions...");
@@ -28,7 +28,7 @@ async function migrateData() {
       SELECT id, player_id, session_token, expiration_timestamp FROM player_sessions 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-player_sessions_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-player_sessions") + 1)`,
+      sql`SELECT setval('"OuiTank-player_sessions_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-player_sessions") + 1)`
     );
 
     console.log("3. Migrating levels...");
@@ -36,7 +36,7 @@ async function migrateData() {
       SELECT id, name, creator_id, max_players, type, status, content, creation_timestamp FROM levels 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-levels_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-levels") + 1)`,
+      sql`SELECT setval('"OuiTank-levels_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-levels") + 1)`
     );
 
     console.log("4. Migrating levels_img...");
@@ -44,7 +44,7 @@ async function migrateData() {
       SELECT id, level_id, img FROM levels_img 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-levels_img_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-levels_img") + 1)`,
+      sql`SELECT setval('"OuiTank-levels_img_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-levels_img") + 1)`
     );
 
     console.log("5. Migrating campaigns...");
@@ -52,7 +52,7 @@ async function migrateData() {
       SELECT id, name, creator_id, description, creation_timestamp FROM campaigns 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-campaigns_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-campaigns") + 1)`,
+      sql`SELECT setval('"OuiTank-campaigns_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-campaigns") + 1)`
     );
 
     console.log("6. Migrating campaign_levels...");
@@ -60,7 +60,7 @@ async function migrateData() {
       SELECT id, campaign_id, level_id, order_index FROM campaign_levels 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-campaign_levels_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-campaign_levels") + 1)`,
+      sql`SELECT setval('"OuiTank-campaign_levels_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-campaign_levels") + 1)`
     );
 
     console.log("7. Migrating ratings...");
@@ -68,7 +68,7 @@ async function migrateData() {
       SELECT id, stars, level_id, player_id FROM ratings 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-ratings_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-ratings") + 1)`,
+      sql`SELECT setval('"OuiTank-ratings_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-ratings") + 1)`
     );
 
     console.log("8. Migrating logings...");
@@ -76,7 +76,7 @@ async function migrateData() {
       SELECT id, player_id, ip_address, attempt_timestamp, status FROM logings 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-logings_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-logings") + 1)`,
+      sql`SELECT setval('"OuiTank-logings_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-logings") + 1)`
     );
 
     console.log("9. Migrating rounds...");
@@ -84,7 +84,7 @@ async function migrateData() {
       SELECT id, player_id, level_id, wins, kills, deaths, shots, hits, plants, blocks_destroyed, timestamp FROM rounds 
       ON CONFLICT DO NOTHING`);
     await db.execute(
-      sql`SELECT setval('"OuiTank-rounds_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-rounds") + 1)`,
+      sql`SELECT setval('"OuiTank-rounds_id_seq"', (SELECT COALESCE(MAX(id), 0) FROM "OuiTank-rounds") + 1)`
     );
 
     console.log("");

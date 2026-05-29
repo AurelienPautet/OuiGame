@@ -39,8 +39,8 @@ async function get_levels(input_name, imput_nb_players, type, socket) {
           eq(levels.status, "up"),
           imput_nb_players !== 0
             ? eq(levels.maxPlayers, imput_nb_players)
-            : undefined,
-        ),
+            : undefined
+        )
       )
       .groupBy(levels.id)
       .orderBy(desc(sql`rating`));
@@ -79,8 +79,8 @@ async function get_my_levels(input_name, imput_nb_players, socket) {
           eq(levels.status, "up"),
           imput_nb_players !== 0
             ? eq(levels.maxPlayers, imput_nb_players)
-            : undefined,
-        ),
+            : undefined
+        )
       )
       .groupBy(levels.id)
       .orderBy(sql`rating`);
@@ -124,7 +124,7 @@ async function save_level(
   level_name,
   max_players,
   type,
-  socket,
+  socket
 ) {
   if (!users[socket.id]) {
     console.log("User not logged in, cannot save level");
@@ -255,7 +255,7 @@ async function format_and_send_levels(rows, socket, response_event) {
 
   const creators = new Map(creatorRows.map((r) => [r.id, r.username]));
   const images = new Map(
-    imgRows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null]),
+    imgRows.map((r) => [r.levelId, r.img ? r.img.toString("hex") : null])
   );
   const statsByLevel = new Map(statRows.map((r) => [r.levelId, r]));
 
