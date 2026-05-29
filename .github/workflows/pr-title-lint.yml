@@ -1,0 +1,57 @@
+name: PR Title Lint
+
+# Enforce Conventional Commits (https://www.conventionalcommits.org) on pull
+# request titles. PRs are squash-merged and the squash commit on master is
+# generated from the PR title, so a conventional title keeps the master history
+# conventional too. The allowed types below mirror the prefixes already used in
+# this repo's git log (feat, fix, refactor, test, chore, build, ...). A scope is
+# required (e.g. feat(front): ...) — its presence is enforced, but any scope
+# name is accepted.
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+# Reads the PR title from the event payload; it never checks out or runs PR
+# code, so pull_request_target (which also gives fork PRs a usable token) is
+# safe here. read is the least privilege the action needs.
+permissions:
+  pull-requests: read
+
+# A title edit supersedes any in-flight run for the same PR.
+concurrency:
+  group: pr-title-lint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Conventional Commits compliance
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Require a scope on every title (e.g. feat(front): ...). No `scopes`
+          # allowlist is set, so any scope name is accepted — only its presence
+          # is enforced.
+          requireScope: true
+          # Allowed type prefixes (commitlint conventional defaults, listed
+          # explicitly as documentation of what this repo accepts).
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
