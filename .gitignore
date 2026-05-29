@@ -8,6 +8,49 @@ node_modules/
 tailwind.config.js
 .DS_Store
 
+# Playwright MCP output (screenshots, snapshots, console logs)
+/.playwright-mcp/
+
+# Claude Code local state (scheduled-task lock, agent worktrees, etc.)
+/.claude/
+
+# Env files — keep ALL variants out (only exact ".env" was covered before).
+# Track an example template if you ever add one.
+.env*
+!.env.example
+
+# Logs (root server runs via nodemon; Client has its own copy of these)
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Stray lockfiles from the wrong package manager. pnpm-lock.yaml is the source
+# of truth; the build script runs `npm install` in Client/, which would drop a
+# Client/package-lock.json the root "/package-lock.json" rule doesn't catch.
+package-lock.json
+yarn.lock
+
+# Vite local overrides
+*.local
+
+# Test / coverage output (backend tests are on the way)
+/coverage/
+.nyc_output/
+
+# Build output (Vite — was in Client/.gitignore, now centralized)
+dist/
+dist-ssr/
+
+# Misc editor / OS cruft
+.idea/
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
 # Design source files — keep them out of the app folders, but the curated
 # originals under design-source/ are tracked on purpose (see the negations).
 *.psd
