@@ -19,7 +19,24 @@
     "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate-data": "node Server/db/migrate_data.js"
+    "db:migrate-data": "node Server/db/migrate_data.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "{Server,shared}/**/*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,cjs,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "Client/**/*.{js,jsx,css,html}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "author": "",
   "license": "ISC",
