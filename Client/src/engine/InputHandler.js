@@ -126,7 +126,7 @@ export class InputHandler {
     window.gameInput.aim = value;
   }
 
-  setScale(scale) {
+  setScale(_scale) {
     // Scale is handled via canvas reference in global handlers
   }
 

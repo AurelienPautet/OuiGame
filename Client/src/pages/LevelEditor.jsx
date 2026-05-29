@@ -58,7 +58,7 @@ export const LevelEditor = () => {
   const [searchParams] = useSearchParams();
   const levelId = searchParams.get("id");
 
-  const { socket, isConnected } = useSocket();
+  const { isConnected } = useSocket();
   const { user } = useAuth();
   const { openModal } = useModal();
 

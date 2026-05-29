@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Search, Plus, RefreshCw, Gamepad2 } from "lucide-react";
-import { useModal, useSocket, useGame, MODALS } from "../../contexts";
+import { useModal, useGame, MODALS } from "../../contexts";
 import { RoomCard } from "../ui/RoomCard";
 import { useRooms } from "../../hooks/api";
 
 export const RoomSelectorModal = () => {
   const { closeModal, openModal } = useModal();
-  const { socket } = useSocket();
   const { startOnlineGame } = useGame();
   const [searchName, setSearchName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(0);

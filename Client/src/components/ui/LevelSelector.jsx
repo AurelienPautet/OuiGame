@@ -9,7 +9,6 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { useAuth } from "../../contexts";
 import { LevelCard } from "./LevelCard";
 import { hexToDataUrl } from "../../utils/levelUtils";
 import { useLevels, useMyLevels } from "../../hooks/api";
@@ -35,7 +34,6 @@ export function LevelSelector({
   onDelete,
   onCreate,
 }) {
-  const { user } = useAuth();
   const listRef = useRef(null);
 
   const savedState = useMemo(() => {
