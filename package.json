@@ -7,6 +7,12 @@
     "node": "23.3.0",
     "npm": "10.9.0"
   },
+  "packageManager": "pnpm@10.23.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "scripts": {
     "dev:tailwind": "npx tailwindcss -i Public/src/css/styles.css -o Public/src/css/tails.css --watch",
     "dev": "nodemon Server/server.js",
