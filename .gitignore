@@ -43,6 +43,9 @@ yarn.lock
 dist/
 dist-ssr/
 
+# Turborepo task cache
+.turbo/
+
 # Misc editor / OS cruft
 .idea/
 *.sw?

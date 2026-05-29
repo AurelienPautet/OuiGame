@@ -22,11 +22,11 @@
     }
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @ouigame/api --filter @ouigame/web dev",
+    "dev": "turbo run dev",
     "dev:api": "pnpm --filter @ouigame/api dev",
     "dev:web": "pnpm --filter @ouigame/web dev",
-    "build": "pnpm --filter @ouigame/web build",
-    "start": "pnpm --filter @ouigame/web build && node apps/api/server.js",
+    "build": "turbo run build",
+    "start": "node apps/api/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint . && pnpm --filter @ouigame/web lint",
@@ -69,6 +69,7 @@
     "lint-staged": "^17.0.5",
     "pg": "^8.13.1",
     "prettier": "^3.8.3",
-    "supertest": "^7.2.2"
+    "supertest": "^7.2.2",
+    "turbo": "^2.5.0"
   }
 }
