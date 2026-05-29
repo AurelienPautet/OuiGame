@@ -55,3 +55,53 @@ jobs:
 
       - name: ESLint
         run: pnpm run lint
+
+  test:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    # Postgres for the integration tests. Credentials/port match the test
+    # harness defaults in Server/__tests__/helpers/testEnv.js (overridden below
+    # via TEST_DB_* env vars). POSTGRES_DB=ouigame is the admin database the
+    # harness connects to in order to CREATE the ouigame_test database.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ouigame
+          POSTGRES_PASSWORD: ouigame
+          POSTGRES_DB: ouigame
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ouigame"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DB_HOST: localhost
+      TEST_DB_PORT: "5432"
+      TEST_DB_USER: ouigame
+      TEST_DB_PASSWORD: ouigame
+      TEST_DB_NAME: ouigame_test
+      TEST_DB_ADMIN_DB: ouigame
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
