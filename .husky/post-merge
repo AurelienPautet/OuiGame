@@ -1,5 +1,7 @@
 # Auto-install dependencies when pnpm-lock.yaml changes after a merge/pull (QoL).
-if git diff-tree -r --name-only HEAD@{1} HEAD | grep -q '^pnpm-lock\.yaml$'; then
+# Skip silently if the pre-merge ref can't be resolved (e.g. reflog disabled).
+prev=$(git rev-parse --verify --quiet 'HEAD@{1}') || exit 0
+if ! git diff --quiet "$prev" HEAD -- pnpm-lock.yaml; then
 	echo "husky - pnpm-lock.yaml changed, running pnpm install..."
 	pnpm install --frozen-lockfile
 fi
