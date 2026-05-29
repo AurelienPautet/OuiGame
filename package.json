@@ -13,6 +13,10 @@
     "start": "npm run build && node Server/server.js",
     "build": "cd Client && npm install --include=dev && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate-data": "node Server/db/migrate_data.js"
@@ -36,6 +40,9 @@
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.12.0",
     "globals": "^15.11.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "prettier": "^3.8.3",
     "tailwindcss": "^3.4.13"
   }
 }
