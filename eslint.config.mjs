@@ -9,7 +9,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 export default defineConfig([
   globalIgnores([
     "node_modules",
-    "Client",
+    "apps/web",
     "Public",
     "dist",
     "**/migrations/**",
@@ -17,7 +17,7 @@ export default defineConfig([
 
   // Express server: Node runtime, CommonJS modules.
   {
-    files: ["Server/**/*.js"],
+    files: ["apps/api/**/*.js"],
     extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",
@@ -65,7 +65,7 @@ export default defineConfig([
   // the Server/** block for files under Server/__tests__/.
   {
     files: [
-      "Server/__tests__/**/*.js",
+      "apps/api/__tests__/**/*.js",
       "jest.config.js",
       "jest.setup.js",
       "jest.afterEnv.js",

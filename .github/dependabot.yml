@@ -12,8 +12,12 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "npm"
-    # Look for `package.json` and `lock` files in the `root` directory
-    directory: "/Client/"
-    # Check the npm registry for updates every day (weekdays)
+    # Frontend workspace package
+    directory: "/apps/web/"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "npm"
+    # Backend workspace package
+    directory: "/apps/api/"
     schedule:
       interval: "daily"

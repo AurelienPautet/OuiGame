@@ -1,9 +1,16 @@
-require("dotenv").config();
+const path = require("path");
+// Load .env from the repo root so it works regardless of CWD. Turbo runs this
+// script from apps/api/, and dotenv only looks in CWD; on Heroku the file is
+// absent and real config vars are already set, so a missing file is a no-op.
+require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 const express = require("express");
 const app = express();
 
-const path = require("path");
+// Behind Heroku's router; trust the first proxy hop so req.ip and the rate
+// limiter key on the real client IP rather than the shared proxy IP.
+app.set("trust proxy", 1);
 const cors = require("cors");
+const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const apiRoutes = require("./routes");
 const { setRoomsRef } = require("./routes/rooms.routes");
@@ -49,6 +56,38 @@ const allowedOrigins = [
     : []),
 ];
 
+// Security headers. The CSP allows what the served client needs: same-origin
+// scripts/styles (the React bundle + the shared game <script> tags), the
+// Google Identity script, data:/blob: images (level thumbnails are data URLs),
+// and connections to the API/socket + Google. Cross-origin resource/embedder
+// policies are relaxed so the itch.io build can consume the API + shared
+// assets cross-origin. (CSP only applies to responses this server serves; the
+// itch.io build is served by itch and uses its own headers.)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://accounts.google.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://accounts.google.com",
+          "https://wiitank.pautet.net",
+          "wss://wiitank.pautet.net",
+        ],
+        frameSrc: ["https://accounts.google.com"],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
 app.use(express.json({ limit: "10mb" }));
 
 app.use(
@@ -65,11 +104,11 @@ const limiter = rateLimit({
 
 app.use("/api", limiter, apiRoutes);
 
-app.use(express.static(path.join(__dirname, "../Client/dist")));
-app.use(express.static(path.join(__dirname, "../shared")));
+app.use(express.static(path.join(__dirname, "../web/dist")));
+app.use(express.static(path.join(__dirname, "../../shared")));
 
-app.get("*", limiter, (req, res) => {
-  res.sendFile(path.join(__dirname, "../Client/dist/index.html"));
+app.get("/*splat", limiter, (req, res) => {
+  res.sendFile(path.join(__dirname, "../web/dist/index.html"));
 });
 
 const PORT = process.env.PORT || 8000;
@@ -83,10 +122,12 @@ const io = socketio(expressServer, {
   },
 });
 
-const { loadlevel } = require(__dirname + "/../shared/scripts/level_loader.js");
-const { makeid } = require(__dirname + "/../shared/scripts/commons.js");
+const { loadlevel } = require(
+  __dirname + "/../../shared/scripts/level_loader.js"
+);
+const { makeid } = require(__dirname + "/../../shared/scripts/commons.js");
 
-const Room = require(__dirname + "/../shared/class/Room.js");
+const Room = require(__dirname + "/../../shared/class/Room.js");
 
 const { get_level_rating_from_player } = require(
   __dirname + "/database/db_levels_ratings.js"

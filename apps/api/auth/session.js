@@ -12,7 +12,7 @@ const { db, schema } = require(path.join(__dirname, "..", "db"));
 const { playerSessions, players } = schema;
 const { eq, and, gt } = require("drizzle-orm");
 const { makeid } = require(
-  path.join(__dirname, "..", "..", "shared", "scripts", "commons.js")
+  path.join(__dirname, "..", "..", "..", "shared", "scripts", "commons.js")
 );
 
 function hashToken(token) {

@@ -22,14 +22,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           # Mirror the engine declared in package.json / used by Heroku.
           node-version: 24.x
+          cache: pnpm
 
-      # Replicates the exact command Heroku runs at deploy time:
-      #   npm run build  ->  cd Client && npm install --include=dev && npm run build
-      # Catching a broken build here turns a failed deploy into a failed PR check.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Replicates the build Heroku runs at deploy time: the root `build` script
+      # builds the web app (apps/web) via the pnpm workspace. Catching a broken
+      # build here turns a failed deploy into a failed PR check.
       - name: Build
-        run: npm run build
+        run: pnpm run build

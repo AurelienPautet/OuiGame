@@ -3,7 +3,7 @@
 const bcrypt = require("bcryptjs");
 const { getTableConfig } = require("drizzle-orm/pg-core");
 const { db, schema, pool } = require("../../db");
-const { makeid } = require("../../../shared/scripts/commons.js");
+const { makeid } = require("../../../../shared/scripts/commons.js");
 const { hashToken } = require("../../auth/session");
 
 const {

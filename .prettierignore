@@ -1,6 +1,7 @@
 node_modules
 dist
-Client/dist
+apps/web/dist
+.turbo
 Public
 pnpm-lock.yaml
 **/migrations/**
