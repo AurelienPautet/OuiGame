@@ -1,26 +1,48 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { io } from "socket.io-client";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { io, type Socket } from "socket.io-client";
 import { onAuthChange } from "../api/authEvents";
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents,
+} from "@ouigame/shared/socket";
 
 const SERVER_URL = import.meta.env.PROD
   ? "https://wiitank.pautet.net"
   : "http://localhost:8000";
 
-const SocketContext = createContext(null);
+// socket.io-client's generic order is <ListenEvents, EmitEvents> = (S2C, C2S).
+type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+interface SocketContextValue {
+  socket: GameSocket | null;
+  isConnected: boolean;
+  onlineCount: number;
+}
+
+const SocketContext = createContext<SocketContextValue | null>(null);
 
 export const useSocket = () => useContext(SocketContext);
 
-export const SocketProvider = ({ children }) => {
-  const [socket, setSocket] = useState(null);
+export const SocketProvider = ({ children }: { children: ReactNode }) => {
+  const [socket, setSocket] = useState<GameSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
     // The auth callback is re-read on every (re)connect, so a fresh token is
     // sent automatically after a reconnect.
+    // socket.io-client@4's `io()` overloads are not generic, so we assert the
+    // returned socket to the typed shape. This keeps full per-event typing on
+    // `sock.on`/`sock.emit` below (only the io() call itself is asserted).
     const sock = io(SERVER_URL, {
       auth: (cb) => cb({ token: localStorage.getItem("session_id") || null }),
-    });
+    }) as GameSocket;
 
     sock.on("connect", () => {
       setIsConnected(true);

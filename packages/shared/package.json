@@ -1,0 +1,32 @@
+{
+  "name": "@ouigame/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared wire contracts (types, socket events, Zod API schemas) for OuiGame.",
+  "sideEffects": false,
+  "exports": {
+    "./types": {
+      "types": "./src/types/index.ts",
+      "import": "./src/types/index.ts"
+    },
+    "./socket": {
+      "types": "./src/socket/index.ts",
+      "import": "./src/socket/index.ts"
+    },
+    "./api": {
+      "types": "./src/api/index.ts",
+      "import": "./src/api/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@ouigame/config-ts": "workspace:*",
+    "typescript": "~6.0.3"
+  }
+}
