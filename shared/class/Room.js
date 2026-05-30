@@ -111,54 +111,39 @@ class Room {
       this.bot1_spawns,
       this.bot1_spawns.length
     );
+    // One config-driven loop replacing the former Bot1-4 subclasses. Per-kind
+    // tuning lives in BOT_CONFIGS (Bot.js); colours stay sourced from
+    // Room.bot_colors. Preserves the exact socketid numbering: a single
+    // bot_index across all kinds, spawn key === the bot's socketid (bot1's old
+    // `bot${i}` key already equalled `bot${bot_index}` since bot1 is first).
+    const kinds = ["bot1", "bot2", "bot3", "bot4"];
+    const labels = { bot1: "Bot1", bot2: "Bot2", bot3: "Bot3", bot4: "Bot4" };
+    const spawnLists = {
+      bot1: this.bot1_spawns,
+      bot2: this.bot2_spawns,
+      bot3: this.bot3_spawns,
+      bot4: this.bot4_spawns,
+    };
     let bot_index = 0;
-    let number_to_spawn_1 = this.bot1_spawns.length;
-    for (let i = 0; i < number_to_spawn_1; i++) {
-      let bot = new Bot1(
-        { x: 0, y: 0 },
-        `bot${bot_index}`,
-        `Bot1_ ${i}`,
-        Room.bot_colors.bot1[0],
-        Room.bot_colors.bot1[1]
-      );
-      this.spawn_new(bot, `bot${i}`, this.bot1_spawns);
-      bot_index++;
-    }
-    let number_to_spawn_2 = this.bot2_spawns.length;
-    for (let i = 0; i < number_to_spawn_2; i++) {
-      let bot = new Bot2(
-        { x: 0, y: 0 },
-        `bot${bot_index}`,
-        `Bot2_ ${i}`,
-        Room.bot_colors.bot2[0],
-        Room.bot_colors.bot2[1]
-      );
-      this.spawn_new(bot, `bot${bot_index}`, this.bot2_spawns);
-      bot_index++;
-    }
-    let number_to_spawn_3 = this.bot3_spawns.length;
-    for (let i = 0; i < number_to_spawn_3; i++) {
-      let bot = new Bot3(
-        { x: 0, y: 0 },
-        `bot${bot_index}`,
-        `Bot3_ ${i}`,
-        Room.bot_colors.bot3[0],
-        Room.bot_colors.bot3[1]
-      );
-      this.spawn_new(bot, `bot${bot_index}`, this.bot3_spawns);
-      bot_index++;
-    }
-    let number_to_spawn_4 = this.bot4_spawns.length;
-    for (let i = 0; i < number_to_spawn_4; i++) {
-      let bot = new Bot4(
-        { x: 0, y: 0 },
-        `bot${bot_index}`,
-        `Bot4_ ${i}`,
-        "red",
-        "red"
-      );
-      this.spawn_new(bot, `bot${bot_index}`, this.bot4_spawns);
-      bot_index++;
+    for (const kind of kinds) {
+      const spawns = spawnLists[kind];
+      const colors = Room.bot_colors[kind];
+      // Capture the count BEFORE the loop: spawn_player mutates the spawns array
+      // (consumes the used spawn), so reading spawns.length live would stop
+      // early. This matches the legacy `number_to_spawn_N` captured-length loops.
+      const count = spawns.length;
+      for (let i = 0; i < count; i++) {
+        const bot = new Bot(
+          { x: 0, y: 0 },
+          `bot${bot_index}`,
+          `${labels[kind]}_ ${i}`,
+          colors[0],
+          colors[1],
+          kind
+        );
+        this.spawn_new(bot, `bot${bot_index}`, spawns);
+        bot_index++;
+      }
     }
   }
 
