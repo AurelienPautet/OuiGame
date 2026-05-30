@@ -1,0 +1,18 @@
+{
+  // Emits .d.ts ONLY (the runtime stays plain .js, consumed directly by tsx /
+  // jest-swc / node). apps/api needs precise Drizzle schema types — allowJs
+  // inference across the package boundary loses precision and brand-mismatches
+  // apps/api's drizzle-orm operator overloads (~280 phantom type errors).
+  "compilerOptions": {
+    "allowJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "es2022",
+    "rootDir": "./src",
+    "outDir": "./dist-types"
+  },
+  "include": ["src/**/*.js"]
+}

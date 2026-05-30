@@ -6,11 +6,24 @@
   "description": "Drizzle schema and the configured Postgres connection for OuiGame.",
   "main": "src/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./schema": "./src/schema/index.js"
+    ".": {
+      "types": "./dist-types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./schema": {
+      "types": "./dist-types/schema/index.d.ts",
+      "default": "./src/schema/index.js"
+    }
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
     "pg": "^8.21.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.dts.json",
+    "typecheck": "tsc -p tsconfig.dts.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
   }
 }

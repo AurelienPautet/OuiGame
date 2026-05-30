@@ -13,12 +13,14 @@ export default defineConfig([
     "apps/web",
     "Public",
     "dist",
+    "**/dist-types/**",
     "**/migrations/**",
   ]),
 
-  // Express server + the @ouigame/db package: Node runtime, CommonJS modules.
+  // The @ouigame/db package: Node runtime, CommonJS modules. (apps/api is now
+  // TypeScript — see the **/*.{ts,tsx} block + the apps/api test block below.)
   {
-    files: ["apps/api/**/*.js", "packages/db/**/*.js"],
+    files: ["packages/db/**/*.js"],
     extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",
@@ -86,12 +88,9 @@ export default defineConfig([
     },
   },
 
-  // Jest test suite and the CommonJS Jest config files: Node + Jest globals
-  // (describe/test/expect/beforeEach/...). Listed last so it layers on top of
-  // the Server/** block for files under Server/__tests__/.
+  // The CommonJS Jest config/setup files at the repo root: Node + Jest globals.
   {
     files: [
-      "apps/api/__tests__/**/*.js",
       "jest.config.js",
       "jest.setup.js",
       "jest.afterEnv.js",
@@ -108,14 +107,30 @@ export default defineConfig([
     },
   },
 
-  // TypeScript source (none yet in Phase 0b; this wires future .ts files).
-  // Non-type-aware only: no parserOptions.project/projectService, so no JS file
-  // is ever forced into a tsconfig and lint stays fast. Scoped to **/*.ts(x) so
-  // the all-JS blocks above are untouched.
+  // TypeScript source. Non-type-aware only: no parserOptions.project, so lint
+  // stays fast. tseslint's no-undef-off lets Node globals (process, console, …)
+  // through; apps/api .ts are checked here.
   {
     files: ["**/*.{ts,tsx}"],
     extends: [...tseslint.configs.recommended],
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
+    },
+  },
+
+  // apps/api Jest tests (.ts): layer Node + Jest globals on top of the TS block,
+  // and allow `any` — test mocks / flexible fixture overrides legitimately use
+  // it, and these files are excluded from the strict typecheck anyway.
+  {
+    files: ["apps/api/__tests__/**/*.ts"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.jest },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_" },
