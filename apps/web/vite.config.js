@@ -1,7 +1,6 @@
-import { defineConfig, normalizePath } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { viteStaticCopy } from "vite-plugin-static-copy";
 import path from "path";
 import fs from "node:fs";
 import { fileURLToPath } from "url";
@@ -17,33 +16,30 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       tailwindcss(),
-      viteStaticCopy({
-        // Only the public assets, which live inside the Vite root. The sibling
-        // `shared/` folder is copied separately below — vite-plugin-static-copy
-        // (tinyglobby) won't glob paths outside the root.
-        targets: isBuild
-          ? [
-              {
-                src:
-                  normalizePath(path.resolve(__dirname, "public")) +
-                  "/!(*Shared)",
-                dest: ".",
-              },
-            ]
-          : [],
-      }),
-      // Copy the sibling `shared/` folder into dist/shared on build. It lives
-      // outside the Vite root, so glob-based copying is unreliable (it works
-      // with the lockfile-pinned plugin but a fresh npm install on CI/Heroku
-      // resolves a newer vite-plugin-static-copy that refuses out-of-root
-      // globs). Copying directly with fs is robust across versions.
+      // publicDir is disabled during build (below) to avoid an EISDIR on the
+      // public/Shared symlink, so we copy assets into dist ourselves. fs.cpSync
+      // is deterministic and lands files at dist/<name>; vite-plugin-static-copy
+      // v4 nested them under dist/public/, which broke /ressources/* asset URLs.
       {
-        name: "copy-shared-to-dist",
+        name: "copy-assets-to-dist",
         apply: "build",
         closeBundle() {
-          const src = path.resolve(__dirname, "../../shared");
-          const dest = path.resolve(__dirname, "dist/shared");
-          fs.cpSync(src, dest, { recursive: true });
+          // Sibling shared/ folder (outside the Vite root) -> dist/shared.
+          fs.cpSync(
+            path.resolve(__dirname, "../../shared"),
+            path.resolve(__dirname, "dist/shared"),
+            { recursive: true }
+          );
+          // public/ assets -> dist root, skipping the dev-only Shared symlink.
+          const publicDir = path.resolve(__dirname, "public");
+          for (const entry of fs.readdirSync(publicDir)) {
+            if (entry === "Shared") continue;
+            fs.cpSync(
+              path.join(publicDir, entry),
+              path.resolve(__dirname, "dist", entry),
+              { recursive: true }
+            );
+          }
         },
       },
       {
