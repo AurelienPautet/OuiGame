@@ -4,11 +4,11 @@
 const target = new EventTarget();
 const AUTH_CHANGED = "auth-changed";
 
-export function notifyAuthChange() {
+export function notifyAuthChange(): void {
   target.dispatchEvent(new Event(AUTH_CHANGED));
 }
 
-export function onAuthChange(handler) {
+export function onAuthChange(handler: () => void): () => void {
   target.addEventListener(AUTH_CHANGED, handler);
   return () => target.removeEventListener(AUTH_CHANGED, handler);
 }
