@@ -1,3 +1,5 @@
+import { storage } from "../lib/storage";
+
 // VITE_API_URL (build-time, e.g. the itch.io build) wins; otherwise the
 // hosted prod API / local dev default — so the normal build is unchanged.
 const BASE_URL =
@@ -22,7 +24,7 @@ class ApiClient {
   }
 
   getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem("session_id");
+    const token = storage.getSessionId();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 

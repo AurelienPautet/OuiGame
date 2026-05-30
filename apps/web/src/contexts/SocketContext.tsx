@@ -7,6 +7,7 @@ import {
 } from "react";
 import { io, type Socket } from "socket.io-client";
 import { onAuthChange } from "../api/authEvents";
+import { storage } from "../lib/storage";
 import type {
   ServerToClientEvents,
   ClientToServerEvents,
@@ -49,7 +50,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     // returned socket to the typed shape. This keeps full per-event typing on
     // `sock.on`/`sock.emit` below (only the io() call itself is asserted).
     const sock = io(SERVER_URL, {
-      auth: (cb) => cb({ token: localStorage.getItem("session_id") || null }),
+      auth: (cb) => cb({ token: storage.getSessionId() }),
     }) as GameSocket;
 
     sock.on("connect", () => {
@@ -67,7 +68,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     // Re-authenticate the live socket when the user logs in or out without a
     // full reconnect.
     const unsubscribe = onAuthChange(() => {
-      const token = localStorage.getItem("session_id");
+      const token = storage.getSessionId();
       if (token) {
         sock.emit("authenticate", token);
       } else {
