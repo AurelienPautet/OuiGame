@@ -1,6 +1,10 @@
-const BASE_URL = import.meta.env.PROD
-  ? "https://wiitank.pautet.net/api"
-  : "http://localhost:8000/api";
+// VITE_API_URL (build-time, e.g. the itch.io build) wins; otherwise the
+// hosted prod API / local dev default — so the normal build is unchanged.
+const BASE_URL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.PROD
+    ? "https://wiitank.pautet.net/api"
+    : "http://localhost:8000/api");
 
 // The thrown error carries the HTTP status and the parsed error body. (Named
 // distinctly from @ouigame/shared/api's `ApiError`, which is the error-response

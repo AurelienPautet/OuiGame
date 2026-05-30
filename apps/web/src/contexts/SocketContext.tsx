@@ -12,9 +12,13 @@ import type {
   ClientToServerEvents,
 } from "@ouigame/shared/socket";
 
-const SERVER_URL = import.meta.env.PROD
-  ? "https://wiitank.pautet.net"
-  : "http://localhost:8000";
+// VITE_SOCKET_URL (build-time, e.g. the itch.io build) wins; otherwise the
+// hosted prod / local dev default — so the normal build is unchanged.
+const SERVER_URL =
+  import.meta.env.VITE_SOCKET_URL ??
+  (import.meta.env.PROD
+    ? "https://wiitank.pautet.net"
+    : "http://localhost:8000");
 
 // socket.io-client's generic order is <ListenEvents, EmitEvents> = (S2C, C2S).
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
