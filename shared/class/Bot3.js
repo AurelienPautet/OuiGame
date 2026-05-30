@@ -21,3 +21,12 @@ class Bot3 extends Bot {
     this.bullet_type = 2;
   }
 }
+
+// Node.js: expose for require() (Phase 2 PR-A characterization test). Browser-
+// inert (try/catch; loaded as a <script> tag). Temporary scaffolding — Bot1-4
+// collapse into a config-driven Bot in a later Phase 2 PR.
+try {
+  module.exports = Bot3;
+} catch (e) {
+  console.error("Error exporting Bot3 class:", e);
+}
