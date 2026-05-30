@@ -14,7 +14,7 @@
     "@tanstack/react-query": "^5.90.20",
     "daisyui": "^5.5.14",
     "howler": "^2.2.4",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.17.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0",
