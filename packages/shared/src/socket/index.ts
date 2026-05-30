@@ -33,24 +33,30 @@ export interface ClientToServerEvents {
     list_id: number[],
     creator: string
   ) => void;
+  // room_id is whatever id the client holds; the server indexes rooms[room_id],
+  // which accepts a numeric id or its string form (rooms are also joined as
+  // String(room.id)). The web GameContext likewise types roomId as number|string.
   play: (
     playerName: string,
     turretc: string,
     bodyc: string,
-    room_id: number
+    room_id: number | string
   ) => void;
   quit: () => void;
   // "tock" — the ~60fps player input. Keys verbatim: serverid, mysocketid,
-  // playerid, direction, plant, click, aim, room_id, mytick.
+  // playerid, direction, plant, click, aim, room_id, mytick. serverid/mysocketid/
+  // playerid are nullable on the wire (the solo-derived engine may not have set
+  // them yet); the server only meaningfully reads serverid, room_id, mytick,
+  // direction, aim, click, plant.
   tock: (input: {
-    serverid: string;
-    mysocketid: string;
-    playerid: number;
+    serverid: string | null;
+    mysocketid: string | null;
+    playerid: number | null;
     direction: { x: number; y: number };
     plant: boolean;
     click: boolean;
     aim: { x: number; y: number };
-    room_id: number;
+    room_id: number | string | null;
     mytick: number;
   }) => void;
 }
