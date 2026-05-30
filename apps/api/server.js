@@ -56,13 +56,33 @@ const allowedOrigins = [
     : []),
 ];
 
-// Security headers. CSP is left off because the client loads inline/external
-// scripts (Google Identity, the shared game <script> tags); cross-origin
-// resource/embedder policies are relaxed so the itch.io build and other
-// allowed origins can consume the API and shared assets cross-origin.
+// Security headers. The CSP allows what the served client needs: same-origin
+// scripts/styles (the React bundle + the shared game <script> tags), the
+// Google Identity script, data:/blob: images (level thumbnails are data URLs),
+// and connections to the API/socket + Google. Cross-origin resource/embedder
+// policies are relaxed so the itch.io build can consume the API + shared
+// assets cross-origin. (CSP only applies to responses this server serves; the
+// itch.io build is served by itch and uses its own headers.)
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://accounts.google.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://accounts.google.com",
+          "https://wiitank.pautet.net",
+          "wss://wiitank.pautet.net",
+        ],
+        frameSrc: ["https://accounts.google.com"],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
