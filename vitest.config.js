@@ -21,10 +21,10 @@ export default defineConfig({
       {
         test: {
           name: "shared",
-          root: "shared",
+          root: "packages/shared",
           environment: "node",
           globals: true,
-          include: ["__tests__/**/*.{test,spec}.js"],
+          include: ["src/game/__tests__/**/*.{test,spec}.js"],
         },
       },
     ],

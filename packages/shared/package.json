@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Shared wire contracts (types, socket events, Zod API schemas) for OuiGame.",
+  "description": "Shared contracts (types, socket events, Zod API schemas) and the isomorphic game runtime for OuiGame.",
   "sideEffects": false,
   "exports": {
     "./types": {
@@ -17,9 +17,15 @@
     "./api": {
       "types": "./src/api/index.ts",
       "import": "./src/api/index.ts"
+    },
+    "./game": {
+      "import": "./dist/game.js",
+      "require": "./dist/game.cjs"
     }
   },
   "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -27,6 +33,7 @@
   },
   "devDependencies": {
     "@ouigame/config-ts": "workspace:*",
+    "tsup": "^8.5.1",
     "typescript": "~6.0.3"
   }
 }
