@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { authMiddleware } = require("../middleware/auth.middleware");
+const { validate } = require("../middleware/validate.middleware");
+const { SaveLevelRequestSchema } = require("@ouigame/shared/api");
 const { parseId } = require("../repositories/shared/format");
 const levelsService = require("../services/levels.service");
 
@@ -79,51 +81,61 @@ router.get("/:id/json", async (req, res) => {
 });
 
 // POST /api/levels
-router.post("/", authMiddleware, async (req, res) => {
-  const { levelData, hexData, levelName, maxPlayers, type } = req.body;
-  const playerId = req.user.playerId;
+router.post(
+  "/",
+  authMiddleware,
+  validate({ body: SaveLevelRequestSchema }),
+  async (req, res) => {
+    const { levelData, hexData, levelName, maxPlayers, type } = req.body;
+    const playerId = req.user.playerId;
 
-  try {
-    const result = await levelsService.saveLevel(playerId, {
-      levelData,
-      hexData,
-      levelName,
-      maxPlayers,
-      type,
-    });
-    res.json(result);
-  } catch (err) {
-    console.error("Error creating level:", err);
-    res.status(500).json({ error: "Failed to create level" });
+    try {
+      const result = await levelsService.saveLevel(playerId, {
+        levelData,
+        hexData,
+        levelName,
+        maxPlayers,
+        type,
+      });
+      res.json(result);
+    } catch (err) {
+      console.error("Error creating level:", err);
+      res.status(500).json({ error: "Failed to create level" });
+    }
   }
-});
+);
 
 // PUT /api/levels/:id
-router.put("/:id", authMiddleware, async (req, res) => {
-  const levelId = parseId(req.params.id);
-  if (levelId === null) {
-    return res.status(400).json({ error: "Invalid level id" });
-  }
-  const { levelData, hexData, levelName, maxPlayers, type } = req.body;
-  const playerId = req.user.playerId;
-
-  try {
-    const result = await levelsService.updateLevel(playerId, levelId, {
-      levelData,
-      hexData,
-      levelName,
-      maxPlayers,
-      type,
-    });
-    if (result === null) {
-      return res.status(403).json({ error: "Not your level" });
+router.put(
+  "/:id",
+  authMiddleware,
+  validate({ body: SaveLevelRequestSchema }),
+  async (req, res) => {
+    const levelId = parseId(req.params.id);
+    if (levelId === null) {
+      return res.status(400).json({ error: "Invalid level id" });
     }
-    res.json(result);
-  } catch (err) {
-    console.error("Error updating level:", err);
-    res.status(500).json({ error: "Failed to update level" });
+    const { levelData, hexData, levelName, maxPlayers, type } = req.body;
+    const playerId = req.user.playerId;
+
+    try {
+      const result = await levelsService.updateLevel(playerId, levelId, {
+        levelData,
+        hexData,
+        levelName,
+        maxPlayers,
+        type,
+      });
+      if (result === null) {
+        return res.status(403).json({ error: "Not your level" });
+      }
+      res.json(result);
+    } catch (err) {
+      console.error("Error updating level:", err);
+      res.status(500).json({ error: "Failed to update level" });
+    }
   }
-});
+);
 
 // DELETE /api/levels/:id
 router.delete("/:id", authMiddleware, async (req, res) => {

@@ -120,6 +120,9 @@ importers:
       socket.io:
         specifier: ^4.8.1
         version: 4.8.3
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@ouigame/config-ts':
         specifier: workspace:*

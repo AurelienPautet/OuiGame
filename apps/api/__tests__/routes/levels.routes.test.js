@@ -141,6 +141,18 @@ describe("POST /api/levels", () => {
       .send({ levelName: "Nope", maxPlayers: 2, type: "online" });
     expect(res.status).toBe(401);
   });
+
+  test("rejects a malformed body (400) via Zod validation", async () => {
+    const { authHeader } = await createUserWithSession();
+    const res = await request(app)
+      .post("/api/levels")
+      .set("Authorization", authHeader)
+      // missing levelData + hexData, maxPlayers wrong type
+      .send({ levelName: "Bad", maxPlayers: "two", type: "online" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Validation failed");
+    expect(Array.isArray(res.body.details)).toBe(true);
+  });
 });
 
 describe("PUT /api/levels/:id", () => {
