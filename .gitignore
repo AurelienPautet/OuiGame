@@ -35,8 +35,9 @@ yarn.lock
 # Vite local overrides
 *.local
 
-# Test / coverage output (backend tests are on the way)
-/coverage/
+# Test / coverage output (jest backend tests + vitest web/shared coverage).
+# Unanchored so it also catches apps/web/coverage and shared/coverage.
+coverage/
 .nyc_output/
 
 # Build output (Vite — was in Client/.gitignore, now centralized)
@@ -45,6 +46,11 @@ dist-ssr/
 
 # Turborepo task cache
 .turbo/
+
+# TypeScript incremental build info (only written by `tsc -b`; the per-package
+# `tsc --noEmit` typecheck does not emit these, but ignore them defensively).
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Misc editor / OS cruft
 .idea/
