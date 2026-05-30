@@ -405,13 +405,8 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "Not your campaign" });
     }
 
-    // Manual cascade (no ON DELETE CASCADE in the schema).
-    await db
-      .delete(campaignRuns)
-      .where(eq(campaignRuns.campaignId, campaignId));
-    await db
-      .delete(campaignLevels)
-      .where(eq(campaignLevels.campaignId, campaignId));
+    // Runs (via campaign_id) and campaign-level links are removed by ON DELETE
+    // CASCADE in the schema.
     await db.delete(campaigns).where(eq(campaigns.id, campaignId));
 
     res.json({ success: true });

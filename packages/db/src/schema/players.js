@@ -34,7 +34,8 @@ const playerSessions = pgTable("OuiTank-player_sessions", {
   id: serial("id").primaryKey(),
   playerId: integer("player_id")
     .notNull()
-    .references(() => players.id),
+    // OWNERSHIP: a session is meaningless without its player.
+    .references(() => players.id, { onDelete: "cascade" }),
   sessionToken: varchar("session_token", { length: 120 }).notNull().unique(),
   expirationTimestamp: timestamp("expiration_timestamp").default(
     sql`NOW() + INTERVAL '7 days'`

@@ -394,10 +394,10 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "Not your level" });
     }
 
-    await db.delete(levelsImg).where(eq(levelsImg.levelId, levelId));
-
-    await db.delete(ratings).where(eq(ratings.levelId, levelId));
-
+    // Child rows (image, ratings, multiplayer + solo rounds, campaign-level
+    // links) are removed by ON DELETE CASCADE in the schema. (The old manual
+    // deletes only cleaned image + ratings, so deleting a level that had rounds
+    // or sat in a campaign FK-violated — the cascade fixes that.)
     await db.delete(levels).where(eq(levels.id, levelId));
 
     res.json({ success: true });

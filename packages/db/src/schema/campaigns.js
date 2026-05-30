@@ -14,7 +14,8 @@ const campaigns = pgTable("OuiTank-campaigns", {
   name: varchar("name", { length: 30 }).notNull().unique(),
   creatorId: integer("creator_id")
     .notNull()
-    .references(() => players.id),
+    // OWNERSHIP: deleting a player removes their campaigns (NOT NULL → cascade).
+    .references(() => players.id, { onDelete: "cascade" }),
   description: varchar("description", { length: 300 }).notNull(),
   creationTimestamp: timestamp("creation_timestamp").defaultNow(),
 });
@@ -23,10 +24,14 @@ const campaignLevels = pgTable("OuiTank-campaign_levels", {
   id: serial("id").primaryKey(),
   campaignId: integer("campaign_id")
     .notNull()
-    .references(() => campaigns.id),
+    // OWNERSHIP: a campaign's level-list rows die with the campaign
+    // (replaces a manual cascade in the DELETE route).
+    .references(() => campaigns.id, { onDelete: "cascade" }),
   levelId: integer("level_id")
     .notNull()
-    .references(() => levels.id),
+    // OWNERSHIP-of-level: deleting a level removes it from every campaign
+    // (fixes a latent FK-violation when a campaigned level was deleted).
+    .references(() => levels.id, { onDelete: "cascade" }),
   orderIndex: integer("order_index").notNull(),
 });
 
@@ -36,10 +41,14 @@ const campaignLevels = pgTable("OuiTank-campaign_levels", {
 // levels; "completed" = they have a run with completed = true.
 const campaignRuns = pgTable("OuiTank-campaign_runs", {
   id: serial("id").primaryKey(),
-  playerId: integer("player_id").references(() => players.id),
+  // ANALYTICS: run history outlives the player (nullable → set null).
+  playerId: integer("player_id").references(() => players.id, {
+    onDelete: "set null",
+  }),
   campaignId: integer("campaign_id")
     .notNull()
-    .references(() => campaigns.id),
+    // OWNERSHIP: runs die with their campaign (replaces a manual cascade).
+    .references(() => campaigns.id, { onDelete: "cascade" }),
   levelsCleared: integer("levels_cleared").notNull(),
   livesLeft: integer("lives_left").notNull(),
   completed: boolean("completed").notNull(),
