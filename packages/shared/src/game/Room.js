@@ -1,17 +1,9 @@
-try {
-  ({
-    rectanglesSeTouchent,
-    rectRect,
-    distance,
-  } = require("../../shared/scripts/check_collision.js"));
+import { rectRect, distance, rectanglesSeTouchent } from "./check_collision.js";
+import { generateBcollision } from "./level_loader.js";
+import { Player } from "./Player.js";
+import { Bot } from "./Bot.js";
 
-  ({ generateBcollision } = require("../../shared/scripts/level_loader.js"));
-  Player = require("../../shared/class/Player.js");
-} catch (error) {
-  console.error("Error requiring dependencies in Room.js:", error);
-}
-
-class Room {
+export class Room {
   static next_id = 1;
   static bot_colors = {
     bot1: ["blue", "blue"],
@@ -456,10 +448,4 @@ class Room {
     }
     return stats;
   }
-}
-
-try {
-  module.exports = Room;
-} catch (error) {
-  console.error("Error exporting Room class:", error);
 }

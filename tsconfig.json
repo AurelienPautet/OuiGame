@@ -7,6 +7,6 @@
   "references": [
     { "path": "./apps/web" },
     { "path": "./apps/api" },
-    { "path": "./shared" }
+    { "path": "./packages/shared" }
   ]
 }

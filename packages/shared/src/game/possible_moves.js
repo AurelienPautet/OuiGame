@@ -1,3 +1,5 @@
+import { rectRect2 } from "./possible_shots_balls.js";
+
 class possible_moves {
   constructor(position, size, bot, direction) {
     this.position = { x: position.x, y: position.y };
@@ -130,9 +132,7 @@ class possible_moves {
   }
 }
 
-console.log("possible_moves.js loaded");
-
-function launch_possible_moves(size, bot, room, ctx, debug_visual) {
+export function launch_possible_moves(size, bot, room, ctx, debug_visual) {
   new possible_moves(
     {
       x: bot.position.x + bot.size.w / 2 - 160,
@@ -250,16 +250,4 @@ function launch_possible_moves(size, bot, room, ctx, debug_visual) {
     bot,
     "bullet up right"
   ).update_state(room, ctx, debug_visual);
-}
-
-if (typeof module === "object" && module.exports) {
-  console.log("Loading level_loader.js in Node.js environment");
-  module.exports = {
-    launch_possible_moves,
-  };
-} else {
-  console.log("Loading level_loader.js in browser environment");
-  if (!window.launch_possible_moves) {
-    window.launch_possible_moves = launch_possible_moves;
-  }
 }

@@ -1,4 +1,4 @@
-class Stats {
+export class Stats {
   constructor() {
     this.stats = {
       wins: 0,
@@ -22,10 +22,4 @@ class Stats {
       blocks_destroyed: 0,
     };
   }
-}
-
-try {
-  module.exports = Stats;
-} catch (error) {
-  console.error("Error exporting Stats:", error);
 }

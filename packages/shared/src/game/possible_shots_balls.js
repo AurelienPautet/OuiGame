@@ -248,7 +248,15 @@ class possible_shot_points {
   }
 }
 
-function launch_possible_shots(N, step_size, radius, bot, data, room, ctx) {
+export function launch_possible_shots(
+  N,
+  step_size,
+  radius,
+  bot,
+  data,
+  room,
+  ctx
+) {
   for (let i = 0; i < N; i++) {
     const angle = (i * Math.PI * 2) / N;
 
@@ -269,7 +277,7 @@ function launch_possible_shots(N, step_size, radius, bot, data, room, ctx) {
   }
 }
 
-function rectRect2(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
+export function rectRect2(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
   if (
     r1x + r1w >= r2x &&
     r1x <= r2x + r2w &&
@@ -306,25 +314,4 @@ function detectCollisions2(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
     if (minOverlap === overlapBottom) return "bottom";
   }
   return "";
-}
-
-if (typeof module === "object" && module.exports) {
-  // Node.js environment
-  console.log("Loading level_loader.js in Node.js environment");
-  module.exports = {
-    launch_possible_shots,
-    // Also exported so the characterization tests can pin its edge-touch
-    // behaviour against check_collision's rectRect (they are currently
-    // identical; the test proves it before any future merge).
-    rectRect2,
-  };
-} else {
-  // Browser environment
-  console.log("Loading level_loader.js in browser environment");
-  if (!window.launch_possible_shots) {
-    window.launch_possible_shots = launch_possible_shots;
-  }
-  if (!window.rectRect2) {
-    window.rectRect2 = rectRect2;
-  }
 }

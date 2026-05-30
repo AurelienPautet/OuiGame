@@ -1,7 +1,5 @@
-const PlayerClass = require("../class/Player.js");
-global.Player = PlayerClass;
-const BotClass = require("../class/Bot.js");
-global.Bot = BotClass;
+import { Bot as BotClass } from "../Bot.js";
+
 // Characterization (golden) test pinning the per-kind bot INSTANCE SHAPE. The
 // Bot1-4 subclasses were collapsed into a single config-driven Bot +
 // BOT_CONFIGS (Phase 2 PR-C); this pins that `new Bot(..., kind)` reproduces

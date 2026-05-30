@@ -1,11 +1,6 @@
-try {
-  detectCollision =
-    require("../../shared/scripts/check_collision.js").detectCollision;
-} catch (error) {
-  console.error("Error requiring detectCollision:", error);
-}
+import { detectCollision } from "./check_collision.js";
 
-class Bullet {
+export class Bullet {
   constructor(position, angle, speed, size, max_bounce, type, emitter, room) {
     this.type = type;
     this.velocity = {
@@ -52,7 +47,7 @@ class Bullet {
       this.position.y + 2 * this.velocity.y,
       this.position.x + 2 * this.velocity.x,
       this.size.w,
-      this.size.h,    
+      this.size.h,
       obj.position.y,
       obj.position.x,
       obj.size.w,
@@ -119,10 +114,4 @@ class Bullet {
       }
     }
   }
-}
-
-try {
-  module.exports = Bullet;
-} catch (error) {
-  console.error("Error exporting Bullet class:", error);
 }

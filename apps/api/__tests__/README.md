@@ -11,9 +11,10 @@ pnpm test:watch      # watch mode
 
 ## What's covered
 
-- **`unit/`** — pure functions, no database:
+- **`unit/`** — pure functions from the `@ouigame/shared/game` package, no
+  database (these double as a smoke test that its CJS build is require-able):
   - `commons.test.js` — `makeid` token generator
-  - `collision.test.js` — geometry helpers in `shared/scripts/check_collision.js`
+  - `collision.test.js` — the geometry helpers (`check_collision`)
 - **`middleware/`** — `authMiddleware` / `optionalAuth` (token validation, expiry).
 - **`routes/`** — every API router exercised end-to-end with `supertest` against a
   real Postgres database: `auth`, `levels`, `rankings`, `stats`, `solo`, `rooms`.

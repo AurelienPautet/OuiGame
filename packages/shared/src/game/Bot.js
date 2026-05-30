@@ -1,9 +1,13 @@
+import { Player } from "./Player.js";
+import { launch_possible_moves } from "./possible_moves.js";
+import { launch_possible_shots } from "./possible_shots_balls.js";
+
 // Per-kind bot tuning. Collapses the former Bot1-4 subclasses: every variant
 // differed ONLY in these constructor fields (no method overrides), so one
 // config-driven Bot reproduces all four field-for-field. Applied AFTER the base
 // fields + mytick seeding (see the constructor), so mytick stays seeded from the
 // base min_interval_shoot (140) for every kind — the legacy super()-first order.
-const BOT_CONFIGS = {
+export const BOT_CONFIGS = {
   bot1: {
     min_interval_shoot: 170,
     max_rotation_speed: Math.PI / 200,
@@ -62,7 +66,7 @@ const BOT_CONFIGS = {
   },
 };
 
-class Bot extends Player {
+export class Bot extends Player {
   constructor(position, socketid, name, turretc, bodyc, kind) {
     super(position, socketid, name, turretc, bodyc);
 
@@ -408,16 +412,4 @@ class Bot extends Player {
     this.last_shoot.mytick = this.mytick;
     this.last_shoot.angle = this.angle;
   }
-}
-
-// Node.js: expose the class for require() (used by the characterization tests,
-// and available to any future server-side bot loop — the server does not
-// require it today). The browser loads this file as a plain <script> tag
-// where `module` is undefined, so the try/catch makes the export a no-op there
-// — the same dual-load pattern the sibling classes (Player, Block, ...) use.
-// Behaviour is unchanged in both environments.
-try {
-  module.exports = Bot;
-} catch (e) {
-  console.error("Error exporting Bot class:", e);
 }

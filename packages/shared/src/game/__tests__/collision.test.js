@@ -1,22 +1,19 @@
-const {
+import {
   rectRect,
   rectanglesSeTouchent,
   colliderect,
   distance,
   detectCollision,
-} = require("../scripts/check_collision.js");
-const { rectRect2 } = require("../class/possible_shots_balls.js");
-const {
-  intersectRaySegment,
-  getEdges,
-} = require("../scripts/check_intersect.js");
+} from "../check_collision.js";
+import { rectRect2 } from "../possible_shots_balls.js";
+import { intersectRaySegment, getEdges } from "../check_intersect.js";
 
 // Characterization (golden) tests for the shared collision math. They freeze
-// the CURRENT behaviour so the Phase 2 keystone (ESM conversion + bot
-// de-globalization) cannot silently change it: any diff here is a regression,
-// never a re-baseline. The expected values were captured from the live code.
-// Vitest globals (describe/it/expect) are ambient via the `shared` project's
-// `globals: true`, and the modules are required (shared/ is CommonJS).
+// the behaviour so the Phase 2 keystone (the ESM conversion + bot
+// de-globalization that moved this code into @ouigame/shared/game) cannot
+// silently change it: any diff here is a regression, never a re-baseline. The
+// expected values were captured from the live code. Vitest globals
+// (describe/it/expect) are ambient via the `shared` project's `globals: true`.
 
 describe("rectRect / rectRect2 — inclusive edges (>=, <=)", () => {
   it("reports overlapping rects", () => {

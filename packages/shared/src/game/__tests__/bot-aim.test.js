@@ -1,13 +1,11 @@
-const PlayerClass = require("../class/Player.js");
-// Bot.js declares `class Bot extends Player`, reading `Player` as a global the
-// way the browser <script> tags provide it. Set the global BEFORE requiring Bot
-// (and never shadow it with a local `const Player`, which breaks resolution).
-global.Player = PlayerClass;
-const Bot = require("../class/Bot.js");
+import { Bot } from "../Bot.js";
+import { Player as PlayerClass } from "../Player.js";
+import * as possibleShots from "../possible_shots_balls.js";
 
 // Characterization (golden) tests for the bot AIM MATH. The plan freezes this
 // math: any diff here is a regression, NEVER a re-baseline — the Phase 2
-// keystone (de-globalizing the bots) must reproduce these outputs exactly. The
+// keystone (ESM conversion + de-globalizing the bots) reproduces these outputs
+// exactly. The
 // expected values were captured from the live code. Vitest globals
 // (describe/it/expect/vi/beforeEach/afterEach) are ambient (globals: true).
 // Angle results that flow through Math.atan use toBeCloseTo so a last-ULP libm
@@ -26,7 +24,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  delete global.launch_possible_shots;
 });
 
 describe("Bot.angleDifference — signed shortest angle in [-PI, PI]", () => {
@@ -118,9 +115,11 @@ describe("Bot killing_aims sort — (a,b) => a.distance - b.distance + 0.1*(a.an
       { angle: 2.0, distance: 3 },
       { angle: 0.2, distance: 8 },
     ];
-    global.launch_possible_shots = (n, s, r, bot) => {
-      for (const e of entries) bot.killing_aims.push({ ...e });
-    };
+    vi.spyOn(possibleShots, "launch_possible_shots").mockImplementation(
+      (n, s, r, bot) => {
+        for (const e of entries) bot.killing_aims.push({ ...e });
+      }
+    );
     b.aim_and_shoot();
     expect(b.killing_aims).toEqual([
       { angle: 0.5, distance: 3 },
@@ -145,9 +144,11 @@ describe("Bot shoot gate — fires only when |angleDifference(angle, desired)| i
     b.shoot = () => {
       fired = true;
     };
-    global.launch_possible_shots = (n, s, r, bot) => {
-      bot.killing_aims.push({ angle: targetAngle, distance: 1 });
-    };
+    vi.spyOn(possibleShots, "launch_possible_shots").mockImplementation(
+      (n, s, r, bot) => {
+        bot.killing_aims.push({ angle: targetAngle, distance: 1 });
+      }
+    );
     b.aim_and_shoot();
     return fired;
   };

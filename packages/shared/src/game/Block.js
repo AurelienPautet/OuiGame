@@ -1,4 +1,4 @@
-class Block {
+export class Block {
   constructor(position, type) {
     this.position = position;
     this.size = {
@@ -7,10 +7,4 @@ class Block {
     };
     this.type = type;
   }
-}
-
-try {
-  module.exports = Block;
-} catch (error) {
-  console.error("Error exporting Block class:", error);
 }

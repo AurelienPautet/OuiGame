@@ -1,4 +1,4 @@
-class Mine {
+export class Mine {
   constructor(position, emitter, room) {
     this.position = position;
     this.radius = 15;
@@ -14,10 +14,4 @@ class Mine {
   update(fps_corector) {
     this.timealive += fps_corector;
   }
-}
-
-try {
-  module.exports = Mine;
-} catch (error) {
-  console.error("Error exporting Mine class:", error);
 }

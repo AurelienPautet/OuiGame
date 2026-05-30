@@ -1,13 +1,13 @@
-// check_collision.js logs a line at import time; silence it so CI output stays
-// clean, then require it lazily after the mock is in place.
-jest.spyOn(console, "log").mockImplementation(() => {});
+// The collision math now ships in the built @ouigame/shared/game package; the
+// api consumes its CommonJS build via require(), so this doubles as a smoke test
+// that the dual ESM/CJS bundle is require-able from the api's jest env.
 const {
   rectRect,
   detectCollision,
   colliderect,
   distance,
   rectanglesSeTouchent,
-} = require("../../../../shared/scripts/check_collision.js");
+} = require("@ouigame/shared/game");
 
 describe("rectRect (AABB overlap incl. touching edges)", () => {
   test("detects overlapping rectangles", () => {

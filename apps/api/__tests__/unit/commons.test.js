@@ -1,4 +1,4 @@
-const { makeid } = require("../../../../shared/scripts/commons.js");
+const { makeid } = require("@ouigame/shared/game");
 
 describe("makeid", () => {
   test("returns a string of the requested length", () => {

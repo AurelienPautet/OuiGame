@@ -1,6 +1,8 @@
-console.log("Loading level_loader.js");
+import { Block } from "./Block.js";
+import { Hole } from "./Hole.js";
+import { CollisionBox } from "./CollisionBox.js";
 
-function generateBcollision(room) {
+export function generateBcollision(room) {
   //generate the collision boxes for the blocks in the level and merge them if they are touching each other to reduce the number of collision boxes to check
   let boxed = [];
   let i = 0;
@@ -40,7 +42,7 @@ function generateBcollision(room) {
         }
       }
       room.Bcollision.push(
-        new CollisonsBox(
+        new CollisionBox(
           { x: (i % 23) * 50, y: Math.floor(i / 23) * 50 },
           { w: l * 50, h: col * 50 }
         )
@@ -60,7 +62,7 @@ function generateBcollision(room) {
         room.Bcollision[i].size.w === room.Bcollision[e].size.w
       ) {
         room.Bcollision.push(
-          new CollisonsBox(
+          new CollisionBox(
             {
               x: room.Bcollision[i].position.x,
               y: room.Bcollision[i].position.y,
@@ -94,7 +96,7 @@ function generateBcollision(room) {
         room.Bcollision[i].size.h === room.Bcollision[e].size.h
       ) {
         room.Bcollision.push(
-          new CollisonsBox(
+          new CollisionBox(
             {
               x: room.Bcollision[i].position.x,
               y: room.Bcollision[i].position.y,
@@ -141,7 +143,7 @@ function generateBcollision(room) {
   }
 }
 
-async function loadlevel(level_json, room) {
+export async function loadlevel(level_json, room) {
   room.blocklist = level_json;
   room.blocks = [];
   room.spawns = [];
@@ -173,26 +175,4 @@ async function loadlevel(level_json, room) {
     }
   }
   generateBcollision(room);
-}
-
-if (typeof module === "object" && module.exports) {
-  // Node.js environment
-  console.log("Loading level_loader.js in Node.js environment");
-  module.exports = {
-    loadlevel,
-    generateBcollision,
-  };
-
-  Block = require("../class/Block.js");
-  CollisonsBox = require("../class/CollisonsBox.js");
-  Hole = require("../class/Hole.js");
-} else {
-  // Browser environment
-  console.log("Loading level_loader.js in browser environment");
-  if (!window.generateBcollision) {
-    window.generateBcollision = generateBcollision;
-  }
-  if (!window.loadlevel) {
-    window.loadlevel = loadlevel;
-  }
 }

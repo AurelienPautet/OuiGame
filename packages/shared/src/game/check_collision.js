@@ -1,4 +1,4 @@
-function rectRect(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
+export function rectRect(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
   // are the sides of one rectangle touching the other?
 
   if (
@@ -12,7 +12,7 @@ function rectRect(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
   return false;
 }
 
-function detectCollision(rect1, rect2, velocity1) {
+export function detectCollision(rect1, rect2, velocity1) {
   // Vérifier s'il position.y a une collision
   if (
     rect1.position.x + velocity1.x + velocity1.x <
@@ -53,7 +53,7 @@ function detectCollision(rect1, rect2, velocity1) {
   return "";
 }
 
-function colliderect(
+export function colliderect(
   rect1t,
   rect1l,
   rect1w,
@@ -136,14 +136,14 @@ function colliderect(
   return "";
 }
 
-function distance(position1, size1, position2, size2) {
+export function distance(position1, size1, position2, size2) {
   return (
     (position1.x + size1.w / 2 - position2.x - size2.w / 2) ** 2 +
     (position1.y + size1.h / 2 - position2.y - size2.h / 2) ** 2
   );
 }
 
-function rectanglesSeTouchent(
+export function rectanglesSeTouchent(
   x1,
   y1,
   width1,
@@ -158,34 +158,4 @@ function rectanglesSeTouchent(
   const verticale = y1 < y2 + height2 && y1 + height1 > y2;
 
   return horizontale && verticale;
-}
-
-if (typeof module === "object" && module.exports) {
-  // Node.js environment
-  console.log("Loading level_loader.js in Node.js environment");
-  module.exports = {
-    rectRect,
-    detectCollision,
-    colliderect,
-    distance,
-    rectanglesSeTouchent,
-  };
-} else {
-  // Browser environment
-  console.log("Loading level_loader.js in browser environment");
-  if (!window.rectRect) {
-    window.rectRect = rectRect;
-  }
-  if (!window.detectCollision) {
-    window.detectCollision = detectCollision;
-  }
-  if (!window.colliderect) {
-    window.colliderect = colliderect;
-  }
-  if (!window.distance) {
-    window.distance = distance;
-  }
-  if (!window.rectanglesSeTouchent) {
-    window.rectanglesSeTouchent = rectanglesSeTouchent;
-  }
 }

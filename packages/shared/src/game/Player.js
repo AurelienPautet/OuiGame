@@ -1,16 +1,9 @@
-try {
-  ({
-    rectRect,
-    colliderect,
-  } = require("../../shared/scripts/check_collision.js"));
-  Bullet = require("../../shared/class/Bullet.js");
-  Mine = require("../../shared/class/Mine.js");
-  Stats = require("../../shared/class/Stats.js");
-} catch (e) {
-  console.error("Error requiring dependencies in Player.js:", e);
-}
+import { rectRect, colliderect } from "./check_collision.js";
+import { Bullet } from "./Bullet.js";
+import { Mine } from "./Mine.js";
+import { Stats } from "./Stats.js";
 
-class Player {
+export class Player {
   constructor(position, socketid, name, turretc, bodyc) {
     this.name = name;
     this.bodyc = bodyc;
@@ -245,10 +238,4 @@ class Player {
       if (this.velocity.y > 0) this.velocity.y = 0;
     }
   }
-}
-
-try {
-  module.exports = Player;
-} catch (e) {
-  console.error("Error exporting Player class:", e);
 }
