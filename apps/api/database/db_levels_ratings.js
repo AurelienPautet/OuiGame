@@ -1,6 +1,6 @@
 console.log(__dirname, "db_levels_ratings.js loaded");
 const path = require("path");
-const { db, schema } = require(path.join(__dirname, "..", "db"));
+const { db, schema } = require("@ouigame/db");
 const { ratings } = schema;
 const { eq, and } = require("drizzle-orm");
 const { users } = require(path.join(__dirname, "..", "shared_state.js"));

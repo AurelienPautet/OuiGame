@@ -1,10 +1,12 @@
 const { drizzle } = require("drizzle-orm/node-postgres");
 const { Pool } = require("pg");
 const schema = require("./schema");
-const path = require("path");
 
-require("dotenv").config({ path: path.join(__dirname, "../../.env") });
-
+// The connection string + SSL behaviour are env-driven. This package does NOT
+// load dotenv: env is the consumer's responsibility (apps/api's server.js loads
+// the root .env before requiring this, drizzle.config.js loads dotenv/config,
+// and the jest setup sets DB_* directly). Loading dotenv here would need a
+// brittle relative path to the repo root that only makes sense for one consumer.
 const connectionString =
   process.env.DATABASE_URL ||
   `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
@@ -29,4 +31,4 @@ pool.on("error", (err) => {
 
 const db = drizzle(pool, { schema });
 
-module.exports = { db, pool, schema };
+module.exports = { db, pool };

@@ -1,5 +1,5 @@
 const path = require("path");
-const { db, schema } = require(path.join(__dirname, "..", "db"));
+const { db, schema } = require("@ouigame/db");
 const { levels, levelsImg } = schema;
 const { ratings, rounds } = schema;
 const { players } = schema;

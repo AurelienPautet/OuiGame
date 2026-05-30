@@ -39,7 +39,7 @@
     "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate-data": "node apps/api/db/migrate_data.js",
+    "db:migrate-data": "node apps/api/scripts/migrate_data.js",
     "prepare": "husky"
   },
   "lint-staged": {

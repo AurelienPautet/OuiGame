@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
-const path = require("path");
-const { db, schema } = require(path.join(__dirname, "..", "db"));
+const { db, schema } = require("@ouigame/db");
 const { players, logings } = schema;
 const { eq } = require("drizzle-orm");
 const { verifyToken } = require("../auth_server.js");

@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const path = require("path");
-const { db, schema } = require(path.join(__dirname, "..", "db"));
+const { db, schema } = require("@ouigame/db");
 const { soloRounds, players, levels } = schema;
 const { eq, sql, sum, count, desc, and, isNotNull } = require("drizzle-orm");
 const {
