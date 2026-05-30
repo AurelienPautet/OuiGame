@@ -20,10 +20,6 @@ export default defineConfig([
         ...globals.browser,
         // Google Identity Services, injected via an external <script> tag.
         google: "readonly",
-        // Shared game classes/helpers served from /shared and loaded as plain
-        // <script> globals by the engine (same pattern as the shared/ package).
-        Room: "readonly",
-        loadlevel: "readonly",
       },
       parserOptions: {
         ecmaVersion: "latest",
@@ -63,8 +59,6 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         google: "readonly",
-        Room: "readonly",
-        loadlevel: "readonly",
       },
     },
     rules: {

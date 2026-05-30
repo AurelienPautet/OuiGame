@@ -32,7 +32,7 @@
     "test:watch": "jest --watch",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "typecheck": "turbo run typecheck && tsc -p shared/tsconfig.json --noEmit",
+    "typecheck": "turbo run typecheck",
     "lint": "eslint . && pnpm --filter @ouigame/web lint",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -43,7 +43,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "{apps/api,shared}/**/*.js": [
+    "apps/api/**/*.js": [
       "eslint --fix",
       "prettier --write"
     ],

@@ -151,14 +151,6 @@ export class GameEngine {
     this.startTime = performance.now();
     this.gameOverTriggered = false;
 
-    // Check if Room class is available globally (loaded via script tag)
-    if (typeof Room === "undefined") {
-      console.error(
-        "Room class not loaded. Make sure Shared scripts are included."
-      );
-      throw new Error("Room class not available");
-    }
-
     // Request level data from server
     return new Promise((resolve, reject) => {
       if (!this.socket) {
