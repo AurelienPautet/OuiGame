@@ -69,6 +69,8 @@
     "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^9.39.4",
     "@ouigame/config-ts": "workspace:*",
+    "@swc/core": "^1.7.0",
+    "@swc/jest": "^0.2.39",
     "@types/node": "^24.12.4",
     "@vitejs/plugin-react": "^5.1.1",
     "drizzle-kit": "^0.31.10",
@@ -83,6 +85,7 @@
     "prettier": "^3.8.3",
     "supertest": "^7.2.2",
     "turbo": "^2.5.0",
+    "tsx": "^4.22.3",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.7"

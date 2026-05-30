@@ -22,9 +22,15 @@
     "helmet": "^8.1.0",
     "pg": "^8.21.0",
     "socket.io": "^4.8.1",
+    "tsx": "^4.22.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@ouigame/config-ts": "workspace:*"
+    "@ouigame/config-ts": "workspace:*",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/supertest": "^6.0.0",
+    "typescript": "~6.0.3"
   }
 }

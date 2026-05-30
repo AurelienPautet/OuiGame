@@ -1,11 +1,18 @@
 {
   "extends": "@ouigame/config-ts/tsconfig.base.json",
+  // Inherit module:esnext + moduleResolution:bundler from the base. This is
+  // load-bearing: it lets @ouigame/shared/{api,socket} resolve to their .ts
+  // types (under nodenext the api would resolve to the typeless dist/*.cjs and
+  // the shared source's extensionless imports would error). The runtime is tsx,
+  // which has its own resolver — verified to load the CJS @ouigame/db + the
+  // ESM game from .ts.
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["**/*.js"],
-  "exclude": ["node_modules", "dist", "**/__tests__/**"]
+  // Transitional: both .js and .ts while the conversion is in flight (allowJs +
+  // checkJs:false from the base means the remaining .js is parsed, not checked).
+  // Narrowed to **/*.ts in the final cutover commit.
+  "include": ["**/*.js", "**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
