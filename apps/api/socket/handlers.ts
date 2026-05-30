@@ -151,7 +151,9 @@ function registerSocketHandlers({
     });
 
     socket.on("play", (playerName, turretc, bodyc, room_id) => {
-      const room = rooms[room_id];
+      // room_id arrives as a number or its string form; the rooms registry is
+      // keyed by numeric id, so normalize before the lookup.
+      const room = rooms[Number(room_id)];
       if (room == undefined) {
         socket.emit("id-fail");
         return;
@@ -207,7 +209,9 @@ function registerSocketHandlers({
         return;
       }
 
-      const room = rooms[data.room_id];
+      // data.room_id may be a number, its string form, or null; the registry is
+      // keyed by numeric id (Number(null) === 0 simply misses, as before).
+      const room = rooms[Number(data.room_id)];
       const player = room?.players?.[socket.id];
       if (!player || player.position == undefined) return;
       if (room.countdownActive) return; // can see, but not act, during countdown

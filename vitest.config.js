@@ -15,7 +15,7 @@ export default defineConfig({
           root: "apps/web",
           environment: "jsdom",
           globals: true,
-          include: ["src/**/*.{test,spec}.{js,jsx}"],
+          include: ["src/**/*.{test,spec}.{js,jsx,ts,tsx}"],
         },
       },
       {

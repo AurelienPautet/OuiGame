@@ -66,6 +66,11 @@ export default defineConfig([
         "error",
         { varsIgnorePattern: "^[A-Z_]", argsIgnorePattern: "^[A-Z_]" },
       ],
+      // `any` is a tracked code-smell, not a hard error: the game engine wraps
+      // the still-untyped @ouigame/shared/game runtime (bullet/mine entities,
+      // the LocalIO emit shim), and tests use it for mocks. Phase 5 (strictness
+      // ratchet) tightens this back to error once the runtime is typed.
+      "@typescript-eslint/no-explicit-any": "warn",
       "react-refresh/only-export-components": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "warn",

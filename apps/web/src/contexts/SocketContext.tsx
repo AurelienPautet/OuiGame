@@ -7,14 +7,19 @@ import {
 } from "react";
 import { io, type Socket } from "socket.io-client";
 import { onAuthChange } from "../api/authEvents";
+import { storage } from "../lib/storage";
 import type {
   ServerToClientEvents,
   ClientToServerEvents,
 } from "@ouigame/shared/socket";
 
-const SERVER_URL = import.meta.env.PROD
-  ? "https://wiitank.pautet.net"
-  : "http://localhost:8000";
+// VITE_SOCKET_URL (build-time, e.g. the itch.io build) wins; otherwise the
+// hosted prod / local dev default — so the normal build is unchanged.
+const SERVER_URL =
+  import.meta.env.VITE_SOCKET_URL ??
+  (import.meta.env.PROD
+    ? "https://wiitank.pautet.net"
+    : "http://localhost:8000");
 
 // socket.io-client's generic order is <ListenEvents, EmitEvents> = (S2C, C2S).
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -27,7 +32,11 @@ interface SocketContextValue {
 
 const SocketContext = createContext<SocketContextValue | null>(null);
 
-export const useSocket = () => useContext(SocketContext);
+export const useSocket = () => {
+  const ctx = useContext(SocketContext);
+  if (!ctx) throw new Error("useSocket must be used within SocketProvider");
+  return ctx;
+};
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<GameSocket | null>(null);
@@ -41,7 +50,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     // returned socket to the typed shape. This keeps full per-event typing on
     // `sock.on`/`sock.emit` below (only the io() call itself is asserted).
     const sock = io(SERVER_URL, {
-      auth: (cb) => cb({ token: localStorage.getItem("session_id") || null }),
+      auth: (cb) => cb({ token: storage.getSessionId() }),
     }) as GameSocket;
 
     sock.on("connect", () => {
@@ -59,7 +68,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     // Re-authenticate the live socket when the user logs in or out without a
     // full reconnect.
     const unsubscribe = onAuthChange(() => {
-      const token = localStorage.getItem("session_id");
+      const token = storage.getSessionId();
       if (token) {
         sock.emit("authenticate", token);
       } else {
