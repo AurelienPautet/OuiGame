@@ -1,5 +1,69 @@
+// Per-kind bot tuning. Collapses the former Bot1-4 subclasses: every variant
+// differed ONLY in these constructor fields (no method overrides), so one
+// config-driven Bot reproduces all four field-for-field. Applied AFTER the base
+// fields + mytick seeding (see the constructor), so mytick stays seeded from the
+// base min_interval_shoot (140) for every kind — the legacy super()-first order.
+const BOT_CONFIGS = {
+  bot1: {
+    min_interval_shoot: 170,
+    max_rotation_speed: Math.PI / 200,
+    max_bulletcount: 3,
+    shoot_speed: 5,
+    precision: 0.4,
+    number_of_rays: 50,
+    size_of_rays: 10,
+    steps_of_rays: 10,
+    shoot_max_bounce: 3,
+    bullet_type: 1,
+    bullet_size: { w: 15, h: 15 },
+    can: { move: false, shoot: true, plant: true, spam: true },
+  },
+  bot2: {
+    min_interval_shoot: 60,
+    max_rotation_speed: Math.PI / 100,
+    max_bulletcount: 3,
+    shoot_speed: 5,
+    precision: 0.1,
+    number_of_rays: 50,
+    size_of_rays: 10,
+    steps_of_rays: 10,
+    shoot_max_bounce: 3,
+    bullet_type: 1,
+    bullet_size: { w: 15, h: 15 },
+    can: { move: true, shoot: true, plant: true, spam: true },
+  },
+  bot3: {
+    min_interval_shoot: 90,
+    max_rotation_speed: Math.PI / 100,
+    max_bulletcount: 3,
+    shoot_speed: 10,
+    precision: 0.01,
+    number_of_rays: 50,
+    size_of_rays: 10,
+    steps_of_rays: 10,
+    shoot_max_bounce: 1,
+    bullet_type: 2,
+    bullet_size: { w: 15, h: 15 },
+    can: { move: true, shoot: true, plant: true, spam: true },
+  },
+  bot4: {
+    min_interval_shoot: 90,
+    max_rotation_speed: Math.PI / 80,
+    max_bulletcount: 3,
+    shoot_speed: 10,
+    precision: 0.01,
+    number_of_rays: 50,
+    size_of_rays: 5,
+    steps_of_rays: 5,
+    shoot_max_bounce: 3,
+    bullet_type: 2,
+    bullet_size: { w: 20, h: 20 },
+    can: { move: false, shoot: true, plant: true, spam: true },
+  },
+};
+
 class Bot extends Player {
-  constructor(position, socketid, name, turretc, bodyc) {
+  constructor(position, socketid, name, turretc, bodyc, kind) {
     super(position, socketid, name, turretc, bodyc);
 
     this.killing_aims = [];
@@ -72,6 +136,30 @@ class Bot extends Player {
     this.opposit_dir_coef = 0.1;
 
     this.mytick = Math.floor(Math.random() * this.min_interval_shoot);
+
+    // Apply the per-kind config LAST, so mytick above is seeded from the base
+    // min_interval_shoot (140) regardless of kind (matches the legacy Bot1-4
+    // where super() ran before the subclass reassigned min_interval_shoot).
+    if (kind) {
+      const cfg = BOT_CONFIGS[kind];
+      this.min_interval_shoot = cfg.min_interval_shoot;
+      this.max_rotation_speed = cfg.max_rotation_speed;
+      this.max_bulletcount = cfg.max_bulletcount;
+      this.shoot_speed = cfg.shoot_speed;
+      this.precision = cfg.precision;
+      this.number_of_rays = cfg.number_of_rays;
+      this.size_of_rays = cfg.size_of_rays;
+      this.steps_of_rays = cfg.steps_of_rays;
+      this.shoot_max_bounce = cfg.shoot_max_bounce;
+      this.bullet_type = cfg.bullet_type;
+      this.bullet_size = { w: cfg.bullet_size.w, h: cfg.bullet_size.h };
+      this.can = {
+        move: cfg.can.move,
+        shoot: cfg.can.shoot,
+        plant: cfg.can.plant,
+        spam: cfg.can.spam,
+      };
+    }
   }
 
   update(room, fps_corector, ctx, debug_visual) {
