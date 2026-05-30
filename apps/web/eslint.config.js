@@ -66,15 +66,24 @@ export default defineConfig([
         "error",
         { varsIgnorePattern: "^[A-Z_]", argsIgnorePattern: "^[A-Z_]" },
       ],
-      // `any` is a tracked code-smell, not a hard error: the game engine wraps
-      // the still-untyped @ouigame/shared/game runtime (bullet/mine entities,
-      // the LocalIO emit shim), and tests use it for mocks. Phase 5 (strictness
-      // ratchet) tightens this back to error once the runtime is typed.
-      "@typescript-eslint/no-explicit-any": "warn",
+      // Phase 5 ratchet: `any` is now an error. The engine's game-runtime
+      // boundary is typed via minimal interfaces + the @ouigame/shared/game
+      // ambient (RenderBullet/RenderMine) and the shared socket payload types,
+      // so no `any` remains in web source.
+      "@typescript-eslint/no-explicit-any": "error",
       "react-refresh/only-export-components": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "warn",
       "react-hooks/rules-of-hooks": "warn",
+    },
+  },
+
+  // Test files: `any` is fine for mocks / fixtures (they run via Vitest, not the
+  // strict type gate).
+  {
+    files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ]);

@@ -148,7 +148,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         isPlaying: true,
         isPaused: false,
         mode: "campaign",
-        levelId: levelIds[0],
+        // The `levelIds.length === 0` guard above proves index 0 is present.
+        levelId: levelIds[0]!,
         roomId: null,
         playerName,
         tankColors: localColors(),
@@ -192,17 +193,20 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const nextIndex = campaignIndex + 1;
+    // The early `clearedCount >= campaignLevelIds.length` return above means
+    // nextIndex (= clearedCount) is in bounds, so this lookup is defined.
+    const nextLevelId = campaignLevelIds[nextIndex]!;
     setGameState((prev) => ({
       ...prev,
       campaignIndex: nextIndex,
-      levelId: campaignLevelIds[nextIndex],
+      levelId: nextLevelId,
       lives: newLives,
       runNonce: prev.runNonce + 1,
     }));
     return {
       type: "next",
       gainedLife,
-      nextLevelId: campaignLevelIds[nextIndex],
+      nextLevelId,
     };
   }, [gameState]);
 

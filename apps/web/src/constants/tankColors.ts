@@ -18,7 +18,8 @@ export const DEFAULT_TANK_COLOR: string = "orange";
 // Resolve a persisted index to a color name, falling back to the default.
 export function colorFromIndex(index: number | string | null): string {
   const i = Number(index);
+  // The `i >= 0 && i < TANK_COLORS.length` guard proves the index is in range.
   return Number.isInteger(i) && i >= 0 && i < TANK_COLORS.length
-    ? TANK_COLORS[i]
+    ? TANK_COLORS[i]!
     : DEFAULT_TANK_COLOR;
 }

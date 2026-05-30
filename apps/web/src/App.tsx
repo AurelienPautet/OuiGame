@@ -21,7 +21,16 @@ import { LevelEditor, CampaignEditor } from "./pages";
 const named = (
   importer: () => Promise<Record<string, ComponentType>>,
   name: string
-) => lazy(() => importer().then((m) => ({ default: m[name] })));
+) =>
+  lazy(() =>
+    importer().then((m) => {
+      const component = m[name];
+      if (!component) {
+        throw new Error(`Module is missing expected export "${name}"`);
+      }
+      return { default: component };
+    })
+  );
 
 const AuthModal = named(
   () => import("./components/modals/AuthModal"),

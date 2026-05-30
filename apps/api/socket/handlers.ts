@@ -167,31 +167,32 @@ function registerSocketHandlers({
         socket.leave("lobby" + serverid);
         socket.join(String(room.id));
         io.to(String(room.id)).emit("player-connection", playerName);
+        // room.levels holds level IDs; the current entry is present for a live
+        // room.
+        const levelId = room.levels[room.levelid];
         // level_change_info is emitted as an ARRAY (the client reads levels[0]),
         // exactly as the old format_and_send_levels did — [] when missing.
-        levelsService.getLevel(room.levels[room.levelid]).then((level) => {
-          socket.emit("level_change_info", level ? [level] : []);
-        });
+        if (levelId !== undefined) {
+          levelsService.getLevel(levelId).then((level) => {
+            socket.emit("level_change_info", level ? [level] : []);
+          });
 
-        // Send user's current rating for this level
-        if (users[socket.id]) {
-          ratingsRepo
-            .getRating(
-              room.levels[room.levelid], // room.levels holds level IDs
-              users[socket.id].playerId
-            )
-            .then((stars) => {
+          // Send user's current rating for this level
+          const user = users[socket.id];
+          if (user) {
+            ratingsRepo.getRating(levelId, user.playerId).then((stars) => {
               socket.emit("your_level_rating", stars ? stars : 0);
             });
-        }
+          }
 
-        socket.emit("level_change", {
-          // room.blocks / room.Bcollision are opaque (`unknown`) on the ambient
-          // Room handle; narrow to the wire DTO shapes at the emit boundary.
-          blocks: room.blocks as Block[],
-          Bcollision: room.Bcollision as CollisonsBox[],
-          level_id: room.levels[room.levelid],
-        });
+          socket.emit("level_change", {
+            // room.blocks / room.Bcollision are opaque (`unknown`) on the ambient
+            // Room handle; narrow to the wire DTO shapes at the emit boundary.
+            blocks: room.blocks as Block[],
+            Bcollision: room.Bcollision as CollisonsBox[],
+            level_id: levelId,
+          });
+        }
         room_list(0);
       } else {
         socket.emit("id-fail");

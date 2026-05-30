@@ -46,9 +46,9 @@ async function getLevel(levelId: number) {
 // GET /api/levels/:id/json — content payload for play, or null when missing.
 async function getLevelJson(levelId: number) {
   const result = await levelsRepo.selectContentById(levelId);
-  if (result.length === 0) return null;
-
   const row = result[0];
+  if (row === undefined) return null;
+
   const creatorName = await getCreatorName(row.creatorId);
   const img = await getImgFromLevelId(levelId);
 
@@ -77,7 +77,8 @@ async function saveLevel(
     maxPlayers,
     type,
   });
-  const levelId = result[0].id;
+  // A single-row insert with .returning() always yields exactly one row.
+  const levelId = result[0]!.id;
   await levelsRepo.insertLevelImg(levelId, hexData);
   return { levelId };
 }

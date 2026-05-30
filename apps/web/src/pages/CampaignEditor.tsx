@@ -76,7 +76,12 @@ export const CampaignEditor = () => {
       const next = [...prev];
       const target = index + delta;
       if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target], next[index]];
+      const a = next[index];
+      const b = next[target];
+      // index is a valid map index and target was just bounds-checked, so both are defined.
+      if (a === undefined || b === undefined) return prev;
+      next[index] = b;
+      next[target] = a;
       return next;
     });
   };
@@ -91,6 +96,7 @@ export const CampaignEditor = () => {
       if (dragIndex === null || dragIndex === toIndex) return prev;
       const next = [...prev];
       const [moved] = next.splice(dragIndex, 1);
+      if (moved === undefined) return prev;
       next.splice(toIndex, 0, moved);
       return next;
     });
@@ -121,7 +127,7 @@ export const CampaignEditor = () => {
     setSaving(true);
     saveCampaign.mutate(
       {
-        id: campaignId ? parseInt(campaignId) : undefined,
+        ...(campaignId ? { id: parseInt(campaignId) } : {}),
         name: name.trim(),
         description,
         levelIds: pickedIds,

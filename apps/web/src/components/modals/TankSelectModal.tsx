@@ -44,11 +44,13 @@ export const TankSelectModal = () => {
   };
 
   const handleSave = () => {
+    // bodyIndex/turretIndex are always clamped to [0, COLORS.length - 1], so
+    // these lookups are guaranteed to be defined.
     storage.setTankColors(
       bodyIndex,
       turretIndex,
-      COLORS[bodyIndex],
-      COLORS[turretIndex]
+      COLORS[bodyIndex]!,
+      COLORS[turretIndex]!
     );
     closeModal();
   };

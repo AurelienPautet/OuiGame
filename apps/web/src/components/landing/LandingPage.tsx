@@ -54,13 +54,14 @@ export const LandingPage = () => {
       const turretIdx = storage.getTurretIndex();
 
       setTankColors({
+        // The `idx >= 0 && idx < COLORS.length` guards prove the index is in range.
         body:
           bodyIdx !== null && bodyIdx >= 0 && bodyIdx < COLORS.length
-            ? COLORS[bodyIdx]
+            ? COLORS[bodyIdx]!
             : "orange",
         turret:
           turretIdx !== null && turretIdx >= 0 && turretIdx < COLORS.length
-            ? COLORS[turretIdx]
+            ? COLORS[turretIdx]!
             : "orange",
       });
     };

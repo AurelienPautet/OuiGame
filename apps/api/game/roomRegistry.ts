@@ -73,9 +73,11 @@ function createRoomRegistry({
     const room = new Room(name, rounds, list_id, creator, io);
     room.maxplayernb = (await levelsRepo.getMinMaxPlayers(list_id))
       .min as number;
-    const level_json = await levelsService.getLevelJson(
-      room.levels[room.levelid]
-    );
+    // room.levels is the list_id passed above; the entry at levelid (0 on a
+    // fresh room) is present whenever the room was created with levels.
+    const levelId = room.levels[room.levelid];
+    const level_json =
+      levelId !== undefined ? await levelsService.getLevelJson(levelId) : null;
     rooms[room.id] = room;
     if (room) {
       loadlevel(level_json!.data, room);

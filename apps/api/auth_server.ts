@@ -7,9 +7,10 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 async function verifyToken(idToken: string) {
   try {
+    const audience = process.env.GOOGLE_CLIENT_ID;
     const ticket = await client.verifyIdToken({
       idToken: idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      ...(audience !== undefined ? { audience } : {}),
     });
 
     const payload = ticket.getPayload()!;

@@ -144,6 +144,7 @@ export const EndGameScreen = ({
     const handleLevelChangeInfo = (levels: LevelDTO[]) => {
       if (levels && levels.length > 0) {
         const level = levels[0];
+        if (!level) return;
         setLevelInfo({
           id: level.level_id,
           name: level.level_name || "Unknown",

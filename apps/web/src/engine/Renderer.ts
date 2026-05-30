@@ -174,7 +174,7 @@ export class Renderer {
 
   clear() {
     this.c.clearRect(0, 0, this.width, this.height);
-    if (this.fc) {
+    if (this.fc && this.images.bg) {
       this.fc.globalAlpha = 0.05;
       this.fc.drawImage(this.images.bg, 0, 0, this.width, this.height);
     }
@@ -210,8 +210,8 @@ export class Renderer {
 
     // Draw players
     if (players) {
-      Object.keys(players).forEach((socketId) => {
-        this._drawPlayer(players[socketId], socketId);
+      Object.entries(players).forEach(([socketId, player]) => {
+        this._drawPlayer(player, socketId);
       });
     }
   }
@@ -236,13 +236,10 @@ export class Renderer {
   }
 
   _drawHole(h: Hole) {
-    this.c.drawImage(
-      this.images.hole,
-      h.position.x,
-      h.position.y,
-      h.size.w,
-      h.size.h
-    );
+    const holeImg = this.images.hole;
+    if (holeImg) {
+      this.c.drawImage(holeImg, h.position.x, h.position.y, h.size.w, h.size.h);
+    }
 
     if (this.debugVisual) {
       this.c.beginPath();
@@ -256,13 +253,15 @@ export class Renderer {
 
   _drawBlock(block: Block) {
     const img = block.type === 1 ? this.images.block1 : this.images.block2;
-    this.c.drawImage(
-      img,
-      block.position.x,
-      block.position.y,
-      block.size.w,
-      block.size.h
-    );
+    if (img) {
+      this.c.drawImage(
+        img,
+        block.position.x,
+        block.position.y,
+        block.size.w,
+        block.size.h
+      );
+    }
   }
 
   _drawCollisionDebug(Bcollision: CollisionBox[]) {
@@ -285,15 +284,18 @@ export class Renderer {
       this.c.filter = `hue-rotate(${hueRotation}deg)`;
     }
 
-    this._drawImageRot(
-      this.c,
-      this.images.bullet,
-      bullet.position.x,
-      bullet.position.y,
-      bullet.size.w,
-      bullet.size.h,
-      bullet.angle
-    );
+    const bulletImg = this.images.bullet;
+    if (bulletImg) {
+      this._drawImageRot(
+        this.c,
+        bulletImg,
+        bullet.position.x,
+        bullet.position.y,
+        bullet.size.w,
+        bullet.size.h,
+        bullet.angle
+      );
+    }
 
     this.c.restore();
 
@@ -329,10 +331,11 @@ export class Renderer {
       }
 
       // Draw tracks on fading canvas
-      if (this.fc && this.drawTicks % 15 === 0) {
+      const tracksImg = this.images.body_tracks;
+      if (this.fc && tracksImg && this.drawTicks % 15 === 0) {
         this._drawImageRot(
           this.fc,
-          this.images.body_tracks,
+          tracksImg,
           player.position.x,
           player.position.y,
           player.size.w,
@@ -355,9 +358,10 @@ export class Renderer {
       }
 
       // Draw bot marker
-      if (socketId.includes("bot")) {
+      const botMarkerImg = this.images.turret_decalc_bot;
+      if (socketId.includes("bot") && botMarkerImg) {
         this._drawTurretRot(
-          this.images.turret_decalc_bot,
+          botMarkerImg,
           player.position.x,
           player.position.y,
           player.turretsize.w,
@@ -367,10 +371,11 @@ export class Renderer {
       }
     } else {
       // Draw dead player
-      if (this.fc) {
+      const deadImg = this.images.dead;
+      if (this.fc && deadImg) {
         this._drawImageRot(
           this.fc,
-          this.images.dead,
+          deadImg,
           player.position.x,
           player.position.y,
           player.size.w,
@@ -431,8 +436,9 @@ export class Renderer {
     // Draw particles
     if (particles) {
       for (let i = particles.length - 1; i >= 0; i--) {
-        if (particles[i].timealive < particles[i].timelife) {
-          particles[i].draw(this.c);
+        const particle = particles[i];
+        if (particle && particle.timealive < particle.timelife) {
+          particle.draw(this.c);
         }
       }
     }
@@ -440,8 +446,9 @@ export class Renderer {
     // Draw shockwaves
     if (chockwaves) {
       for (let i = chockwaves.length - 1; i >= 0; i--) {
-        if (chockwaves[i].timealive < chockwaves[i].timelife) {
-          chockwaves[i].draw(this.c);
+        const chockwave = chockwaves[i];
+        if (chockwave && chockwave.timealive < chockwave.timelife) {
+          chockwave.draw(this.c);
         }
       }
     }

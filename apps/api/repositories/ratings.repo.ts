@@ -10,7 +10,7 @@ async function getRating(levelId: number, playerId: number) {
     .select()
     .from(ratings)
     .where(and(eq(ratings.playerId, playerId), eq(ratings.levelId, levelId)));
-  return res.length > 0 ? res[0].stars : false;
+  return res[0]?.stars ?? false;
 }
 
 // Insert a rating, or update the existing one (one row per player+level).
