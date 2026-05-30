@@ -23,7 +23,8 @@ async function levelStats(levelId: number) {
     })
     .from(soloRounds)
     .where(eq(soloRounds.levelId, levelId));
-  return result[0];
+  // Aggregate (count/sum) with no GROUP BY always yields exactly one row.
+  return result[0]!;
 }
 
 // Best successful time per player for a level (anonymous as null username),
@@ -73,7 +74,8 @@ async function myStats(playerId: number) {
     })
     .from(soloRounds)
     .where(eq(soloRounds.playerId, playerId));
-  return result[0];
+  // Aggregate (count/sum) with no GROUP BY always yields exactly one row.
+  return result[0]!;
 }
 
 export {

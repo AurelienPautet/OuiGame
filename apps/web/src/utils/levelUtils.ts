@@ -25,7 +25,7 @@ export function extractBotCounts(
   const counts: Record<number, number> = {};
   for (let i = 0; i < levelJson.length; i++) {
     const cellValue = levelJson[i];
-    if (cellValue > 10) {
+    if (cellValue !== undefined && cellValue > 10) {
       const botType = cellValue - 10;
       counts[botType] = (counts[botType] || 0) + 1;
     }

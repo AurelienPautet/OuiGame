@@ -161,7 +161,8 @@ async function insertCampaign({
     .insert(campaigns)
     .values({ name, description, creatorId })
     .returning({ id: campaigns.id });
-  return inserted[0].id;
+  // A single-row insert with .returning() always yields exactly one row.
+  return inserted[0]!.id;
 }
 
 async function updateCampaign(

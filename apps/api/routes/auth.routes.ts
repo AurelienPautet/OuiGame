@@ -53,9 +53,10 @@ async function logAttempt(
       .select({ id: players.id })
       .from(players)
       .where(eq(players.email, email));
-    if (res.length === 0) return;
+    const player = res[0];
+    if (player === undefined) return;
     await db.insert(logings).values({
-      playerId: res[0].id,
+      playerId: player.id,
       // ip_address is NOT NULL; req.ip can be undefined (e.g. no trust-proxy /
       // unknown socket), so record an empty string rather than failing insert.
       ipAddress: ipAddress ?? "",
@@ -107,7 +108,8 @@ router.post("/signup", async (req: Request, res: Response) => {
       })
       .returning({ id: players.id });
 
-    const playerId = insertResult[0].id;
+    // A single-row insert with .returning() always yields exactly one row.
+    const playerId = insertResult[0]!.id;
     const sessionToken = await createSession(playerId);
 
     await logAttempt(email, ipAddress, "sign_up_success");
@@ -135,13 +137,13 @@ router.post("/login", async (req: Request, res: Response) => {
       .from(players)
       .where(eq(players.email, email));
 
-    if (result.length === 0) {
+    const user = result[0];
+    if (user === undefined) {
       return res
         .status(401)
         .json({ error: "email", message: "Email not found" });
     }
 
-    const user = result[0];
     const isMatch = await bcrypt.compare(password, user.passwordHash as string);
 
     if (!isMatch) {
@@ -176,8 +178,8 @@ router.post("/google", async (req: Request, res: Response) => {
       .from(players)
       .where(eq(players.googleId, googleId));
 
-    if (result.length > 0) {
-      const user = result[0];
+    const user = result[0];
+    if (user !== undefined) {
       const sessionToken = await createSession(user.id);
       await logAttempt(user.email, ipAddress, "login_success_google");
       return res.json({
@@ -223,7 +225,8 @@ router.post("/google", async (req: Request, res: Response) => {
       })
       .returning({ id: players.id });
 
-    const sessionToken = await createSession(insertResult[0].id);
+    // A single-row insert with .returning() always yields exactly one row.
+    const sessionToken = await createSession(insertResult[0]!.id);
     await logAttempt(email, ipAddress, "signup_success_google");
 
     res.json({ username, email, sessionToken });

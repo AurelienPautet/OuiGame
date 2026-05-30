@@ -11,9 +11,10 @@ const { levelsImg, rounds, players, soloRounds } = schema;
 
 // Parse a positive-integer path/query param, or null if it isn't one. Express 5
 // types a string-keyed param as `string | string[]` (a repeated param yields an
-// array); a non-string value coerces to NaN here and is rejected, matching the
-// prior "invalid id" behaviour for anything that isn't a single positive int.
-function parseId(value: string | string[]) {
+// array); under noUncheckedIndexedAccess a missing param is `undefined`. Any
+// non-string (array, undefined) is rejected here, matching the prior "invalid
+// id" behaviour for anything that isn't a single positive int.
+function parseId(value: string | string[] | undefined) {
   if (typeof value !== "string") return null;
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
@@ -24,7 +25,7 @@ async function getCreatorName(creatorId: number) {
     .select({ username: players.username })
     .from(players)
     .where(eq(players.id, creatorId));
-  return res.length > 0 ? res[0].username : "Unknown";
+  return res[0]?.username ?? "Unknown";
 }
 
 async function getImgFromLevelId(levelId: number) {
@@ -32,8 +33,9 @@ async function getImgFromLevelId(levelId: number) {
     .select({ img: levelsImg.img })
     .from(levelsImg)
     .where(eq(levelsImg.levelId, levelId));
-  if (res.length === 0) return null;
-  return (res[0].img as Buffer).toString("hex");
+  const row = res[0];
+  if (row === undefined) return null;
+  return (row.img as Buffer).toString("hex");
 }
 
 // --- Batched lookups used by formatLevels (avoids N+1 over a list) ---

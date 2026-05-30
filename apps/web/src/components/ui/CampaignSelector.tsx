@@ -81,8 +81,8 @@ export function CampaignSelector({
               completed={c.completed || false}
               author={c.campaign_creator_name}
               onClick={() => (isMy ? undefined : onSelect?.(c.campaign_id))}
-              onEdit={isMy ? onEdit : undefined}
-              onDelete={isMy ? onDelete : undefined}
+              {...(isMy && onEdit ? { onEdit } : {})}
+              {...(isMy && onDelete ? { onDelete } : {})}
             />
           ))
         )}

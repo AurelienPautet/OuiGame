@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "strict": true,
+    // Phase 5 strictness ratchet: index access yields T | undefined (forces
+    // guarding array/record lookups), and optional props can't be assigned
+    // `undefined` explicitly (distinguishes "absent" from "present-but-undefined").
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,

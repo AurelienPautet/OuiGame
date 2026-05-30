@@ -41,15 +41,18 @@ function createTickLoop({
       // Bail if the room was emptied/deleted during the wait.
       if (rooms[room.id] === undefined) return;
 
-      const level_json = await levelsService.getLevelJson(
-        room.levels[room.levelid]
-      );
+      // room.levels holds level IDs; the entry at the current index is always
+      // present for a live room, but guard so a malformed/empty list is a no-op.
+      const levelId = room.levels[room.levelid];
+      if (levelId === undefined) return;
+
+      const level_json = await levelsService.getLevelJson(levelId);
       await loadlevel(level_json!.data, room);
 
       // Re-check after the awaits — the room could have emptied meanwhile.
       if (rooms[room.id] === undefined) return;
 
-      levelsService.getLevel(room.levels[room.levelid]).then((level) => {
+      levelsService.getLevel(levelId).then((level) => {
         room.io.to(room.id).emit("level_change_info", level ? [level] : []);
       });
 
@@ -70,11 +73,11 @@ function createTickLoop({
       roomTimers.set(room.id, tracked);
 
       for (const socketid in room.players) {
-        if (users[socketid]) {
-          const stars = await ratingsRepo.getRating(
-            (room.levels[room.levelid] as unknown as { id: number }).id,
-            users[socketid].playerId
-          );
+        const user = users[socketid];
+        if (user) {
+          // room.levels holds level IDs directly; pass it as-is (matching the
+          // `play` handler) so getRating receives the real id.
+          const stars = await ratingsRepo.getRating(levelId, user.playerId);
           io.to(socketid).emit("your_level_rating", stars ? stars : 0);
         }
       }
@@ -92,14 +95,15 @@ function createTickLoop({
 
     for (const room of Object.values(rooms)) {
       if (room.update(fps_corector)) {
+        // room.levels holds level IDs; the current entry is present for a live
+        // room. Guard so a malformed/empty list skips the round insert.
+        const levelId = room.levels[room.levelid];
         for (const socketid in room.players) {
           const player = room.players[socketid];
-          const playerId = users[socketid] ? users[socketid].playerId : null;
-          statsRepo.insertRound(
-            playerId,
-            room.levels[room.levelid],
-            player.round_stats.stats
-          );
+          if (player === undefined || levelId === undefined) continue;
+          const user = users[socketid];
+          const playerId = user ? user.playerId : null;
+          statsRepo.insertRound(playerId, levelId, player.round_stats.stats);
           player.round_stats.reset();
         }
 

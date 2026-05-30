@@ -10,7 +10,11 @@
  * as window globals.
  */
 import { Room, loadlevel } from "@ouigame/shared/game";
-import type { RoomPlayer } from "@ouigame/shared/game";
+import type {
+  RoomPlayer,
+  RenderBullet,
+  RenderMine,
+} from "@ouigame/shared/game";
 import type { Socket } from "socket.io-client";
 import type {
   ClientToServerEvents,
@@ -68,26 +72,39 @@ class LocalIO {
     this.sounds = sounds;
   }
 
-  emit(event: string, data: any) {
+  // The Room runtime forwards the union of these payloads (PositionEvent /
+  // PositionAngleEvent for explosions, SoundEvents for tick_sounds). `data` is
+  // typed `unknown` and narrowed per-event rather than trusting a single shape.
+  emit(event: string, data: unknown) {
     // Handle particle events
     switch (event) {
-      case "ricochet_explosion":
-        this.particles.ricochetSparks(data.position, data.angle, 20);
+      case "ricochet_explosion": {
+        const { position, angle } = data as PositionAngleEvent;
+        this.particles.ricochetSparks(position, angle, 20);
         break;
-      case "bullet_explosion":
-        this.particles.bulletExplosion(data.position, 100);
+      }
+      case "bullet_explosion": {
+        const { position } = data as PositionEvent;
+        this.particles.bulletExplosion(position, 100);
         break;
-      case "shoot_explosion":
-        this.particles.shootExplosion(data.position, data.angle, 30);
+      }
+      case "shoot_explosion": {
+        const { position, angle } = data as PositionAngleEvent;
+        this.particles.shootExplosion(position, angle, 30);
         break;
-      case "player_explosion":
-        this.particles.explosion(data.position, 100);
+      }
+      case "player_explosion": {
+        const { position } = data as PositionEvent;
+        this.particles.explosion(position, 100);
         break;
-      case "mine_explosion":
-        this.particles.explosion(data.position, 100);
+      }
+      case "mine_explosion": {
+        const { position } = data as PositionEvent;
+        this.particles.explosion(position, 100);
         break;
+      }
       case "tick_sounds":
-        this.sounds.playSounds(data);
+        this.sounds.playSounds(data as SoundEvents);
         break;
     }
   }
@@ -141,8 +158,8 @@ export class GameEngine {
   players: Record<string, RoomPlayer>;
   blocks: unknown[];
   Bcollision: unknown[];
-  bullets: any[];
-  mines: any[];
+  bullets: RenderBullet[];
+  mines: RenderMine[];
   holes: unknown[];
 
   // Callbacks
@@ -420,12 +437,7 @@ export class GameEngine {
     // During countdown, just render current state - NO game updates (freeze everything)
     if (this.inCountdown) {
       // Just sync state for rendering (no room.update() - freeze players and bots)
-      this.players = this.localRoom.players;
-      this.blocks = this.localRoom.blocks;
-      this.Bcollision = this.localRoom.Bcollision;
-      this.bullets = this.localRoom.bullets;
-      this.mines = this.localRoom.mines;
-      this.holes = this.localRoom.holes;
+      this._syncStateFromRoom(this.localRoom);
       return;
     }
 
@@ -497,8 +509,9 @@ export class GameEngine {
     }
 
     // Update room (handles bot updates via Room.update_players)
-    // Fuse sound logic for mines
-    this.localRoom.mines.forEach((mine: any) => {
+    // Fuse sound logic for mines. Room.mines is loosely typed (unknown[]) by the
+    // ambient runtime contract; narrow to the render shape we read here.
+    (this.localRoom.mines as RenderMine[]).forEach((mine) => {
       // 220 is when visual flashing starts (300 is explosion)
       if (mine.timealive > 220 && mine.timealive % 40 === 0) {
         this.sounds.playFuse();
@@ -529,14 +542,21 @@ export class GameEngine {
     this.sounds.playSounds(this.localRoom.sounds as unknown as SoundEvents);
 
     // Sync local state for rendering
-    this.players = this.localRoom.players;
-    this.blocks = this.localRoom.blocks;
-    this.Bcollision = this.localRoom.Bcollision;
-    this.bullets = this.localRoom.bullets;
-    this.mines = this.localRoom.mines;
-    this.holes = this.localRoom.holes;
+    this._syncStateFromRoom(this.localRoom);
 
     this.tick++;
+  }
+
+  // Copy the Room's loosely-typed (unknown[]) entity arrays into the engine's
+  // render-shaped fields. The ambient Room contract is deliberately loose; the
+  // bullets/mines arrays are narrowed to the render shapes the engine reads.
+  private _syncStateFromRoom(room: Room) {
+    this.players = room.players;
+    this.blocks = room.blocks;
+    this.Bcollision = room.Bcollision;
+    this.bullets = room.bullets as RenderBullet[];
+    this.mines = room.mines as RenderMine[];
+    this.holes = room.holes;
   }
 
   _sendInput() {
@@ -563,15 +583,18 @@ export class GameEngine {
     });
   }
 
-  _onTick(data: any) {
+  _onTick(data: RoomSnapshot) {
     this.bullets = data.bullets;
     this.mines = data.mines;
     this.tick = data.tick;
-    this.players = data.players;
+    // Server-tick players are serialized snapshots (no shoot/plant methods); the
+    // engine only reads render fields off them, so widen to the loose RoomPlayer
+    // map the renderer/state fields expect.
+    this.players = data.players as unknown as Record<string, RoomPlayer>;
     this.holes = data.holes;
   }
 
-  _onLevelChange(data: any) {
+  _onLevelChange(data: LevelChange) {
     this.blocks = data.blocks;
     this.Bcollision = data.Bcollision;
   }
@@ -584,7 +607,7 @@ export class GameEngine {
 
     // Trigger fast bullet particles (Rocket trails)
     if (this.bullets) {
-      this.bullets.forEach((bullet: any) => {
+      this.bullets.forEach((bullet) => {
         if (bullet.type === 2) {
           this.particles.fastBullets(
             {

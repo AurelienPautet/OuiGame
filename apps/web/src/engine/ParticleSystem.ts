@@ -59,20 +59,29 @@ function gradientcolor(
 function steppingradient(steps: GradientStep[], percentFade: number): string {
   let current_step = 0;
   for (let e = 0; e < steps.length; e++) {
-    if (steps[e].percent < percentFade) {
+    const step = steps[e];
+    if (step !== undefined && step.percent < percentFade) {
       current_step = e;
     }
   }
-  const begin = steps[current_step].percent;
+  // current_step is always a valid index (0..steps.length-1) from the loop.
+  const currentStep = steps[current_step]!;
+  // The legacy code reads steps[current_step + 1].color unconditionally; callers
+  // always pass a gradient whose final step has percent: 1 with percentFade
+  // clamped to <= 1, so the next step is present at runtime. The non-null
+  // assertion preserves that always-defined behavior (an undefined would have
+  // thrown in the original too).
+  const nextStep = steps[current_step + 1]!;
+  const begin = currentStep.percent;
   let end;
   if (current_step < steps.length - 1) {
-    end = steps[current_step + 1].percent;
+    end = nextStep.percent;
   } else {
     end = 1;
   }
   return gradientcolor(
-    steps[current_step].color,
-    steps[current_step + 1].color,
+    currentStep.color,
+    nextStep.color,
     (percentFade - begin) / (end - begin)
   );
 }
@@ -212,16 +221,20 @@ export class ParticleSystem {
   update() {
     // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
-      this.particles[i].update();
-      if (this.particles[i].timealive >= this.particles[i].timelife) {
+      const particle = this.particles[i];
+      if (particle === undefined) continue;
+      particle.update();
+      if (particle.timealive >= particle.timelife) {
         this.particles.splice(i, 1);
       }
     }
 
     // Update shockwaves
     for (let i = this.chockwaves.length - 1; i >= 0; i--) {
-      this.chockwaves[i].update();
-      if (this.chockwaves[i].timealive >= this.chockwaves[i].timelife) {
+      const chockwave = this.chockwaves[i];
+      if (chockwave === undefined) continue;
+      chockwave.update();
+      if (chockwave.timealive >= chockwave.timelife) {
         this.chockwaves.splice(i, 1);
       }
     }

@@ -48,6 +48,27 @@ declare module "@ouigame/shared/game" {
     [key: string]: unknown;
   }
 
+  /**
+   * The loose bullet shape the web engine reads off the runtime / server tick.
+   * Only the fields the render + particle code touches are modelled, so the
+   * richer shared `Bullet` snapshot remains assignable to it.
+   */
+  export interface RenderBullet {
+    position: { x: number; y: number };
+    size: { w: number; h: number };
+    angle: number;
+    type?: number;
+    bounce?: number;
+  }
+
+  /** The loose mine shape the web engine reads (fuse timing + render fields). */
+  export interface RenderMine {
+    position: { x: number; y: number };
+    radius: number;
+    timealive: number;
+    color?: string;
+  }
+
   export function makeid(length: number): string;
   export function loadlevel(data: unknown, room: Room): void | Promise<void>;
 }

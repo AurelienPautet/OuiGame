@@ -217,10 +217,12 @@ export const LevelEditor = () => {
 
       // Draw all blocks
       for (let i = 0; i < layout.length; i++) {
-        if (layout[i] >= 0) {
+        const block = layout[i];
+        // i is bounded by layout.length, so block is always defined.
+        if (block !== undefined && block >= 0) {
           const x = (i % GRID_COLS) * CELL_SIZE;
           const y = Math.floor(i / GRID_COLS) * CELL_SIZE;
-          drawBlock(ctx, layout[i], x, y);
+          drawBlock(ctx, block, x, y);
         }
       }
 
@@ -385,6 +387,7 @@ export const LevelEditor = () => {
     if (!canvas) return;
     const lowQuality = canvas.toDataURL("image/jpeg", 0.1);
     const base64Data = lowQuality.split(",")[1];
+    if (base64Data === undefined) return;
 
     // Convert base64 to hex (matching old implementation)
     const binary = atob(base64Data);
@@ -398,7 +401,7 @@ export const LevelEditor = () => {
 
     setSaving(true);
     saveLevelMutation.mutate({
-      id: levelId ? parseInt(levelId) : undefined,
+      ...(levelId ? { id: parseInt(levelId) } : {}),
       levelData,
       hexData,
       levelName,

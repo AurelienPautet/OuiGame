@@ -107,11 +107,13 @@ export class SoundManager {
 
   // Stop all sounds and unload
   clear() {
-    this.sounds.tir.unload();
-    this.sounds.kill.unload();
-    this.sounds.explose.unload();
-    this.sounds.fuse.unload();
-    this.sounds.plant.unload();
-    this.sounds.ricochet.unload();
+    // All keys are populated in the constructor; optional chaining keeps this a
+    // no-op should any be absent (matching the prior always-defined access).
+    this.sounds.tir?.unload();
+    this.sounds.kill?.unload();
+    this.sounds.explose?.unload();
+    this.sounds.fuse?.unload();
+    this.sounds.plant?.unload();
+    this.sounds.ricochet?.unload();
   }
 }

@@ -39,7 +39,7 @@ async function findUsernameById(playerId: number) {
     .select({ username: players.username })
     .from(players)
     .where(eq(players.id, playerId));
-  return res.length > 0 ? res[0].username : null;
+  return res[0]?.username ?? null;
 }
 
 export { findRankings, findRankedRows, findUsernameById };
