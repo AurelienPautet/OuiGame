@@ -3,10 +3,10 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
-// Root lint config: covers the Node server (`Server/`), the dual-environment
-// game logic (`shared/`), and root-level tooling configs. The React client in
-// `Client/` ships its own flat config (`Client/eslint.config.js`), so we ignore
-// it here and let `cd Client && npm run lint` handle it.
+// Root lint config: covers the Node server (`apps/api`), the isomorphic game
+// runtime (`packages/shared/src/game`), and root-level tooling configs. The
+// React client (`apps/web`) ships its own flat config
+// (`apps/web/eslint.config.js`), so we ignore it here.
 export default defineConfig([
   globalIgnores([
     "node_modules",
@@ -24,6 +24,51 @@ export default defineConfig([
       ecmaVersion: "latest",
       sourceType: "commonjs",
       globals: { ...globals.node },
+    },
+    rules: {
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
+  },
+
+  // The isomorphic game runtime (@ouigame/shared/game): ES modules that run in
+  // BOTH the Node server and the browser client, so they get Node + browser
+  // globals. (Replaces the old root shared/**/*.js block.)
+  {
+    files: ["packages/shared/src/game/**/*.js"],
+    ignores: ["packages/shared/src/game/**/__tests__/**"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
+  },
+
+  // The game's Vitest golden tests: same module + isomorphic globals, plus the
+  // Vitest test API (describe/it/expect/vi/...) which is ambient via the shared
+  // project's `globals: true`.
+  {
+    files: ["packages/shared/src/game/**/__tests__/**/*.js"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        vi: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+      },
     },
     rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
