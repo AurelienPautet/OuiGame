@@ -19,3 +19,12 @@ class Bot1 extends Bot {
     };
   }
 }
+
+// Node.js: expose for require() (Phase 2 PR-A characterization test). Browser-
+// inert (try/catch; loaded as a <script> tag). Temporary scaffolding — Bot1-4
+// collapse into a config-driven Bot in a later Phase 2 PR.
+try {
+  module.exports = Bot1;
+} catch (e) {
+  console.error("Error exporting Bot1 class:", e);
+}
