@@ -2,9 +2,15 @@
  * Data Migration Script
  * Migrates data from old tables to new OuiTank-* tables
  * Run after: pnpm db:migrate
+ *
+ * Standalone one-off script: load the root .env ourselves (the @ouigame/db
+ * connection no longer loads dotenv — env is the caller's responsibility).
  */
 
-const { db } = require("./index");
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../../../.env") });
+
+const { db } = require("@ouigame/db");
 const { sql } = require("drizzle-orm");
 
 async function migrateData() {

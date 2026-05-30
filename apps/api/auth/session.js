@@ -7,8 +7,7 @@
 // already high-entropy, and an unsalted deterministic hash lets us look the
 // session up by hash instead of scanning every row.
 const crypto = require("crypto");
-const path = require("path");
-const { db, schema } = require(path.join(__dirname, "..", "db"));
+const { db, schema } = require("@ouigame/db");
 const { playerSessions, players } = schema;
 const { eq, and, gt } = require("drizzle-orm");
 const { makeid } = require("@ouigame/shared/game");

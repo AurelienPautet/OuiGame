@@ -6,6 +6,9 @@ const {
   cleanDb,
   createUserWithSession,
   createLevel,
+  createRound,
+  createSoloRound,
+  createCampaign,
 } = require("../helpers/db");
 const { eq, and } = require("drizzle-orm");
 
@@ -138,6 +141,18 @@ describe("POST /api/levels", () => {
       .send({ levelName: "Nope", maxPlayers: 2, type: "online" });
     expect(res.status).toBe(401);
   });
+
+  test("rejects a malformed body (400) via Zod validation", async () => {
+    const { authHeader } = await createUserWithSession();
+    const res = await request(app)
+      .post("/api/levels")
+      .set("Authorization", authHeader)
+      // missing levelData + hexData, maxPlayers wrong type
+      .send({ levelName: "Bad", maxPlayers: "two", type: "online" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Validation failed");
+    expect(Array.isArray(res.body.details)).toBe(true);
+  });
 });
 
 describe("PUT /api/levels/:id", () => {
@@ -211,6 +226,50 @@ describe("DELETE /api/levels/:id", () => {
       .from(schema.levels)
       .where(eq(schema.levels.id, level.id));
     expect(rows).toHaveLength(0);
+  });
+
+  test("cascades to rounds, solo rounds and campaign links (was an FK violation)", async () => {
+    // Before ON DELETE CASCADE, the DELETE handler only removed the image and
+    // ratings, so deleting a level that had a round / solo round / campaign
+    // membership FK-violated and 500'd. This freezes the fix.
+    const { player, authHeader } = await createUserWithSession();
+    const level = await createLevel(player.id, { name: "Played", img: "aa" });
+    await createRound(player.id, level.id);
+    await createSoloRound(player.id, level.id);
+    await createCampaign(player.id, [level.id]); // creates a campaign_levels row
+
+    const res = await request(app)
+      .delete(`/api/levels/${level.id}`)
+      .set("Authorization", authHeader);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // The level and every child row referencing it are gone.
+    expect(
+      await db
+        .select()
+        .from(schema.levels)
+        .where(eq(schema.levels.id, level.id))
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.rounds)
+        .where(eq(schema.rounds.levelId, level.id))
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.soloRounds)
+        .where(eq(schema.soloRounds.levelId, level.id))
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.campaignLevels)
+        .where(eq(schema.campaignLevels.levelId, level.id))
+    ).toHaveLength(0);
   });
 
   test("refuses to delete someone else's level (403)", async () => {

@@ -2,7 +2,7 @@
 // through Drizzle (faster and more explicit than going through the HTTP API).
 const bcrypt = require("bcryptjs");
 const { getTableConfig } = require("drizzle-orm/pg-core");
-const { db, schema, pool } = require("../../db");
+const { db, schema, pool } = require("@ouigame/db");
 const { makeid } = require("@ouigame/shared/game");
 const { hashToken } = require("../../auth/session");
 

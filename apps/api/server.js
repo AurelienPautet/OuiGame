@@ -123,13 +123,10 @@ const io = socketio(expressServer, {
 
 const { loadlevel, makeid, Room } = require("@ouigame/shared/game");
 
-const { get_level_rating_from_player } = require(
-  __dirname + "/database/db_levels_ratings.js"
-);
-const { get_max_players, get_json_from_id, get_level_from_id } = require(
-  __dirname + "/database/db_level.js"
-);
-const { add_round } = require(__dirname + "/database/db_stats.js");
+const levelsService = require("./services/levels.service");
+const levelsRepo = require("./repositories/levels.repo");
+const ratingsRepo = require("./repositories/ratings.repo");
+const statsRepo = require("./repositories/stats.repo");
 
 // Resolve a session token to an in-memory user record keyed by socket id.
 async function authenticateSocket(socket, token) {
@@ -137,7 +134,7 @@ async function authenticateSocket(socket, token) {
     const user = await verifySession(token);
     if (user) {
       users[socket.id] = {
-        id: user.playerId,
+        playerId: user.playerId,
         username: user.username,
         email: user.email,
       };
@@ -179,8 +176,13 @@ io.on("connect", (socket) => {
   });
 
   socket.on("get_json_from_id", (level_id) => {
-    get_json_from_id(level_id)
+    levelsService
+      .getLevelJson(level_id)
       .then((json) => {
+        if (json === null) {
+          socket.emit("error_getting_json", "Failed to retrieve level data.");
+          return;
+        }
         socket.emit("recieve_json_from_id", json);
       })
       .catch((error) => {
@@ -217,16 +219,22 @@ io.on("connect", (socket) => {
       socket.leave("lobby" + serverid);
       socket.join(room.id);
       io.to(room.id).emit("player-connection", playerName);
-      get_level_from_id(room.levels[room.levelid], socket, "level_change_info");
+      // level_change_info is emitted as an ARRAY (the client reads levels[0]),
+      // exactly as the old format_and_send_levels did — [] when missing.
+      levelsService.getLevel(room.levels[room.levelid]).then((level) => {
+        socket.emit("level_change_info", level ? [level] : []);
+      });
 
       // Send user's current rating for this level
       if (users[socket.id]) {
-        get_level_rating_from_player(
-          room.levels[room.levelid], // Use level ID directly if possible, but room.levels contains IDs
-          users[socket.id].id
-        ).then((stars) => {
-          socket.emit("your_level_rating", stars ? stars : 0);
-        });
+        ratingsRepo
+          .getRating(
+            room.levels[room.levelid], // room.levels holds level IDs
+            users[socket.id].playerId
+          )
+          .then((stars) => {
+            socket.emit("your_level_rating", stars ? stars : 0);
+          });
       }
 
       //console.log("blocks on plys", room.blocks);
@@ -297,28 +305,24 @@ const tickTockInterval = setTimeout(function toocking() {
     if (room.update(fps_corector)) {
       for (const socketid in room.players) {
         const player = room.players[socketid];
-        if (users[socketid]) {
-          ////console.log("caca");
-          add_round(
-            socketid,
-            room.levels[room.levelid],
-            player.round_stats.stats
-          );
-        } else {
-          add_round(null, room.levels[room.levelid], player.round_stats.stats);
-        }
+        const playerId = users[socketid] ? users[socketid].playerId : null;
+        statsRepo.insertRound(
+          playerId,
+          room.levels[room.levelid],
+          player.round_stats.stats
+        );
         player.round_stats.reset();
       }
 
       const respawnwait = setTimeout(async () => {
-        const level_json = await get_json_from_id(room.levels[room.levelid]);
+        const level_json = await levelsService.getLevelJson(
+          room.levels[room.levelid]
+        );
         await loadlevel(level_json.data, room);
 
-        get_level_from_id(
-          room.levels[room.levelid],
-          room.io.to(room.id),
-          "level_change_info"
-        );
+        levelsService.getLevel(room.levels[room.levelid]).then((level) => {
+          room.io.to(room.id).emit("level_change_info", level ? [level] : []);
+        });
 
         room.respawn_the_room();
 
@@ -335,9 +339,9 @@ const tickTockInterval = setTimeout(function toocking() {
 
         for (const socketid in room.players) {
           if (users[socketid]) {
-            const stars = await get_level_rating_from_player(
+            const stars = await ratingsRepo.getRating(
               room.levels[room.levelid].id,
-              users[socketid].id
+              users[socketid].playerId
             );
             io.to(socketid).emit("your_level_rating", stars ? stars : 0);
           }
@@ -399,8 +403,10 @@ function getTimeElapsed() {
 
 async function create_room(name, rounds, list_id, creator, io) {
   const room = new Room(name, rounds, list_id, creator, io);
-  room.maxplayernb = await get_max_players(list_id);
-  const level_json = await get_json_from_id(room.levels[room.levelid]);
+  room.maxplayernb = (await levelsRepo.getMinMaxPlayers(list_id)).min;
+  const level_json = await levelsService.getLevelJson(
+    room.levels[room.levelid]
+  );
   //console.log("level_json", level_json);
   rooms[room.id] = room;
   if (room) {

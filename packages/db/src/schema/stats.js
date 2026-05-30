@@ -18,10 +18,12 @@ const ratings = pgTable(
     stars: integer("stars").notNull(),
     levelId: integer("level_id")
       .notNull()
-      .references(() => levels.id),
+      // OWNERSHIP: a rating belongs to its level (replaces a manual cascade).
+      .references(() => levels.id, { onDelete: "cascade" }),
     playerId: integer("player_id")
       .notNull()
-      .references(() => players.id),
+      // OWNERSHIP: deleting a player removes their ratings (NOT NULL → cascade).
+      .references(() => players.id, { onDelete: "cascade" }),
   },
   (table) => ({
     uniqueRating: unique().on(table.levelId, table.playerId),
@@ -32,7 +34,10 @@ const logings = pgTable("OuiTank-logings", {
   id: serial("id").primaryKey(),
   playerId: integer("player_id")
     .notNull()
-    .references(() => players.id),
+    // Audit log keyed to a player. Ideally SET NULL for retention, but the
+    // column is NOT NULL → cascade is the safe NOT-NULL-compatible choice.
+    // TODO (later): relax to nullable + SET NULL to keep the audit trail.
+    .references(() => players.id, { onDelete: "cascade" }),
   ipAddress: varchar("ip_address").notNull(),
   attemptTimestamp: timestamp("attempt_timestamp").defaultNow(),
   status: varchar("status", { length: 30 }).notNull(),
@@ -42,10 +47,15 @@ const rounds = pgTable(
   "OuiTank-rounds",
   {
     id: serial("id").primaryKey(),
-    playerId: integer("player_id").references(() => players.id),
+    // ANALYTICS: round history outlives the player (nullable → set null).
+    playerId: integer("player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
     levelId: integer("level_id")
       .notNull()
-      .references(() => levels.id),
+      // Deleting a level removes its round records (NOT NULL → cascade; also
+      // fixes a latent FK-violation when a played level was deleted).
+      .references(() => levels.id, { onDelete: "cascade" }),
     wins: integer("wins").notNull(),
     kills: integer("kills").notNull(),
     deaths: integer("deaths").notNull(),
@@ -65,10 +75,14 @@ const soloRounds = pgTable(
   "OuiTank-solo_rounds",
   {
     id: serial("id").primaryKey(),
-    playerId: integer("player_id").references(() => players.id), // Optional
+    // ANALYTICS: solo-round history outlives the player (nullable → set null).
+    playerId: integer("player_id").references(() => players.id, {
+      onDelete: "set null",
+    }), // Optional
     levelId: integer("level_id")
       .notNull()
-      .references(() => levels.id),
+      // Deleting a level removes its solo-round records (NOT NULL → cascade).
+      .references(() => levels.id, { onDelete: "cascade" }),
     success: boolean("success").notNull(), // true = won, false = failed
     timeMs: integer("time_ms").notNull(), // Round duration in milliseconds
     kills: integer("kills").notNull(),

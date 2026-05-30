@@ -16,9 +16,9 @@ export default defineConfig([
     "**/migrations/**",
   ]),
 
-  // Express server: Node runtime, CommonJS modules.
+  // Express server + the @ouigame/db package: Node runtime, CommonJS modules.
   {
-    files: ["apps/api/**/*.js"],
+    files: ["apps/api/**/*.js", "packages/db/**/*.js"],
     extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",

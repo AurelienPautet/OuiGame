@@ -24,7 +24,8 @@ const levels = pgTable(
     name: varchar("name", { length: 30 }).notNull().unique(),
     creatorId: integer("creator_id")
       .notNull()
-      .references(() => players.id),
+      // OWNERSHIP: deleting a player removes their levels (NOT NULL → cascade).
+      .references(() => players.id, { onDelete: "cascade" }),
     maxPlayers: integer("max_players").notNull(),
     type: varchar("type", { length: 30 }).notNull(),
     status: varchar("status", { length: 30 }).notNull(),
@@ -42,7 +43,8 @@ const levelsImg = pgTable(
     id: serial("id").primaryKey(),
     levelId: integer("level_id")
       .notNull()
-      .references(() => levels.id),
+      // OWNERSHIP: an image belongs to its level (replaces a manual cascade).
+      .references(() => levels.id, { onDelete: "cascade" }),
     img: bytea("img").notNull(),
   },
   (table) => ({

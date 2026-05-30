@@ -1,0 +1,16 @@
+{
+  "name": "@ouigame/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Drizzle schema and the configured Postgres connection for OuiGame.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./schema": "./src/schema/index.js"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.21.0"
+  }
+}

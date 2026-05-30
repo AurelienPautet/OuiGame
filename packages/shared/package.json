@@ -15,8 +15,8 @@
       "import": "./src/socket/index.ts"
     },
     "./api": {
-      "types": "./src/api/index.ts",
-      "import": "./src/api/index.ts"
+      "import": "./src/api/index.ts",
+      "require": "./dist/api.cjs"
     },
     "./game": {
       "import": "./dist/game.js",

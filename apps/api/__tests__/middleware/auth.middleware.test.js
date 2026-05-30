@@ -2,7 +2,7 @@ const {
   authMiddleware,
   optionalAuth,
 } = require("../../middleware/auth.middleware");
-const { db, schema } = require("../../db");
+const { db, schema } = require("@ouigame/db");
 const { hashToken } = require("../../auth/session");
 const { cleanDb, createPlayer, createSession } = require("../helpers/db");
 
