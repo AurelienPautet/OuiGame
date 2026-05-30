@@ -306,6 +306,10 @@ if (typeof module === "object" && module.exports) {
   console.log("Loading level_loader.js in Node.js environment");
   module.exports = {
     launch_possible_shots,
+    // Also exported so the characterization tests can pin its edge-touch
+    // behaviour against check_collision's rectRect (they are currently
+    // identical; the test proves it before any future merge).
+    rectRect2,
   };
 } else {
   // Browser environment

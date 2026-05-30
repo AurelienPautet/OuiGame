@@ -41,3 +41,17 @@ function intersectRaySegment(rayOrigin, rayDir, p1, p2) {
   }
   return null;
 }
+
+// Node.js: expose the pure geometry helpers for require() (the characterization
+// tests). The browser loads this file as a plain <script> tag where these
+// declarations become window globals and `module` is undefined, so the
+// try/catch makes the export a no-op there — matching the dual-load pattern of
+// the sibling shared scripts. Behaviour is unchanged in both environments.
+try {
+  module.exports = {
+    getEdges,
+    intersectRaySegment,
+  };
+} catch (e) {
+  console.error("Error exporting check_intersect helpers:", e);
+}

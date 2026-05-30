@@ -319,3 +319,15 @@ class Bot extends Player {
     this.last_shoot.angle = this.angle;
   }
 }
+
+// Node.js: expose the class for require() (used by the characterization tests,
+// and available to any future server-side bot loop — the server does not
+// require it today). The browser loads this file as a plain <script> tag
+// where `module` is undefined, so the try/catch makes the export a no-op there
+// — the same dual-load pattern the sibling classes (Player, Block, ...) use.
+// Behaviour is unchanged in both environments.
+try {
+  module.exports = Bot;
+} catch (e) {
+  console.error("Error exporting Bot class:", e);
+}
