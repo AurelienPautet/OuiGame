@@ -8,7 +8,6 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
-// https://vite.dev/config/
 export default defineConfig(({ command }) => {
   const isBuild = command === "build";
   return {
@@ -16,31 +15,16 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       tailwindcss(),
-      // publicDir is disabled during build (below) to avoid an EISDIR on the
-      // public/Shared symlink, so we copy assets into dist ourselves. fs.cpSync
-      // is deterministic and lands files at dist/<name>; vite-plugin-static-copy
-      // v4 nested them under dist/public/, which broke /ressources/* asset URLs.
+      // publicDir is disabled during build (below) and we copy public/ assets
+      // into dist ourselves: fs.cpSync is deterministic and lands files at
+      // dist/<name>, whereas vite-plugin-static-copy v4 nested them under
+      // dist/public/, which broke /ressources/* asset URLs.
       {
         name: "copy-assets-to-dist",
         apply: "build",
         closeBundle() {
-          // Sibling shared/ folder (outside the Vite root) -> dist/shared.
-          // Skip dev-only files (vitest specs, tsconfig) so they never ship in
-          // the static bundle — only the game <script> sources belong in dist.
-          fs.cpSync(
-            path.resolve(__dirname, "../../shared"),
-            path.resolve(__dirname, "dist/shared"),
-            {
-              recursive: true,
-              filter: (src) =>
-                !src.includes(`${path.sep}__tests__`) &&
-                !src.endsWith("tsconfig.json"),
-            }
-          );
-          // public/ assets -> dist root, skipping the dev-only Shared symlink.
           const publicDir = path.resolve(__dirname, "public");
           for (const entry of fs.readdirSync(publicDir)) {
-            if (entry === "Shared") continue;
             fs.cpSync(
               path.join(publicDir, entry),
               path.resolve(__dirname, "dist", entry),
@@ -49,34 +33,9 @@ export default defineConfig(({ command }) => {
           }
         },
       },
-      {
-        name: "serve-shared-dev",
-        configureServer(server) {
-          server.middlewares.use((req, res, next) => {
-            // Match lowercase /shared/ requests from index.html
-            if (req.url.startsWith("/shared/")) {
-              const sharedPath = path.resolve(__dirname, "../../shared");
-              const filePath = req.url.replace("/shared", "");
-              // Rewrite to use Vite's internal FS serving
-              req.url = `/@fs${sharedPath}${filePath}`;
-            }
-            next();
-          });
-        },
-      },
     ],
-    resolve: {
-      alias: {
-        "@shared": path.resolve(__dirname, "../../shared"),
-      },
-    },
-    server: {
-      fs: {
-        allow: ["../.."],
-      },
-    },
-    // Disable default publicDir copy during build to prevent EISDIR error on Shared symlink
-    // But keep it enabled for dev to serve assets from public/Shared
+    // Disabled during build; copy-assets-to-dist (above) lands public/ assets at
+    // the dist root instead. Enabled in dev to serve them from public/.
     publicDir: isBuild ? false : "public",
   };
 });

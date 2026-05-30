@@ -11,23 +11,8 @@
   <body>
     <div id="root"></div>
 
-    <!-- Shared game classes (served via symlink in public/Shared) -->
-    <script src="shared/class/CollisonsBox.js"></script>
-    <script src="shared/class/Stats.js"></script>
-    <script src="shared/class/Block.js"></script>
-    <script src="shared/class/Hole.js"></script>
-    <script src="shared/scripts/check_collision.js"></script>
-    <script src="shared/scripts/check_intersect.js"></script>
-    <script src="shared/class/Bullet.js"></script>
-    <script src="shared/class/Mine.js"></script>
-    <script src="shared/class/Player.js"></script>
-    <script src="shared/class/possible_moves.js"></script>
-    <script src="shared/class/possible_shots_balls.js"></script>
-    <script src="shared/class/Bot.js"></script>
-    <script src="shared/class/Room.js"></script>
-    <script src="shared/scripts/level_loader.js"></script>
-
-    <!-- React app -->
+    <!-- React app — the game runtime is bundled in via the
+         @ouigame/shared/game import (was: 14 shared/*.js <script> tags). -->
     <script type="module" src="src/main.jsx"></script>
   </body>
 </html>

@@ -4,9 +4,12 @@
  * Solo: Local Room simulation with 60fps loop
  * Online: Listens to server 'tick' events, sends input via 'tock'
  *
- * Note: This relies on Shared classes being loaded via script tags (Room, Player, etc.)
- * which expose them as window globals - same as the original game.
+ * The game runtime (Room, loadlevel, Player, Bot, ...) is imported from the
+ * @ouigame/shared/game package — the same isomorphic simulation the server
+ * runs. This replaces the old browser <script> tags that exposed those classes
+ * as window globals.
  */
+import { Room, loadlevel } from "@ouigame/shared/game";
 import { Renderer } from "./Renderer.js";
 import { InputHandler } from "./InputHandler.js";
 import { ParticleSystem } from "./ParticleSystem.js";
@@ -174,7 +177,7 @@ export class GameEngine {
           // Extract the actual level data array for loading
           const levelData = levelJson.data || levelJson; // Fallback for backward compat
 
-          // Create local room using global Room class with LocalIO for particle/sound events
+          // Create local room with LocalIO for particle/sound events
           this.localRoom = new Room(
             "Solo Room",
             999,
@@ -184,10 +187,8 @@ export class GameEngine {
           );
           this.localRoom.maxplayernb = 100;
 
-          // Load level using global loadlevel function
-          if (typeof loadlevel === "function") {
-            await loadlevel(levelData, this.localRoom);
-          }
+          // Load level into the room
+          await loadlevel(levelData, this.localRoom);
 
           // Spawn player
           this.localRoom.spawn_new_player(

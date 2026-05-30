@@ -57,12 +57,12 @@ const allowedOrigins = [
 ];
 
 // Security headers. The CSP allows what the served client needs: same-origin
-// scripts/styles (the React bundle + the shared game <script> tags), the
-// Google Identity script, data:/blob: images (level thumbnails are data URLs),
-// and connections to the API/socket + Google. Cross-origin resource/embedder
-// policies are relaxed so the itch.io build can consume the API + shared
-// assets cross-origin. (CSP only applies to responses this server serves; the
-// itch.io build is served by itch and uses its own headers.)
+// scripts/styles (the React bundle — the game runtime is bundled in, no longer
+// separate <script> tags), the Google Identity script, data:/blob: images
+// (level thumbnails are data URLs), and connections to the API/socket + Google.
+// Cross-origin resource/embedder policies are relaxed so the itch.io build can
+// consume the API cross-origin. (CSP only applies to responses this server
+// serves; the itch.io build is served by itch and uses its own headers.)
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -105,7 +105,6 @@ const limiter = rateLimit({
 app.use("/api", limiter, apiRoutes);
 
 app.use(express.static(path.join(__dirname, "../web/dist")));
-app.use(express.static(path.join(__dirname, "../../shared")));
 
 app.get("/*splat", limiter, (req, res) => {
   res.sendFile(path.join(__dirname, "../web/dist/index.html"));
