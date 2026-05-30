@@ -122,12 +122,7 @@ const io = socketio(expressServer, {
   },
 });
 
-const { loadlevel } = require(
-  __dirname + "/../../shared/scripts/level_loader.js"
-);
-const { makeid } = require(__dirname + "/../../shared/scripts/commons.js");
-
-const Room = require(__dirname + "/../../shared/class/Room.js");
+const { loadlevel, makeid, Room } = require("@ouigame/shared/game");
 
 const { get_level_rating_from_player } = require(
   __dirname + "/database/db_levels_ratings.js"

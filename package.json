@@ -28,7 +28,7 @@
     "dev:web": "pnpm --filter @ouigame/web dev",
     "build": "turbo run build",
     "start": "node apps/api/server.js",
-    "test": "jest",
+    "test": "pnpm --filter @ouigame/shared build && jest",
     "test:watch": "jest --watch",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
