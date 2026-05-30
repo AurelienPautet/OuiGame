@@ -377,18 +377,6 @@ export class GameEngine {
       }
     }
 
-    // Sync globals for bots (they rely on window.*)
-    window.room = this.localRoom;
-    window.localroom = this.localRoom;
-    window.players = this.localRoom.players;
-    window.bullets = this.localRoom.bullets;
-    window.mines = this.localRoom.mines;
-    window.blocks = this.localRoom.blocks;
-    window.Bcollision = this.localRoom.Bcollision;
-    window.holes = this.localRoom.holes;
-    window.c = this.renderer.c;
-    window.debug_visual = true; // Enable debug visuals for bots if needed
-
     // Update room (handles bot updates via Room.update_players)
     // Fuse sound logic for mines
     this.localRoom.mines.forEach((mine) => {
@@ -403,20 +391,14 @@ export class GameEngine {
     this.fpsCorrector = (now - this.oldTime) / 16.67;
     this.oldTime = now;
 
-    // Expose game state as globals BEFORE update (required for Bot AI scripts)
-    window.players = this.localRoom.players;
-    window.blocks = this.localRoom.blocks;
-    window.Bcollision = this.localRoom.Bcollision;
-    window.bullets = this.localRoom.bullets;
-    window.mines = this.localRoom.mines;
-    window.holes = this.localRoom.holes;
-    window.localroom = this.localRoom;
-    window.room = this.localRoom; // Alias for bots that use 'room'
-    window.c = this.renderer.c;
-    window.debug_visual = this.renderer.debugVisual;
-
-    // Update room
-    this.localRoom.update(this.fpsCorrector);
+    // Update room. The bots' AI reads game state from the room it is passed
+    // (no more window.* sync); the canvas context + debug flag are threaded in
+    // for the bots' optional debug raycast overlays.
+    this.localRoom.update(
+      this.fpsCorrector,
+      this.renderer.c,
+      this.renderer.debugVisual
+    );
 
     // Play sounds - LocalIO handles this via tick_sounds event from Room?
     // If we play it here AND in LocalIO, it might be double.

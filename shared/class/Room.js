@@ -162,7 +162,7 @@ class Room {
     }
   }
 
-  update(fps_corector) {
+  update(fps_corector, ctx, debug_visual) {
     this.sounds = {
       plant: false,
       kill: false,
@@ -178,7 +178,7 @@ class Room {
 
     // Only update player movements/actions if not in countdown
     if (!this.countdownActive) {
-      this.update_players();
+      this.update_players(ctx, debug_visual);
     }
     //console.log(this.players);
     this.emit_to_room("tick", {
@@ -273,10 +273,10 @@ class Room {
     }
   }
 
-  update_players() {
+  update_players(ctx, debug_visual) {
     //console.log("Updating players in room:", this.players);
     for (let sckid in this.players) {
-      this.players[sckid].update(this, this.fps_corector);
+      this.players[sckid].update(this, this.fps_corector, ctx, debug_visual);
     }
   }
 
