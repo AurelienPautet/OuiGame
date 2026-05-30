@@ -74,14 +74,14 @@ class Bot extends Player {
     this.mytick = Math.floor(Math.random() * this.min_interval_shoot);
   }
 
-  update(room, fps_corector) {
+  update(room, fps_corector, ctx, debug_visual) {
     super.update(room, fps_corector);
     if (this.alive) {
       if (this.can.move) {
-        this.move(room);
+        this.move(room, ctx, debug_visual);
       }
       if (this.can.shoot) {
-        this.aim_and_shoot();
+        this.aim_and_shoot(room, ctx);
       }
     }
   }
@@ -187,7 +187,7 @@ class Bot extends Player {
     );
   }
 
-  move() {
+  move(room, ctx, debug_visual) {
     if (this.mytick % 5 === 0) {
       this.should_go_to = {
         right: false,
@@ -195,7 +195,7 @@ class Bot extends Player {
         up: false,
         down: false,
       };
-      launch_possible_moves({ w: 50, h: 50 }, this);
+      launch_possible_moves({ w: 50, h: 50 }, this, room, ctx, debug_visual);
       this.direction.x = 0;
       this.direction.y = 0;
 
@@ -222,7 +222,7 @@ class Bot extends Player {
     }
   }
 
-  aim_and_shoot() {
+  aim_and_shoot(room, ctx) {
     if (this.mytick % 5 === 0) {
       this.killing_aims = [];
 
@@ -234,7 +234,9 @@ class Bot extends Player {
         {
           bullets: false,
           debug: false,
-        }
+        },
+        room,
+        ctx
       );
       this.killing_aims.sort(
         (a, b) => a.distance - b.distance + 0.1 * (a.angle - b.angle)
@@ -281,7 +283,7 @@ class Bot extends Player {
             difference < Math.PI + this.precision &&
             difference > Math.PI - this.precision
           ) {
-            this.shoot();
+            this.shoot(room);
           }
         }
       }
@@ -313,8 +315,8 @@ class Bot extends Player {
     return this.angle;
   }
 
-  shoot() {
-    super.shoot(localroom);
+  shoot(room) {
+    super.shoot(room);
     this.last_shoot.mytick = this.mytick;
     this.last_shoot.angle = this.angle;
   }

@@ -11,13 +11,13 @@ class possible_moves {
     this.mine = direction.includes("mine");
   }
 
-  update_state() {
+  update_state(room, ctx, debug_visual) {
     if (this.bullet) {
-      for (let i = 0; i < bullets.length; i++) {
+      for (let i = 0; i < room.bullets.length; i++) {
         if (this.should_go) {
           continue; // If already set to go, skip further checks
         }
-        const bullet = bullets[i];
+        const bullet = room.bullets[i];
         if (bullet.emitter === this.bot && bullet.mytick < 15) {
           continue; // Skip if the bullet is emitted by the same bot
         }
@@ -52,8 +52,8 @@ class possible_moves {
       }
     }
     if (this.wall) {
-      for (let i = 0; i < Bcollision.length; i++) {
-        const block = Bcollision[i];
+      for (let i = 0; i < room.Bcollision.length; i++) {
+        const block = room.Bcollision[i];
         if (
           rectRect2(
             this.position.x,
@@ -86,8 +86,8 @@ class possible_moves {
     }
 
     if (this.mine) {
-      for (let i = 0; i < mines.length; i++) {
-        const mine = mines[i];
+      for (let i = 0; i < room.mines.length; i++) {
+        const mine = room.mines[i];
         if (
           rectRect2(
             this.position.x,
@@ -107,12 +107,13 @@ class possible_moves {
         this.bot.mine_go_to = this.should_go;
       }
     }
-    this.draw();
+    this.draw(ctx, debug_visual);
   }
 
-  draw() {
+  draw(ctx, debug_visual) {
+    if (!ctx) return; // headless / no canvas: the bot math already ran above
     let color = "black";
-    c.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.5;
     if (this.bullet) {
       color = "green";
     } else if (this.wall) {
@@ -122,16 +123,16 @@ class possible_moves {
       color = "red";
     }
     if (debug_visual) {
-      c.fillStyle = color;
-      c.fillRect(this.position.x, this.position.y, this.size.w, this.size.h);
+      ctx.fillStyle = color;
+      ctx.fillRect(this.position.x, this.position.y, this.size.w, this.size.h);
     }
-    c.globalAlpha = 1;
+    ctx.globalAlpha = 1;
   }
 }
 
 console.log("possible_moves.js loaded");
 
-function launch_possible_moves(size, bot) {
+function launch_possible_moves(size, bot, room, ctx, debug_visual) {
   new possible_moves(
     {
       x: bot.position.x + bot.size.w / 2 - 160,
@@ -140,7 +141,7 @@ function launch_possible_moves(size, bot) {
     { w: 320, h: 320 },
     bot,
     "mine"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x + bot.size.w,
@@ -149,7 +150,7 @@ function launch_possible_moves(size, bot) {
     { w: size.w * 1.3, h: size.h - 4 * 2 },
     bot,
     "wall left"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x - size.w * 1.3,
@@ -158,7 +159,7 @@ function launch_possible_moves(size, bot) {
     { w: size.w * 1.3, h: size.h - 4 * 2 },
     bot,
     "wall right"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x + 4,
@@ -167,7 +168,7 @@ function launch_possible_moves(size, bot) {
     { w: size.w - 4 * 2, h: size.h * 1.3 },
     bot,
     "wall down"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x + 4,
@@ -176,7 +177,7 @@ function launch_possible_moves(size, bot) {
     { w: size.w - 4 * 2, h: size.h * 1.3 },
     bot,
     "wall up"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x + bot.size.w,
@@ -185,7 +186,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet left"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x - size.w,
@@ -194,7 +195,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet right"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x,
@@ -203,7 +204,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet down"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x,
@@ -212,7 +213,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet up"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x - bot.size.w / 2 - bot.size.w / 2,
@@ -221,7 +222,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet down right"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x + bot.size.w * 1.5 - bot.size.w / 2,
@@ -230,7 +231,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet down left"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x + bot.size.w * 1.5 - bot.size.w / 2,
@@ -239,7 +240,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet up left"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
   new possible_moves(
     {
       x: bot.position.x - bot.size.w / 2 - bot.size.w / 2,
@@ -248,7 +249,7 @@ function launch_possible_moves(size, bot) {
     size,
     bot,
     "bullet up right"
-  ).update_state();
+  ).update_state(room, ctx, debug_visual);
 }
 
 if (typeof module === "object" && module.exports) {

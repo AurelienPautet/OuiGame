@@ -5,8 +5,12 @@ class possible_shot_points {
     step_size,
     radius,
     initial_player,
-    data
+    data,
+    room,
+    ctx
   ) {
+    this.room = room;
+    this.ctx = ctx;
     this.initial_player = initial_player;
     this.initial_position = {
       x: initial_position.x + initial_player.size.w / 2,
@@ -56,10 +60,10 @@ class possible_shot_points {
       y: this.position.y + this.step_size * this.direction.y,
     };
 
-    let numMines = mines.length;
+    let numMines = this.room.mines.length;
     let mine = null;
     for (let i = 0; i < numMines; i++) {
-      mine = mines[i];
+      mine = this.room.mines[i];
       if (
         rectRect2(
           this.position.x,
@@ -79,8 +83,8 @@ class possible_shot_points {
       }
     }
     if (this.data.bullets) {
-      for (let i = 0; i < bullets.length; i++) {
-        const bullet = bullets[i];
+      for (let i = 0; i < this.room.bullets.length; i++) {
+        const bullet = this.room.bullets[i];
         if (
           rectRect2(
             this.position.x,
@@ -107,8 +111,8 @@ class possible_shot_points {
         }
       }
     }
-    for (socketid in players) {
-      let player = players[socketid];
+    for (socketid in this.room.players) {
+      let player = this.room.players[socketid];
       if (!player.alive) {
         continue;
       }
@@ -167,9 +171,9 @@ class possible_shot_points {
     }
     let block = null;
     let res = "";
-    let numBlocks = Bcollision.length;
+    let numBlocks = this.room.Bcollision.length;
     for (let e = 0; e < numBlocks; e++) {
-      block = Bcollision[e];
+      block = this.room.Bcollision[e];
       res = detectCollisions2(
         block.position.x,
         block.position.y,
@@ -230,20 +234,21 @@ class possible_shot_points {
     c.fill();
     c.closePath();
     c.restore(); */
-    if (this.data.debug) {
-      c.globalAlpha = 0.03;
+    if (this.data.debug && this.ctx) {
+      const ctx = this.ctx;
+      ctx.globalAlpha = 0.03;
 
-      c.beginPath();
-      c.arc(this.position.x, this.position.y, 10, 0, 2 * Math.PI);
-      c.fillStyle = color;
-      c.fill();
-      c.closePath();
-      c.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(this.position.x, this.position.y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.closePath();
+      ctx.globalAlpha = 1;
     }
   }
 }
 
-function launch_possible_shots(N, step_size, radius, bot, data) {
+function launch_possible_shots(N, step_size, radius, bot, data, room, ctx) {
   for (let i = 0; i < N; i++) {
     const angle = (i * Math.PI * 2) / N;
 
@@ -256,7 +261,9 @@ function launch_possible_shots(N, step_size, radius, bot, data) {
       step_size,
       radius,
       bot,
-      data
+      data,
+      room,
+      ctx
     );
     shot.update_repeat(10000);
   }
