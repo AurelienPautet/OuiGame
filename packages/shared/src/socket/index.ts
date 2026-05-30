@@ -19,7 +19,7 @@ import type {
 } from "../types";
 // The level DTOs double as the "level_change_info" / "recieve_json_from_id"
 // socket payloads, so they live in api/ (the plan's home for response DTOs).
-import type { LevelInfoDTO, ReceiveJsonFromId } from "../api";
+import type { LevelDTO, LevelInfoDTO, ReceiveJsonFromId } from "../api";
 
 // Client -> Server. "authenticate" carries a bare string (the session token).
 // "play" and "new-room" are POSITIONAL multi-arg events.
@@ -79,9 +79,15 @@ export interface ServerToClientEvents {
   "player-connection": (playerName: string) => void;
   your_level_rating: (stars: number | number[]) => void; // number on the play path; client also accepts an array
   level_change: (data: LevelChange) => void;
-  level_change_info: (levels: LevelInfoDTO[]) => void; // client reads element [0]
-  recieve_levels: (levels: LevelInfoDTO[]) => void; // same shape; not consumed on web today
-  recieve_my_levels: (levels: LevelInfoDTO[]) => void; // same shape; not consumed on web today
+  // Phase 3 unified the server emit onto the REST getLevel path, so this now
+  // carries the full LevelDTO (the solo_* fields are extra constants for online
+  // levels; the client only reads element [0]'s id/name/creator/img).
+  level_change_info: (levels: LevelDTO[]) => void;
+  // recieve_levels / recieve_my_levels: their senders (the old db_level
+  // get_levels / get_my_levels) were retired in Phase 3 and are no longer
+  // emitted; kept for the historical LevelInfoDTO (solo_*-less) shape.
+  recieve_levels: (levels: LevelInfoDTO[]) => void;
+  recieve_my_levels: (levels: LevelInfoDTO[]) => void;
   tick: (snapshot: RoomSnapshot) => void;
   tick_sounds: (sounds: TickSounds) => void;
   shoot_explosion: (data: PositionAngleEvent) => void;
