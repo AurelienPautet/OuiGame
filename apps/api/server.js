@@ -1,8 +1,14 @@
-require("dotenv").config();
+const path = require("path");
+// Load .env from the repo root so it works regardless of CWD. Turbo runs this
+// script from apps/api/, and dotenv only looks in CWD; on Heroku the file is
+// absent and real config vars are already set, so a missing file is a no-op.
+require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 const express = require("express");
 const app = express();
 
-const path = require("path");
+// Behind Heroku's router; trust the first proxy hop so req.ip and the rate
+// limiter key on the real client IP rather than the shared proxy IP.
+app.set("trust proxy", 1);
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
