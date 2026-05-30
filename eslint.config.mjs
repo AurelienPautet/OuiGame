@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 // Root lint config: covers the Node server (`Server/`), the dual-environment
@@ -79,6 +80,21 @@ export default defineConfig([
     },
     rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
+  },
+
+  // TypeScript source (none yet in Phase 0b; this wires future .ts files).
+  // Non-type-aware only: no parserOptions.project/projectService, so no JS file
+  // is ever forced into a tsconfig and lint stays fast. Scoped to **/*.ts(x) so
+  // the all-JS blocks above are untouched.
+  {
+    files: ["**/*.{ts,tsx}"],
+    extends: [...tseslint.configs.recommended],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
     },
   },
 ]);

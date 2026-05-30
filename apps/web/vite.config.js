@@ -25,10 +25,17 @@ export default defineConfig(({ command }) => {
         apply: "build",
         closeBundle() {
           // Sibling shared/ folder (outside the Vite root) -> dist/shared.
+          // Skip dev-only files (vitest specs, tsconfig) so they never ship in
+          // the static bundle — only the game <script> sources belong in dist.
           fs.cpSync(
             path.resolve(__dirname, "../../shared"),
             path.resolve(__dirname, "dist/shared"),
-            { recursive: true }
+            {
+              recursive: true,
+              filter: (src) =>
+                !src.includes(`${path.sep}__tests__`) &&
+                !src.endsWith("tsconfig.json"),
+            }
           );
           // public/ assets -> dist root, skipping the dev-only Shared symlink.
           const publicDir = path.resolve(__dirname, "public");

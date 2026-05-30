@@ -1,0 +1,12 @@
+{
+  // Solution-style project references for IDE cross-package navigation only.
+  // The projects are intentionally non-composite: this repo is all-JS with
+  // noEmit + checkJs:false, so the typecheck runs per-package `tsc --noEmit`
+  // (see the root "typecheck" script), never `tsc -b` against this file.
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/api" },
+    { "path": "./shared" }
+  ]
+}
