@@ -2,11 +2,11 @@
   "name": "@ouigame/api",
   "version": "1.0.0",
   "private": true,
-  "type": "commonjs",
-  "main": "server.js",
+  "type": "module",
+  "main": "server.ts",
   "scripts": {
-    "dev": "node --watch server.js",
-    "start": "node server.js",
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -9,12 +9,23 @@ declare module "@ouigame/shared/game" {
   export function makeid(length: number): string;
   export function loadlevel(data: unknown, room: Room): void | Promise<void>;
 
+  // The per-round counters the tick loop persists via stats.repo.insertRound.
+  export interface RoundStatCounters {
+    kills: number;
+    deaths: number;
+    wins: number;
+    shots: number;
+    hits: number;
+    plants: number;
+    blocks_destroyed: number;
+  }
+
   export interface RoomPlayer {
     position?: { x: number; y: number };
     direction?: { x: number; y: number };
     aim?: { x: number; y: number };
     mytick?: number;
-    round_stats: { stats: Record<string, number>; reset(): void };
+    round_stats: { stats: RoundStatCounters; reset(): void };
     shoot(room: Room): void;
     plant(room: Room): void;
     [key: string]: unknown;

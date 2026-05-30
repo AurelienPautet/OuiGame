@@ -10,9 +10,8 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  // Transitional: both .js and .ts while the conversion is in flight (allowJs +
-  // checkJs:false from the base means the remaining .js is parsed, not checked).
-  // Narrowed to **/*.ts in the final cutover commit.
-  "include": ["**/*.js", "**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  // All source is .ts now. __tests__ run via jest (@swc transpile) — their types
+  // aren't the gate, so they're excluded from this strict typecheck.
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/__tests__/**"]
 }

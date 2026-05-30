@@ -27,7 +27,7 @@
     "dev:api": "pnpm --filter @ouigame/api dev",
     "dev:web": "pnpm --filter @ouigame/web dev",
     "build": "turbo run build",
-    "start": "node apps/api/server.js",
+    "start": "tsx apps/api/server.ts",
     "test": "pnpm --filter @ouigame/shared build && jest",
     "test:watch": "jest --watch",
     "test:unit": "vitest run",
@@ -39,15 +39,15 @@
     "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate-data": "node apps/api/scripts/migrate_data.js",
+    "db:migrate-data": "tsx apps/api/scripts/migrate_data.ts",
     "prepare": "husky"
   },
   "lint-staged": {
-    "apps/api/**/*.js": [
+    "apps/api/**/*.ts": [
       "eslint --fix",
       "prettier --write"
     ],
-    "packages/**/*.{ts,tsx}": [
+    "packages/**/*.{js,ts,tsx}": [
       "eslint --fix",
       "prettier --write"
     ],
