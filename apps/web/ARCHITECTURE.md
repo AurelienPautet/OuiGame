@@ -1,267 +1,112 @@
-# OUI TANK - React Migration Architecture
+# OuiTank web client — architecture
 
-## Overview
+`apps/web` is the React + TypeScript client of the OuiTank monorepo. The guiding
+principle is unchanged from the original game: **React owns the UI (menus,
+modals, HUD, editors); the game runs in a separate, imperative engine driven by
+`requestAnimationFrame`** and talking to the server over Socket.io. React and the
+engine are bridged by a single `useRef` in `GameCanvas`.
 
-This document outlines the architecture for migrating OUI TANK from plain HTML/JS to React while keeping the game engine performant using vanilla JavaScript.
+Everything here is TypeScript (`strict`, plus `noUncheckedIndexedAccess` +
+`exactOptionalPropertyTypes`). Vite builds and dev-serves it; there is no
+separate compile step.
 
-**Key Principle:** React handles UI (menus, modals, HUD), while the game loop runs independently via `requestAnimationFrame`.
-
-> [!IMPORTANT] > **The `Public/` folder must remain untouched.** It serves as reference for the original implementation.
-> All new React code goes in the `Client/` folder.
-
-> **Note:** The app uses **popover modals** rather than page navigation. All screens overlay the main landing page with the canvas always present in the background.
-
----
-
-## Architecture Diagram
+## Place in the monorepo
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         REACT LAYER                             │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │                    App.jsx                                 │ │
-│  │  - Always renders LandingPage + Canvas backdrop            │ │
-│  │  - Modal state management (which modal is open)            │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                              │                                  │
-│     ┌────────────────────────┼────────────────────────┐        │
-│     ▼                        ▼                        ▼        │
-│  ┌──────────┐  ┌─────────────────────────┐  ┌──────────┐      │
-│  │ Modals   │  │     LandingPage         │  │   HUD    │      │
-│  │ (React)  │  │ (always visible behind) │  │ Overlay  │      │
-│  ├──────────┤  └─────────────────────────┘  └──────────┘      │
-│  │ Auth     │                                                  │
-│  │ Rankings │           Canvas (backdrop)                      │
-│  │ Lobby    │                │                                 │
-│  │ Profile  │                │                                 │
-│  │ Editor   │                ▼                                 │
-│  └──────────┘  ┌─────────────────────────┐                    │
-│                │     GameCanvas.jsx      │                    │
-│                │    (useRef bridge)      │                    │
-│                └───────────┬─────────────┘                    │
-└────────────────────────────┼────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                      VANILLA ENGINE                             │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    GameEngine.js                         │   │
-│  │  • requestAnimationFrame loop (60fps)                   │   │
-│  │  • Direct socket communication for game state           │   │
-│  │  • Renderer, InputHandler, ParticleSystem               │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+apps/web    ← this package (React 19 + Vite 7 + TanStack Query 5 + DaisyUI/Tailwind v4)
+apps/api    ← Express 5 + Socket.io + Drizzle server
+packages/shared  ← @ouigame/shared: the isomorphic game runtime (./game) +
+                   the typed contracts the client imports:
+                     ./api    Zod schemas + inferred REST DTOs
+                     ./socket ClientToServerEvents / ServerToClientEvents
+                     ./types  shared wire shapes (RoomSnapshot, LevelChange, …)
+packages/db      ← Drizzle schema + connection (server-only)
+packages/config-ts ← shared tsconfig base
 ```
 
----
+The client imports **types** from `@ouigame/shared/{api,socket,types}` and the
+game **runtime** (`Room`, `loadlevel`, `makeid`) from `@ouigame/shared/game`.
 
-## Directory Structure
-
-```
-Client/
-├── src/
-│   ├── index.css                    # DaisyUI "ouitank" theme ✅
-│   ├── main.jsx                     # Entry point
-│   ├── App.jsx                      # Root + modal state
-│   │
-│   ├── contexts/
-│   │   ├── SocketContext.jsx        # Socket.io singleton
-│   │   ├── AuthContext.jsx          # Login state
-│   │   └── ModalContext.jsx         # Which modal is open
-│   │
-│   ├── components/
-│   │   ├── landing/
-│   │   │   ├── LandingPage.jsx      # Main home screen (always visible)
-│   │   │   ├── TankVisualizer.jsx   # Tank preview + color picker
-│   │   │   └── NameInput.jsx
-│   │   │
-│   │   ├── modals/                  # All use DaisyUI modal component
-│   │   │   ├── AuthModal.jsx        # Login/Register
-│   │   │   ├── ProfileModal.jsx
-│   │   │   ├── RankingsModal.jsx
-│   │   │   ├── RoomSelectorModal.jsx
-│   │   │   ├── LevelSelectorModal.jsx
-│   │   │   ├── MyLevelsModal.jsx
-│   │   │   └── TankSelectModal.jsx
-│   │   │
-│   │   ├── editor/
-│   │   │   └── LevelEditor.jsx      # Full-screen editor view
-│   │   │
-│   │   ├── game/
-│   │   │   ├── GameCanvas.jsx       # useRef bridge to engine
-│   │   │   ├── HUDOverlay.jsx       # Scores, player names
-│   │   │   ├── PauseScreen.jsx
-│   │   │   └── EndScreen.jsx
-│   │   │
-│   │   └── ui/
-│   │       └── Toast.jsx            # Notifications
-│   │
-│   └── engine/                      # Pure vanilla JS (NO REACT)
-│       ├── GameEngine.js            # Main loop + state
-│       ├── Renderer.js              # Canvas drawing (from canvaStuff.js)
-│       ├── InputHandler.js          # Keyboard/mouse
-│       ├── ParticleSystem.js
-│       └── SoundManager.js
-│
-├── public/
-│   └── ressources/                  # Copy from Public/ressources
-```
-
----
-
-## Current → New File Mapping
-
-| Current File                 | New Location                          | Notes                           |
-| ---------------------------- | ------------------------------------- | ------------------------------- |
-| `ui_js/auth.js`              | `modals/AuthModal.jsx`                | React component                 |
-| `ui_js/rankings.js`          | `modals/RankingsModal.jsx`            | React + DaisyUI table           |
-| `ui_js/room_selector.js`     | `modals/RoomSelectorModal.jsx`        | React component                 |
-| `ui_js/level_selector.js`    | `modals/LevelSelectorModal.jsx`       | React component                 |
-| `ui_js/my_level_selector.js` | `modals/MyLevelsModal.jsx`            | React component                 |
-| `ui_js/profile.js`           | `modals/ProfileModal.jsx`             | React component                 |
-| `ui_js/tankselectslider.js`  | `modals/TankSelectModal.jsx`          | React carousel                  |
-| `ui_js/home_ui.js`           | `landing/LandingPage.jsx`             | Main layout                     |
-| `ui_js/level_editor.js`      | `editor/LevelEditor.jsx`              | Hybrid React + Canvas           |
-| `ui_js/toasts.js`            | `ui/Toast.jsx`                        | DaisyUI toast                   |
-| `game_js/canvaStuff.js`      | `engine/Renderer.js`                  | Vanilla class                   |
-| `game_js/particle_system.js` | `engine/ParticleSystem.js`            | Keep as-is                      |
-| `game_js/sounds_system.js`   | `engine/SoundManager.js`              | Keep as-is                      |
-| `client.js`                  | Split: `SocketContext` + `GameEngine` |                                 |
-| `Shared/class/*`             | Keep in `Shared/`                     | Isomorphic (shared with server) |
-
----
-
-## Modal Management Pattern
-
-Since the app uses modals instead of pages, use a context for modal state:
-
-```jsx
-// contexts/ModalContext.jsx
-const ModalContext = createContext();
-
-export const ModalProvider = ({ children }) => {
-  const [activeModal, setActiveModal] = useState(null);
-  // Possible values: null, 'auth', 'profile', 'rankings',
-  //                  'roomSelector', 'levelSelector', 'tankSelect', etc.
-
-  const openModal = (modalName) => setActiveModal(modalName);
-  const closeModal = () => setActiveModal(null);
-
-  return (
-    <ModalContext.Provider value={{ activeModal, openModal, closeModal }}>
-      {children}
-    </ModalContext.Provider>
-  );
-};
-```
-
-```jsx
-// App.jsx
-function App() {
-  const { activeModal } = useModal();
-
-  return (
-    <SocketProvider>
-      <ModalProvider>
-        {/* Always visible backdrop */}
-        <LandingPage />
-        <GameCanvas />
-
-        {/* Modals render on top when active */}
-        {activeModal === "auth" && <AuthModal />}
-        {activeModal === "rankings" && <RankingsModal />}
-        {activeModal === "roomSelector" && <RoomSelectorModal />}
-        {/* ... etc */}
-      </ModalProvider>
-    </SocketProvider>
-  );
-}
-```
-
----
-
-## Data Flow
-
-### UI Events (React → Engine)
+## Layers
 
 ```
-User clicks "Play Solo"
-    → React updates modal state
-    → GameCanvas receives prop change
-    → GameEngine.startGame() called
+┌──────────────────────────── React (UI) ─────────────────────────────┐
+│  main.tsx → App.tsx  (providers + always-mounted LandingPage + canvas)│
+│                                                                       │
+│  contexts/        SocketContext  (one socket.io client, typed)        │
+│                   AuthContext    (session / current user)             │
+│                   GameContext    (game-mode state machine, campaigns) │
+│                   ModalContext   (which overlay is open)              │
+│                   ToastContext   (notifications)                      │
+│                                                                       │
+│  components/ui · modals · landing · game     pages/ (full-screen      │
+│  hooks/api/  (TanStack Query, typed vs DTOs)  Level/Campaign editors) │
+│  api/  client.ts + endpoints/  (fetch wrapper, Bearer auth)           │
+│  lib/storage.ts  (typed localStorage: session, name, tank colours …)  │
+└───────────────────────────────┬───────────────────────────────────────┘
+                                 │  GameCanvas.tsx  (useRef → engine)
+┌───────────────────────────────▼───────────────────────────────────────┐
+│                      engine/ (imperative, no React)                    │
+│  GameEngine.ts   rAF loop; solo runs a local Room, online listens to   │
+│                  the server `tick`; owns the socket gameplay listeners │
+│  Renderer.ts     canvas drawing            InputHandler.ts  kbd/mouse  │
+│  ParticleSystem.ts  effects               SoundManager.ts  howler      │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Game Events (Engine → React)
+## Directory structure
 
 ```
-Player scores a kill
-    → GameEngine receives socket 'tick'
-    → Calls callback.onScoreUpdate(scores)
-    → React HUDOverlay re-renders with new scores
+apps/web/
+├── index.html
+├── vite.config.js            base "./" (relative assets — required for itch.io)
+├── .env.itch                 VITE_API_URL / VITE_SOCKET_URL for the itch build
+├── types/                    ambient .d.ts (the untyped @ouigame/shared/game runtime, howler)
+└── src/
+    ├── main.tsx · App.tsx
+    ├── providers/            QueryProvider, ErrorBoundary
+    ├── contexts/             Socket · Auth · Game · Modal · Toast (+ index barrel)
+    ├── api/
+    │   ├── client.ts         fetch wrapper; Bearer token from storage; VITE_API_URL
+    │   └── endpoints/        auth · levels · campaigns · solo · rankings · rooms · stats
+    ├── hooks/api/            TanStack Query hooks (data infers the @ouigame/shared/api DTOs)
+    ├── lib/storage.ts        typed localStorage access
+    ├── constants/            campaign rules, tank colours
+    ├── utils/                level helpers (hex→dataURL, bot extraction)
+    ├── components/
+    │   ├── ui/               Toast, RoomCard, LevelCard, LevelSelector, Tabs, …
+    │   ├── modals/           Auth, Profile, Rankings, RoomSelector, CreateRoom,
+    │   │                     LevelSelector, MyLevels, TankSelect, Campaign* …
+    │   ├── landing/          LandingPage (always visible behind overlays)
+    │   └── game/             GameCanvas (the React↔engine bridge), EndGameScreen, …
+    ├── engine/               GameEngine · Renderer · InputHandler · ParticleSystem · SoundManager
+    └── pages/                LevelEditor, CampaignEditor (full-screen, route-based)
 ```
 
-### Socket Routing
+## Key patterns
 
-| Event               | Handler             | Why                             |
-| ------------------- | ------------------- | ------------------------------- |
-| `tick` (60/sec)     | GameEngine directly | Performance - never touch React |
-| `level_change`      | GameEngine          | Updates blocks/collision        |
-| `id`, `id-fail`     | React via callback  | Updates UI state                |
-| `rankings_response` | React directly      | UI only                         |
-| `auth_*`            | React directly      | UI only                         |
+- **React ↔ engine bridge.** `GameCanvas` creates a `GameEngine` against the
+  canvas refs + the (typed) socket and drives it imperatively; React never
+  re-renders per frame. On unmount/quit, `GameEngine.quit()` removes its socket
+  listeners and `InputHandler.destroy()` removes the global key/mouse listeners
+  (symmetric attach/detach — the next game re-attaches).
+- **Typed socket end-to-end.** `SocketContext` holds one
+  `Socket<ServerToClientEvents, ClientToServerEvents>`; every `emit`/`on` is
+  checked against `@ouigame/shared/socket`.
+- **Data layer.** `api/client.ts` is a small typed fetch wrapper (Bearer token
+  from `lib/storage`); `hooks/api/*` wrap it in TanStack Query, with `data`
+  inferring the DTOs from `@ouigame/shared/api`.
+- **Contexts return non-null.** `useGame()/useModal()/useSocket()/…` throw if
+  used outside their provider, so consumers don't null-check.
+- **Overlay UI, not routes** (except the full-screen editors): `ModalContext`
+  tracks which overlay is open over the always-mounted `LandingPage` + canvas.
 
----
+## Build targets
 
-## Migration Phases
-
-### Phase 1: React Shell (No game changes)
-
-- [ ] Set up React Router-less structure with modal management
-- [ ] Create all modal components with DaisyUI styling
-- [ ] Implement SocketContext and AuthContext
-- [ ] Port landing page UI to React
-
-### Phase 2: Game Engine Wrapper
-
-- [ ] Create GameEngine class wrapping existing canvas code
-- [ ] Create Renderer class from canvaStuff.js
-- [ ] Create InputHandler class
-- [ ] Connect via GameCanvas.jsx useRef bridge
-
-### Phase 3: Socket Integration
-
-- [ ] Split socket handlers: game-critical → Engine, UI → React
-- [ ] Add callback system for Engine → React communication
-- [ ] Migrate input sending to engine
-
-### Phase 4: HUD & Overlays
-
-- [ ] Create HUDOverlay (HTML, not canvas)
-- [ ] Create PauseScreen, EndScreen as React
-- [ ] Create Toast notifications with DaisyUI
-
-### Phase 5: Level Editor
-
-- [ ] Create hybrid LevelEditor.jsx
-- [ ] Keep editor canvas rendering as vanilla
-- [ ] React handles toolbar and block selection UI
-
----
-
-## Component Responsibility Matrix
-
-| Feature                           | React?          | Vanilla Engine?          |
-| --------------------------------- | --------------- | ------------------------ |
-| Landing page layout               | ✅              |                          |
-| Tank visualizer                   | ✅              |                          |
-| All modals (auth, rankings, etc.) | ✅              |                          |
-| Level editor UI (toolbar)         | ✅              |                          |
-| Level editor canvas               |                 | ✅                       |
-| HUD (scores, names)               | ✅ HTML overlay |                          |
-| Pause/End screens                 | ✅              |                          |
-| Toast notifications               | ✅ DaisyUI      |                          |
-| 60fps game rendering              |                 | ✅ requestAnimationFrame |
-| Player movement                   |                 | ✅ Direct socket         |
-| Bullet/mine physics               |                 | ✅                       |
-| Particle effects                  |                 | ✅                       |
-| Sound effects                     |                 | ✅                       |
+- `pnpm --filter @ouigame/web build` — the normal production bundle (talks to the
+  hosted API/socket via the PROD defaults).
+- `pnpm --filter @ouigame/web build:itch` — `vite build --mode itch`; loads
+  `.env.itch` so `VITE_API_URL`/`VITE_SOCKET_URL` point the static, cross-origin
+  itch.io bundle at the hosted backend (the server already allows the itch
+  origins via CORS; auth is a Bearer token in localStorage, which works
+  cross-origin). Zip `dist/` and upload to itch.
