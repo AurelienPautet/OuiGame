@@ -14,8 +14,8 @@ interface StatProps {
 }
 
 /**
- * The one standard stat chip (rule 5). Numbers use `tabular-nums` so times and
- * counts line up without a monospace font.
+ * The one standard stat chip (rule 5) — a light tile on the white card. Numbers
+ * use `tabular-nums` so times and counts line up without a monospace font.
  */
 export function Stat({
   icon,
@@ -28,16 +28,18 @@ export function Stat({
     return (
       <div
         className={cn(
-          "flex items-center gap-2 bg-white/10 border-2 border-ink rounded-lg px-3 py-2",
+          "flex items-center gap-2 bg-ink/[0.04] border-2 border-ink rounded-lg px-3 py-2",
           className
         )}
       >
         {icon}
         <div className="flex flex-col leading-tight min-w-0">
-          <span className="text-[11px] uppercase tracking-wide text-white/50">
+          <span className="text-[11px] uppercase tracking-wide text-ink-soft">
             {label}
           </span>
-          <span className="text-base font-bold tabular-nums">{value}</span>
+          <span className="text-base font-bold tabular-nums text-ink">
+            {value}
+          </span>
         </div>
       </div>
     );
@@ -46,15 +48,15 @@ export function Stat({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 bg-white/10 border-2 border-ink rounded-lg px-4 py-2",
+        "flex items-center justify-between gap-3 bg-ink/[0.04] border-2 border-ink rounded-lg px-4 py-2",
         className
       )}
     >
-      <span className="flex items-center gap-2 text-sm text-white/70">
+      <span className="flex items-center gap-2 text-sm text-ink-soft">
         {icon}
         {label}
       </span>
-      <span className="font-bold tabular-nums">{value}</span>
+      <span className="font-bold tabular-nums text-ink">{value}</span>
     </div>
   );
 }

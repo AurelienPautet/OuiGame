@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { User } from "lucide-react";
 import { cn } from "../../../lib/cn";
 
@@ -10,9 +11,8 @@ interface SectionCardProps {
 }
 
 /**
- * Inner panel section used for scoreboards / leaderboards — the
- * `bg-white/10 border-2 border-ink` motif shared with `Stat`, with an optional
- * small header.
+ * Inner panel section used for scoreboards / leaderboards — the light tile motif
+ * shared with `Stat`, with an optional small header.
  */
 export function SectionCard({
   icon,
@@ -23,12 +23,12 @@ export function SectionCard({
   return (
     <div
       className={cn(
-        "w-full bg-white/10 border-2 border-ink rounded-lg p-3",
+        "w-full bg-ink/[0.04] border-2 border-ink rounded-lg p-3",
         className
       )}
     >
       {title && (
-        <div className="flex items-center gap-2 mb-2 text-sm font-bold text-white">
+        <div className="flex items-center gap-2 mb-2 text-sm font-bold text-ink">
           {icon}
           {title}
         </div>
@@ -38,12 +38,12 @@ export function SectionCard({
   );
 }
 
-/** Medal colour for a leaderboard rank (arcade tokens only). */
+/** Medal colour for a leaderboard rank (readable on the white card). */
 function rankColor(rank: number): string {
-  if (rank === 1) return "text-yellow";
-  if (rank === 2) return "text-white/60";
+  if (rank === 1) return "text-yellow-d";
+  if (rank === 2) return "text-ink/40";
   if (rank === 3) return "text-orange";
-  return "text-white/70";
+  return "text-ink/50";
 }
 
 interface ScoreRowProps {
@@ -70,25 +70,16 @@ export function ScoreRow({
     <div
       className={cn(
         "flex items-center justify-between gap-3 text-sm px-2 py-1 rounded",
-        isWinner && "bg-yellow/15"
+        isWinner && "bg-yellow/25"
       )}
     >
-      <span
-        className={cn(
-          "font-bold truncate",
-          isWinner ? "text-yellow" : "text-white"
-        )}
-      >
-        {name}
-      </span>
-      <span className="flex items-center gap-3 tabular-nums shrink-0">
-        <span className={isWinner ? "text-yellow" : "text-white/80"}>
-          {wins}W
-        </span>
-        <span className={hasHighestKills ? "text-green" : "text-white/80"}>
+      <span className="font-bold truncate text-ink">{name}</span>
+      <span className="flex items-center gap-3 tabular-nums shrink-0 font-bold">
+        <span className="text-ink">{wins}W</span>
+        <span className={hasHighestKills ? "text-green-d" : "text-ink/60"}>
           {kills}K
         </span>
-        <span className={hasHighestDeaths ? "text-red" : "text-white/80"}>
+        <span className={hasHighestDeaths ? "text-red-d" : "text-ink/60"}>
           {deaths}D
         </span>
       </span>
@@ -111,11 +102,12 @@ export function LeaderRow({
   time,
   isMe = false,
 }: LeaderRowProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
-        "flex items-center justify-between text-sm px-2 py-1 rounded",
-        isMe && "bg-blue/20"
+        "flex items-center justify-between text-sm px-2 py-1 rounded text-ink",
+        isMe && "bg-blue/15"
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -129,9 +121,11 @@ export function LeaderRow({
         </span>
         <User className="w-4 h-4 shrink-0" />
         <span className="truncate">{username}</span>
-        {isMe && <span className="text-xs text-white/60">(you)</span>}
+        {isMe && (
+          <span className="text-xs text-ink/50">{t("common.youParens")}</span>
+        )}
       </div>
-      <span className="font-bold tabular-nums text-yellow">{time}</span>
+      <span className="font-bold tabular-nums text-ink">{time}</span>
     </div>
   );
 }

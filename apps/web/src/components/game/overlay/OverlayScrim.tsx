@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { motion } from "motion/react";
 import { cn } from "../../../lib/cn";
 
 interface OverlayScrimProps {
@@ -13,13 +14,16 @@ interface OverlayScrimProps {
  */
 export function OverlayScrim({ children, className }: OverlayScrimProps) {
   return (
-    <div
+    <motion.div
       className={cn(
-        "absolute inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm animate-[arcadeFadeIn_0.2s_ease-out]",
+        "absolute inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm",
         className
       )}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }

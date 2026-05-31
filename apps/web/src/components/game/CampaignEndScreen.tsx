@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Trophy, Skull, Clock, Layers, Heart } from "lucide-react";
 import { formatTimeMs } from "../../lib/formatTime";
 import { OverlayScrim, OverlayPanel, Stat, OverlayActions } from "./overlay";
@@ -31,6 +32,7 @@ export const CampaignEndScreen = ({
   onReplay,
   onQuit,
 }: CampaignEndScreenProps) => {
+  const { t } = useTranslation();
   if (!result) return null;
   const { completed, levelsCleared, livesLeft, timeMs } = result;
 
@@ -40,33 +42,31 @@ export const CampaignEndScreen = ({
         tone={completed ? "win" : "lose"}
         icon={
           completed ? (
-            <Trophy className="w-16 h-16 text-yellow" />
+            <Trophy className="w-16 h-16 text-yellow-d" />
           ) : (
             <Skull className="w-16 h-16 text-red" />
           )
         }
-        title={completed ? "Campaign Complete!" : "Run Over"}
+        title={completed ? t("campaignEnd.complete") : t("campaignEnd.runOver")}
         subtitle={
-          completed
-            ? "You cleared every level. Nice work!"
-            : "You ran out of lives."
+          completed ? t("campaignEnd.completeSub") : t("campaignEnd.runOverSub")
         }
         footer={<OverlayActions onReplay={onReplay} onQuit={onQuit} />}
       >
         <div className="w-full flex flex-col gap-2">
           <Stat
             icon={<Layers className="w-5 h-5 text-blue" />}
-            label="Levels cleared"
+            label={t("campaignEnd.levelsCleared")}
             value={`${levelsCleared} / ${totalLevels}`}
           />
           <Stat
             icon={<Heart className="w-5 h-5 text-red" />}
-            label="Lives left"
+            label={t("campaignEnd.livesLeft")}
             value={livesLeft}
           />
           <Stat
             icon={<Clock className="w-5 h-5 text-blue" />}
-            label="Total time"
+            label={t("campaignEnd.totalTime")}
             value={formatTimeMs(timeMs)}
           />
         </div>

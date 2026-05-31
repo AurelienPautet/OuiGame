@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Heart,
   HeartCrack,
@@ -60,6 +61,7 @@ export const CampaignInterstitial = ({
   data,
   onContinue,
 }: CampaignInterstitialProps) => {
+  const { t } = useTranslation();
   // Keep the latest onContinue without restarting the timer.
   const onContinueRef = useRef(onContinue);
   useEffect(() => {
@@ -101,16 +103,21 @@ export const CampaignInterstitial = ({
         tone={isWin ? "win" : "lose"}
         icon={
           isWin ? (
-            <CheckCircle2 className="w-14 h-14 text-green" />
+            <CheckCircle2 className="w-14 h-14 text-green-d" />
           ) : (
             <Skull className="w-14 h-14 text-red" />
           )
         }
-        title={isWin ? "Level Cleared!" : "You Died"}
-        subtitle={`Level ${levelNumber} of ${totalLevels}`}
+        title={
+          isWin ? t("interstitial.levelCleared") : t("interstitial.youDied")
+        }
+        subtitle={t("interstitial.levelXofY", {
+          current: levelNumber,
+          total: totalLevels,
+        })}
         footer={
           <div className="w-full">
-            <div className="h-1.5 w-full bg-white/15 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-ink/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue"
                 style={{
@@ -118,8 +125,8 @@ export const CampaignInterstitial = ({
                 }}
               />
             </div>
-            <p className="text-center text-xs text-white/40 mt-1.5">
-              {isWin ? "Next level…" : "Retrying…"}
+            <p className="text-center text-xs text-ink-soft mt-1.5">
+              {isWin ? t("interstitial.nextLevel") : t("interstitial.retrying")}
             </p>
           </div>
         }
@@ -139,17 +146,17 @@ export const CampaignInterstitial = ({
         <p
           className={`-mt-2 text-sm font-bold ${
             isWin && gainedLife
-              ? "text-green"
+              ? "text-green-d"
               : isWin
-                ? "text-white/50"
+                ? "text-ink/50"
                 : "text-red"
           }`}
         >
           {isWin && gainedLife
-            ? "+1 life!"
+            ? t("interstitial.plusLife")
             : isWin
-              ? `${livesAfter} lives left`
-              : `-1 life · ${livesAfter} left`}
+              ? t("interstitial.livesLeft", { count: livesAfter })
+              : t("interstitial.minusLife", { count: livesAfter })}
         </p>
 
         {/* Level stats */}
@@ -157,32 +164,32 @@ export const CampaignInterstitial = ({
           <Stat
             layout="cell"
             icon={<Clock className="w-4 h-4 text-blue" />}
-            label="Time"
+            label={t("stats.time")}
             value={formatTimeMs(timeMs)}
           />
           <Stat
             layout="cell"
             icon={<Skull className="w-4 h-4 text-blue" />}
-            label="Kills"
+            label={t("stats.kills")}
             value={stats.kills || 0}
           />
           <Stat
             layout="cell"
             icon={<Target className="w-4 h-4 text-green" />}
-            label="Accuracy"
+            label={t("stats.accuracy")}
             value={`${accuracy}%`}
           />
           <Stat
             layout="cell"
-            icon={<Crosshair className="w-4 h-4 text-yellow" />}
-            label="Shots"
+            icon={<Crosshair className="w-4 h-4 text-yellow-d" />}
+            label={t("stats.shots")}
             value={stats.shots || 0}
           />
           {(stats.blocksDestroyed || 0) > 0 && (
             <Stat
               layout="cell"
-              icon={<Hammer className="w-4 h-4 text-white/70" />}
-              label="Blocks"
+              icon={<Hammer className="w-4 h-4 text-ink-soft" />}
+              label={t("stats.blocks")}
               value={stats.blocksDestroyed ?? 0}
             />
           )}
