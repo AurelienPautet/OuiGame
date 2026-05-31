@@ -15,6 +15,8 @@ export interface SoundEvents {
 export class SoundManager {
   sounds: Record<string, Howl>;
   contextResumed: boolean;
+  // When false, all playback is suppressed (driven by the "sound" user setting).
+  enabled = true;
 
   constructor() {
     // Preload all sounds
@@ -54,8 +56,14 @@ export class SoundManager {
     this.contextResumed = false;
   }
 
+  /** Enable/disable all sound playback. */
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+  }
+
   // Play a sound with optional rate variation for variety
   _play(soundName: string) {
+    if (!this.enabled) return;
     const sound = this.sounds[soundName];
     if (sound) {
       const id = sound.play();

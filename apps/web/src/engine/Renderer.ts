@@ -11,16 +11,12 @@ import { palette, tankColors, mixHex, WRECK_CHAR } from "../theme/palette";
 import { drawTank, paintField, drawBlocks, drawHole } from "./shapes";
 
 const INK = palette.ink;
+
 // Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
 // map = 1150×800), so grid lines fall exactly on block edges.
 const GRID_CELL = 50;
-// Bullets cycle through warm team colours by bounce count.
-const BULLET_COLORS = [
-  palette.yellow,
-  palette.orange,
-  palette.red,
-  palette.purple,
-];
+// Bullet colour by remaining bounces: 0 → red, 1 → orange, 2+ → yellow.
+const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
 
 interface Vec2 {
   x: number;
@@ -61,6 +57,7 @@ interface Bullet {
   angle: number;
   type?: number;
   bounce?: number;
+  max_bounce?: number;
 }
 
 interface RenderPlayer {
@@ -100,6 +97,10 @@ export class Renderer {
   drawTicks: number;
   theme: number;
   fieldImage: HTMLCanvasElement | null;
+  // When the WebGL post-processor is active it draws the field, holes and walls
+  // procedurally, so the 2D pass skips them (it would otherwise double-draw,
+  // hidden under the GL canvas). Stays false for the non-WebGL fallback.
+  skipEnvironment: boolean;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -124,6 +125,7 @@ export class Renderer {
     this.debugVisual = false;
     this.drawTicks = 0;
     this.theme = 6;
+    this.skipEnvironment = false;
 
     // Pre-rendered graph-paper field, seeded onto the (back) fading canvas so
     // the grid is present from frame 0.
@@ -179,11 +181,13 @@ export class Renderer {
       mines.forEach((mine) => this._drawMine(mine));
     }
 
-    if (holes) {
+    // Holes + walls are drawn by the WebGL post-processor when it's active
+    // (skipEnvironment); otherwise the 2D renderer draws them here.
+    if (holes && !this.skipEnvironment) {
       holes.forEach((h) => this._drawHole(h));
     }
 
-    if (blocks) {
+    if (blocks && !this.skipEnvironment) {
       this._drawBlocks(blocks);
     }
 
@@ -255,12 +259,13 @@ export class Renderer {
   }
 
   _drawBullet(bullet: Bullet) {
-    const bounceCount = bullet.bounce || 0;
+    const remaining = (bullet.max_bounce ?? 3) - (bullet.bounce ?? 0);
     const cx = bullet.position.x + bullet.size.w / 2;
     const cy = bullet.position.y + bullet.size.h / 2;
     const r = Math.min(bullet.size.w, bullet.size.h) / 2;
+    const colorIdx = Math.min(remaining, BULLET_COLOR_BY_REMAINING.length - 1);
     const fill =
-      BULLET_COLORS[bounceCount % BULLET_COLORS.length] ?? palette.yellow;
+      BULLET_COLOR_BY_REMAINING[Math.max(0, colorIdx)] ?? palette.yellow;
 
     this.c.beginPath();
     this.c.arc(cx, cy, r, 0, Math.PI * 2);

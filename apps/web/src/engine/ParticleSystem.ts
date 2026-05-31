@@ -1,7 +1,14 @@
 /**
  * ParticleSystem - Visual effects manager
- * Ported from legacy particle_system.js to preserve original aesthetic
+ *
+ * The particle *physics* (motion, radius/velocity decay, lifetimes) are the
+ * legacy ones — they feel good and are left untouched. The *colours* are now
+ * driven by the shared theme/palette so bursts match the "diep.io arcade"
+ * look the Renderer and TankAvatar use: flat saturated team colours, warm
+ * yellow→orange→red debris that chars to ink, no realistic fire-to-grey-smoke
+ * gradients. Change a colour in theme/palette and the sparks follow.
  */
+import { palette, hexToRgb, type Rgb } from "../theme/palette";
 
 // --- Types ---
 
@@ -10,11 +17,7 @@ interface Vec2 {
   y: number;
 }
 
-interface RGB {
-  red: number;
-  green: number;
-  blue: number;
-}
+type RGB = Rgb;
 
 interface GradientStep {
   color: RGB;
@@ -86,6 +89,49 @@ function steppingradient(steps: GradientStep[], percentFade: number): string {
   );
 }
 
+// --- Arcade palette (single source of truth: theme/palette) ---
+
+const YELLOW = hexToRgb(palette.yellow);
+const ORANGE = hexToRgb(palette.orange);
+const RED = hexToRgb(palette.red);
+const INK = hexToRgb(palette.ink);
+const WHITE = hexToRgb(palette.white);
+
+function clamp8(v: number): number {
+  return Math.max(0, Math.min(255, Math.round(v)));
+}
+
+// Nudge each channel by ±amount so a burst of identical-colour particles still
+// has a little variation (the legacy code jittered the green channel inline).
+function jitter(base: RGB, amount: number): RGB {
+  return {
+    red: clamp8(base.red + getRandomArbitrary(-amount, amount)),
+    green: clamp8(base.green + getRandomArbitrary(-amount, amount)),
+    blue: clamp8(base.blue + getRandomArbitrary(-amount, amount)),
+  };
+}
+
+// Warm arcade debris: bright yellow core → orange → red → charred ink. Flat
+// saturated steps (no grey ash / white smoke) so it reads as cartoon, matching
+// the warm bullet colours.
+function warmDebris(): GradientStep[] {
+  return [
+    { color: jitter(YELLOW, 12), percent: 0 },
+    { color: jitter(ORANGE, 14), percent: 0.35 },
+    { color: jitter(RED, 14), percent: 0.7 },
+    { color: jitter(INK, 8), percent: 1 },
+  ];
+}
+
+// Tiny hot sparks: white flash → yellow → orange.
+function brightSpark(): GradientStep[] {
+  return [
+    { color: WHITE, percent: 0 },
+    { color: jitter(YELLOW, 10), percent: 0.5 },
+    { color: jitter(ORANGE, 12), percent: 1 },
+  ];
+}
+
 // --- Classes ---
 
 class Particle {
@@ -130,6 +176,14 @@ class Particle {
     this.timealive++;
   }
   draw(c: CanvasRenderingContext2D) {
+    const fade = Math.min(1, this.timealive / this.timelife); // Safety clamp
+    // Dissolve over the last 35% of life so debris melts out cleanly instead
+    // of popping at full size (the legacy version just vanished).
+    const FADE_FROM = 0.65;
+    const alpha =
+      fade > FADE_FROM ? 1 - (fade - FADE_FROM) / (1 - FADE_FROM) : 1;
+    c.save();
+    c.globalAlpha = alpha;
     c.beginPath();
     c.arc(
       this.position.x,
@@ -139,12 +193,10 @@ class Particle {
       2 * Math.PI,
       false
     );
-    c.fillStyle = steppingradient(
-      this.steps,
-      Math.min(1, this.timealive / this.timelife) // Safety clamp
-    );
+    c.fillStyle = steppingradient(this.steps, fade);
     c.fill();
     c.closePath();
+    c.restore();
   }
 }
 
@@ -212,10 +264,19 @@ class Chockwave {
 export class ParticleSystem {
   particles: Particle[];
   chockwaves: Chockwave[];
+  // When false, emitters drop their bursts so no particles are spawned (and the
+  // existing ones are cleared). Driven by the "particles" user setting.
+  enabled = true;
 
   constructor() {
     this.particles = [];
     this.chockwaves = [];
+  }
+
+  /** Enable/disable particle emission; clears live particles when turned off. */
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    if (!enabled) this.clear();
   }
 
   update() {
@@ -250,19 +311,12 @@ export class ParticleSystem {
     this.chockwaves = [];
   }
 
-  // --- Effect Methods (Ported 1:1 from legacy code) ---
+  // --- Effect Methods (physics legacy, colours arcade-palette driven) ---
 
   explosion(position: Vec2, num: number) {
+    if (!this.enabled) return;
     this.chockwaves.push(
-      new Chockwave(
-        structuredClone(position),
-        10,
-        0,
-        13,
-        { red: 255, green: 220, blue: 0 },
-        { red: 255, green: 220, blue: 0 },
-        30
-      )
+      new Chockwave(structuredClone(position), 10, 0, 13, WHITE, YELLOW, 30)
     );
     for (let e = 0; e < num; e++) {
       this.particles.push(
@@ -271,40 +325,7 @@ export class ParticleSystem {
           getRandomArbitrary(0, 360),
           getRandomArbitrary(0, 4),
           getRandomArbitrary(5, 15),
-          [
-            {
-              color: {
-                red: 255,
-                green: Math.floor(getRandomArbitrary(220, 260)),
-                blue: 39,
-              },
-              percent: 0,
-            },
-            {
-              color: {
-                red: 255,
-                green: Math.floor(getRandomArbitrary(100, 120)),
-                blue: 39,
-              },
-              percent: 0.4,
-            },
-            {
-              color: {
-                red: Math.floor(getRandomArbitrary(40, 60)),
-                green: Math.floor(getRandomArbitrary(40, 60)),
-                blue: Math.floor(getRandomArbitrary(40, 60)),
-              },
-              percent: 0.6,
-            },
-            {
-              color: {
-                red: Math.floor(getRandomArbitrary(220, 240)),
-                green: Math.floor(getRandomArbitrary(220, 240)),
-                blue: Math.floor(getRandomArbitrary(220, 240)),
-              },
-              percent: 1,
-            },
-          ],
+          warmDebris(),
           40
         )
       );
@@ -316,13 +337,7 @@ export class ParticleSystem {
           getRandomArbitrary(0, 360),
           getRandomArbitrary(4, 7),
           getRandomArbitrary(1.5, 2),
-          [
-            { color: { red: 245, green: 251, blue: 0 }, percent: 0 },
-            { color: { red: 240, green: 251, blue: 249 }, percent: 0.31 },
-            { color: { red: 255, green: 255, blue: 255 }, percent: 0.52 },
-            { color: { red: 252, green: 255, blue: 182 }, percent: 0.8 },
-            { color: { red: 255, green: 239, blue: 90 }, percent: 1 },
-          ],
+          brightSpark(),
           40
         )
       );
@@ -330,16 +345,9 @@ export class ParticleSystem {
   }
 
   bulletExplosion(position: Vec2, num = 20) {
+    if (!this.enabled) return;
     this.chockwaves.push(
-      new Chockwave(
-        structuredClone(position),
-        10,
-        0,
-        13,
-        { red: 255, green: 220, blue: 0 },
-        { red: 255, green: 220, blue: 0 },
-        10
-      )
+      new Chockwave(structuredClone(position), 10, 0, 13, WHITE, YELLOW, 10)
     );
     for (let e = 0; e < num; e++) {
       this.particles.push(
@@ -348,40 +356,7 @@ export class ParticleSystem {
           getRandomArbitrary(0, 360),
           getRandomArbitrary(0, 2),
           getRandomArbitrary(2.5, 7.5),
-          [
-            {
-              color: {
-                red: 255,
-                green: Math.floor(getRandomArbitrary(220, 260)),
-                blue: 39,
-              },
-              percent: 0,
-            },
-            {
-              color: {
-                red: 255,
-                green: Math.floor(getRandomArbitrary(100, 120)),
-                blue: 39,
-              },
-              percent: 0.4,
-            },
-            {
-              color: {
-                red: Math.floor(getRandomArbitrary(40, 60)),
-                green: Math.floor(getRandomArbitrary(40, 60)),
-                blue: Math.floor(getRandomArbitrary(40, 60)),
-              },
-              percent: 0.6,
-            },
-            {
-              color: {
-                red: Math.floor(getRandomArbitrary(220, 240)),
-                green: Math.floor(getRandomArbitrary(220, 240)),
-                blue: Math.floor(getRandomArbitrary(220, 240)),
-              },
-              percent: 1,
-            },
-          ],
+          warmDebris(),
           20
         )
       );
@@ -393,14 +368,7 @@ export class ParticleSystem {
           getRandomArbitrary(0, 360),
           getRandomArbitrary(2, 3),
           getRandomArbitrary(1.5, 2),
-          [
-            { color: { red: 245, green: 251, blue: 0 }, percent: 0 },
-            { color: { red: 238, green: 136, blue: 136 }, percent: 0 },
-            { color: { red: 240, green: 251, blue: 249 }, percent: 0.31 },
-            { color: { red: 255, green: 255, blue: 255 }, percent: 0.52 },
-            { color: { red: 252, green: 255, blue: 182 }, percent: 0.8 },
-            { color: { red: 255, green: 239, blue: 90 }, percent: 1 },
-          ],
+          brightSpark(),
           35
         )
       );
@@ -408,6 +376,7 @@ export class ParticleSystem {
   }
 
   ricochetSparks(position: Vec2, angle: number, num: number) {
+    if (!this.enabled) return;
     for (let e = 0; e < num; e++) {
       this.particles.push(
         new Particle(
@@ -416,22 +385,8 @@ export class ParticleSystem {
           getRandomArbitrary(0, 2),
           getRandomArbitrary(1, 3),
           [
-            {
-              color: {
-                red: 255,
-                green: 255,
-                blue: 255,
-              },
-              percent: 0,
-            },
-            {
-              color: {
-                red: 245,
-                green: 251,
-                blue: 0,
-              },
-              percent: 1,
-            },
+            { color: WHITE, percent: 0 },
+            { color: jitter(YELLOW, 10), percent: 1 },
           ],
           50
         )
@@ -440,18 +395,15 @@ export class ParticleSystem {
   }
 
   shootExplosion(position: Vec2, angle: number, num: number) {
+    if (!this.enabled) return;
     this.chockwaves.push(
-      new Chockwave(
-        structuredClone(position),
-        10,
-        0,
-        2,
-        { red: 255, green: 220, blue: 0 },
-        { red: 255, green: 220, blue: 0 },
-        5
-      )
+      new Chockwave(structuredClone(position), 10, 0, 2, WHITE, YELLOW, 5)
     );
     for (let e = 0; e < num; e++) {
+      // Muzzle flash chars early (ink by ~half-life) so it snaps shut quickly.
+      // NOTE: the final step must stay at percent 1 — steppingradient reads the
+      // step after the last one it lands on, so an early-terminating gradient
+      // would index past the array.
       this.particles.push(
         new Particle(
           structuredClone(position),
@@ -459,38 +411,10 @@ export class ParticleSystem {
           getRandomArbitrary(0.3, 3),
           getRandomArbitrary(5, 10),
           [
-            {
-              color: {
-                red: 255,
-                green: Math.floor(getRandomArbitrary(220, 260)),
-                blue: 39,
-              },
-              percent: 0,
-            },
-            {
-              color: {
-                red: 255,
-                green: Math.floor(getRandomArbitrary(100, 120)),
-                blue: 39,
-              },
-              percent: 0.1,
-            },
-            {
-              color: {
-                red: Math.floor(getRandomArbitrary(40, 60)),
-                green: Math.floor(getRandomArbitrary(40, 60)),
-                blue: Math.floor(getRandomArbitrary(40, 60)),
-              },
-              percent: 0.3,
-            },
-            {
-              color: {
-                red: Math.floor(getRandomArbitrary(220, 240)),
-                green: Math.floor(getRandomArbitrary(220, 240)),
-                blue: Math.floor(getRandomArbitrary(220, 240)),
-              },
-              percent: 1,
-            },
+            { color: jitter(YELLOW, 12), percent: 0 },
+            { color: jitter(ORANGE, 14), percent: 0.15 },
+            { color: jitter(RED, 14), percent: 0.35 },
+            { color: jitter(INK, 8), percent: 1 },
           ],
           60
         )
@@ -499,8 +423,10 @@ export class ParticleSystem {
   }
 
   fastBullets(position: Vec2, angle: number, num: number) {
+    if (!this.enabled) return;
     angle = angle - Math.PI;
     for (let e = 0; e < num; e++) {
+      // Rocket trail: hot yellow flash cooling to orange, dissolving fast.
       this.particles.push(
         new Particle(
           structuredClone(position),
@@ -509,14 +435,9 @@ export class ParticleSystem {
           getRandomArbitrary(0, -5), // Speed negative? Copied from legacy but seems odd with inverted angle
           getRandomArbitrary(2, 4),
           [
-            {
-              color: { red: 255, green: 0, blue: 0 },
-              percent: 0,
-            },
-            {
-              color: { red: 255, green: 255, blue: 255 },
-              percent: 1,
-            },
+            { color: WHITE, percent: 0 },
+            { color: jitter(YELLOW, 12), percent: 0.4 },
+            { color: jitter(ORANGE, 14), percent: 1 },
           ],
           7
         )
