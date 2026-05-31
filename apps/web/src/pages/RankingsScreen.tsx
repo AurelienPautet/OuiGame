@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts";
 import {
   useRankings,
@@ -19,19 +20,15 @@ import { cn } from "../lib/cn";
 type Mode = "ONLINE" | "SOLO";
 
 const ONLINE_STATS = [
-  { value: "KILLS" as const, label: "Kills" },
-  { value: "WINS" as const, label: "Wins" },
-  { value: "ROUNDS_PLAYED" as const, label: "Rounds" },
-];
+  { value: "KILLS" as const, labelKey: "rankings.kills" },
+  { value: "WINS" as const, labelKey: "rankings.wins" },
+  { value: "ROUNDS_PLAYED" as const, labelKey: "rankings.rounds" },
+] as const;
 const SOLO_STATS = [
-  { value: "LEVELS_COMPLETED" as const, label: "Completed" },
-  { value: "LEVELS_PLAYED" as const, label: "Played" },
-  { value: "KILLS" as const, label: "Kills" },
-];
-
-const statLabel = (value: string) =>
-  [...ONLINE_STATS, ...SOLO_STATS].find((s) => s.value === value)?.label ??
-  value.replace("_", " ");
+  { value: "LEVELS_COMPLETED" as const, labelKey: "rankings.completed" },
+  { value: "LEVELS_PLAYED" as const, labelKey: "rankings.played" },
+  { value: "KILLS" as const, labelKey: "rankings.kills" },
+] as const;
 
 const PODIUM_TANK = ["blue", "red", "green"];
 const MEDAL_BG = [palette.yellow, "#dfe3e8", palette.orange];
@@ -43,6 +40,7 @@ interface RankRow {
 }
 
 export const RankingsScreen = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [mode, setMode] = useState<Mode>("ONLINE");
   const [onlineStat, setOnlineStat] = useState<RankingType>("KILLS");
@@ -68,6 +66,21 @@ export const RankingsScreen = () => {
       ? (personalOnlineRank as RankRow | undefined)
       : personalSolo;
 
+  const onlineStatOptions = ONLINE_STATS.map((s) => ({
+    value: s.value,
+    label: t(s.labelKey),
+  }));
+  const soloStatOptions = SOLO_STATS.map((s) => ({
+    value: s.value,
+    label: t(s.labelKey),
+  }));
+  const statLabel = (value: string) => {
+    const found = [...ONLINE_STATS, ...SOLO_STATS].find(
+      (s) => s.value === value
+    );
+    return found ? t(found.labelKey) : value.replace("_", " ");
+  };
+
   const podium = rankings.slice(0, 3);
   const rest = rankings.slice(3);
   const maxData = rankings.reduce(
@@ -82,9 +95,9 @@ export const RankingsScreen = () => {
     <div className="pt-6">
       <div className="flex items-center gap-3.5 flex-wrap mb-4">
         <IoTitle as="h1" className="text-4xl">
-          RANKINGS
+          {t("rankings.title")}
         </IoTitle>
-        <SectionLabel>season 7 · live</SectionLabel>
+        <SectionLabel>{t("rankings.topPlayers")}</SectionLabel>
       </div>
 
       <div className="flex gap-3.5 flex-wrap items-center mb-5">
@@ -92,8 +105,8 @@ export const RankingsScreen = () => {
           value={mode}
           onValueChange={setMode}
           options={[
-            { value: "ONLINE", label: "Online" },
-            { value: "SOLO", label: "Solo" },
+            { value: "ONLINE", label: t("rankings.online") },
+            { value: "SOLO", label: t("rankings.solo") },
           ]}
           aria-label="Ranking mode"
         />
@@ -105,7 +118,7 @@ export const RankingsScreen = () => {
               ? setOnlineStat(v as RankingType)
               : setSoloStat(v as SoloGlobalType)
           }
-          options={mode === "ONLINE" ? ONLINE_STATS : SOLO_STATS}
+          options={mode === "ONLINE" ? onlineStatOptions : soloStatOptions}
           aria-label="Ranking stat"
         />
       </div>
@@ -162,10 +175,12 @@ export const RankingsScreen = () => {
       {/* Ranked list #4+ */}
       <DarkPanel className="p-2">
         {isLoading ? (
-          <p className="text-center text-white/60 py-8">Loading rankings…</p>
+          <p className="text-center text-white/60 py-8">
+            {t("rankings.loadingRankings")}
+          </p>
         ) : rankings.length === 0 ? (
           <p className="text-center text-white/60 py-8">
-            No rankings available
+            {t("rankings.noRankings")}
           </p>
         ) : (
           rest.map((p) => (
@@ -203,17 +218,19 @@ export const RankingsScreen = () => {
         </span>
         <TankAvatar bodyColor="orange" size={34} />
         <div className="flex-1 text-ink font-semibold flex items-center gap-2">
-          {personalRank?.username ?? user?.username ?? "Guest"}
+          {personalRank?.username ?? user?.username ?? t("common.guest")}
           <span className="bg-ink text-white text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-md uppercase">
-            You
+            {t("common.you")}
           </span>
         </div>
         <span className="text-ink font-bold">
           {personalRank
             ? `${personalRank.total_data} ${statLabel(activeStat)}`
             : user
-              ? `Play ${mode === "SOLO" ? "solo" : "online"} to rank`
-              : "Log in to rank"}
+              ? mode === "SOLO"
+                ? t("rankings.playSoloToRank")
+                : t("rankings.playOnlineToRank")
+              : t("rankings.loginToRank")}
         </span>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Pencil, Swords } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Pencil, Swords, Settings } from "lucide-react";
 import { useModal, useAuth, useSocket, MODALS } from "../../contexts";
 import { storage } from "../../lib/storage";
 import { colorFromIndex } from "../../constants/tankColors";
@@ -19,6 +20,7 @@ const pillBtn =
 
 /** Persistent arcade navigation shown on the menu screens (hidden in-game). */
 export const Topbar = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { openModal } = useModal();
   const { user } = useAuth();
@@ -43,27 +45,27 @@ export const Topbar = () => {
 
         <nav className="flex items-center gap-1.5 flex-wrap ml-1">
           <NavLink to="/" end className={navClass}>
-            Home
+            {t("nav.home")}
           </NavLink>
           <NavLink to="/levels" className={navClass}>
-            Play Solo
+            {t("nav.playSolo")}
           </NavLink>
           <NavLink to="/rankings" className={navClass}>
-            Rankings
+            {t("nav.rankings")}
           </NavLink>
           <button
             type="button"
             className={pillBtn}
             onClick={() => openModal(MODALS.MY_LEVELS)}
           >
-            <Pencil size={15} strokeWidth={2.5} /> Editor
+            <Pencil size={15} strokeWidth={2.5} /> {t("nav.editor")}
           </button>
           <button
             type="button"
             className={pillBtn}
             onClick={() => openModal(MODALS.MY_CAMPAIGNS)}
           >
-            <Swords size={15} strokeWidth={2.5} /> Campaigns
+            <Swords size={15} strokeWidth={2.5} /> {t("nav.campaigns")}
           </button>
         </nav>
 
@@ -74,7 +76,7 @@ export const Topbar = () => {
             "hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border-[3px] border-ink",
             isConnected ? "bg-white/10" : "bg-red/20"
           )}
-          title={isConnected ? "Connected" : "Disconnected"}
+          title={isConnected ? t("topbar.connected") : t("topbar.disconnected")}
         >
           <span
             className={cn(
@@ -86,15 +88,25 @@ export const Topbar = () => {
             {onlineCount}
           </span>
           <span className="text-white/60 text-xs uppercase tracking-wide">
-            online
+            {t("topbar.online")}
           </span>
         </div>
 
         <button
           type="button"
+          onClick={() => openModal(MODALS.SETTINGS)}
+          className="inline-flex items-center justify-center size-9 rounded-full border-[3px] border-ink bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-colors"
+          title={t("topbar.settings")}
+          aria-label={t("topbar.settings")}
+        >
+          <Settings size={17} strokeWidth={2.5} />
+        </button>
+
+        <button
+          type="button"
           onClick={() => openModal(user ? MODALS.PROFILE : MODALS.AUTH)}
           className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-[3px] border-ink rounded-full pl-1.5 pr-3.5 py-1 cursor-pointer transition-colors"
-          title={user ? "Your profile" : "Log in"}
+          title={user ? t("topbar.profile") : t("topbar.login")}
         >
           <TankAvatar
             bodyColor={bodyColor}
@@ -102,7 +114,7 @@ export const Topbar = () => {
             size={28}
           />
           <span className="text-white font-semibold text-sm">
-            {user ? user.username : "Log in"}
+            {user ? user.username : t("topbar.login")}
           </span>
         </button>
       </div>

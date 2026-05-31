@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useModal, useGame } from "../../contexts";
 import { LevelSelector } from "../ui";
 import { Dialog, DialogContent, DialogTitle } from "../ui/primitives";
@@ -5,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "../ui/primitives";
 // Kept for the in-game "play another solo level" flow (GameCanvas). The menu
 // entry point is the dedicated /levels screen.
 export const LevelSelectorModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const { startSoloGame } = useGame();
 
@@ -25,7 +27,7 @@ export const LevelSelectorModal = () => {
         className="h-[82vh] flex flex-col overflow-hidden"
       >
         <DialogTitle className="text-2xl font-bold mb-4">
-          Select Level
+          {t("levelSelectorModal.title")}
         </DialogTitle>
         <div className="flex-1 min-h-0">
           <LevelSelector mode="solo" onSelect={handleSelect} />

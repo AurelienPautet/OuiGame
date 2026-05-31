@@ -1,5 +1,8 @@
 import { Layers, CheckCircle2, Pencil, Trash2, Trophy } from "lucide-react";
+import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./primitives";
+import { liftable, springs } from "../../lib/motion";
 import { cn } from "../../lib/cn";
 
 /**
@@ -30,13 +33,15 @@ export function CampaignCard({
   onEdit,
   onDelete,
 }: CampaignCardProps) {
+  const { t } = useTranslation();
   const showActions = !!(onEdit || onDelete);
   const pct = Math.max(0, Math.min(100, completionPercent || 0));
 
   return (
-    <div
-      className="relative flex gap-4 p-3 rounded-xl cursor-pointer transition-all duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)] hover:-translate-y-0.5 group"
+    <motion.div
+      className="relative flex gap-4 p-3 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)] group"
       onClick={onClick}
+      {...liftable}
     >
       <div className="shrink-0 w-28 h-24 rounded-lg border-[3px] border-ink bg-field flex items-center justify-center">
         {completed ? (
@@ -51,13 +56,14 @@ export function CampaignCard({
           <div className="flex flex-col min-w-0">
             <h3 className="text-lg font-bold text-ink truncate">{name}</h3>
             <span className="text-xs font-semibold text-blue-d truncate">
-              by {author || "Unknown"} · {levelCount} level
-              {levelCount === 1 ? "" : "s"}
+              {t("common.by", { name: author || t("common.unknown") })} ·{" "}
+              {t("campaignCard.levels", { count: levelCount })}
             </span>
           </div>
           {completed && (
             <span className="inline-flex items-center gap-1 bg-green text-white text-xs font-bold border-2 border-ink rounded-full px-2 py-0.5 shrink-0">
-              <CheckCircle2 size={12} strokeWidth={3} /> Done
+              <CheckCircle2 size={12} strokeWidth={3} />{" "}
+              {t("campaignCard.done")}
             </span>
           )}
         </div>
@@ -70,13 +76,19 @@ export function CampaignCard({
 
         <div className="mt-2">
           <div className="flex justify-between text-xs font-semibold text-ink-soft mb-1">
-            <span>Progress</span>
+            <span>{t("campaignCard.progress")}</span>
             <span>{pct}%</span>
           </div>
           <div className="h-3 rounded-full border-2 border-ink bg-field overflow-hidden">
-            <div
-              className={cn("h-full", completed ? "bg-green" : "bg-blue")}
+            <motion.div
+              className={cn(
+                "h-full origin-left",
+                completed ? "bg-green" : "bg-blue"
+              )}
               style={{ width: `${pct}%` }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ ...springs.soft, delay: 0.1 }}
             />
           </div>
         </div>
@@ -110,6 +122,6 @@ export function CampaignCard({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

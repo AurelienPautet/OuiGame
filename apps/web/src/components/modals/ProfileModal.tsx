@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import {
   LogOut,
@@ -33,6 +34,7 @@ import {
 import { cn } from "../../lib/cn";
 
 export const ProfileModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const { user, logout } = useAuth();
   const { data: stats, isLoading } = usePlayerStats();
@@ -91,25 +93,27 @@ export const ProfileModal = () => {
           </div>
           <div className="min-w-0">
             <DialogTitle className="text-2xl font-extrabold truncate">
-              {user?.username || "Guest"}
+              {user?.username || t("common.guest")}
             </DialogTitle>
             <p className="text-ink-soft text-sm truncate">
-              {user?.email || "No email"}
+              {user?.email || t("profile.noEmail")}
             </p>
           </div>
           <div className="flex-1" />
           <Button variant="red" size="sm" onClick={handleLogout}>
-            <LogOut size={16} /> Logout
+            <LogOut size={16} /> {t("profile.logout")}
           </Button>
         </div>
 
         <Tabs defaultValue="solo" className="flex-1 min-h-0 flex flex-col">
           <TabsList className="mb-4 border-b-[3px] border-ink shrink-0">
             <TabsTrigger value="solo">
-              <Gamepad2 size={16} className="mr-1.5 inline" /> Solo
+              <Gamepad2 size={16} className="mr-1.5 inline" />{" "}
+              {t("profile.solo")}
             </TabsTrigger>
             <TabsTrigger value="online">
-              <Swords size={16} className="mr-1.5 inline" /> Multiplayer
+              <Swords size={16} className="mr-1.5 inline" />{" "}
+              {t("profile.multiplayer")}
             </TabsTrigger>
           </TabsList>
 
@@ -120,50 +124,50 @@ export const ProfileModal = () => {
               ) : soloTotalRounds > 0 ? (
                 <Grid>
                   <StatCard
-                    title="Levels Completed"
+                    title={t("profile.levelsCompleted")}
                     value={soloLevelsCompleted}
                     icon={CheckCircle}
                     color="text-green"
                   />
                   <StatCard
-                    title="Solo Rounds"
+                    title={t("profile.soloRounds")}
                     value={soloTotalRounds}
                     icon={Gamepad2}
                     color="text-blue-d"
                   />
                   <StatCard
-                    title="Victories"
+                    title={t("profile.victories")}
                     value={soloTotalWins}
                     icon={Trophy}
                     color="text-yellow-d"
                   />
                   <StatCard
-                    title="Win Rate"
+                    title={t("profile.winRate")}
                     value={soloWinRate}
                     icon={TrendingUp}
                     color="text-green"
                   />
                   <StatCard
-                    title="Solo Kills"
+                    title={t("profile.soloKills")}
                     value={soloKills}
                     icon={Swords}
                     color="text-red"
                   />
                   <StatCard
-                    title="Solo K/D"
+                    title={t("profile.soloKd")}
                     value={soloKdRatio}
                     icon={Scale}
                     color="text-purple"
                   />
                   <StatCard
-                    title="Solo Accuracy"
+                    title={t("profile.soloAccuracy")}
                     value={soloAccuracy}
                     icon={Target}
                     color="text-blue-d"
                   />
                 </Grid>
               ) : (
-                <Empty text="No solo games played yet. Try some solo levels!" />
+                <Empty text={t("profile.noSolo")} />
               )}
             </TabsContent>
 
@@ -173,74 +177,74 @@ export const ProfileModal = () => {
               ) : rounds > 0 ? (
                 <Grid>
                   <StatCard
-                    title="Rounds Played"
+                    title={t("profile.roundsPlayed")}
                     value={rounds}
                     icon={Activity}
                     color="text-blue-d"
                   />
                   <StatCard
-                    title="Wins"
+                    title={t("profile.wins")}
                     value={wins}
                     icon={Trophy}
                     color="text-yellow-d"
                   />
                   <StatCard
-                    title="Win Rate"
+                    title={t("profile.winRate")}
                     value={winRate}
                     icon={TrendingUp}
                     color="text-green"
                   />
                   <StatCard
-                    title="Kills"
+                    title={t("profile.kills")}
                     value={kills}
                     icon={Swords}
                     color="text-red"
                   />
                   <StatCard
-                    title="Deaths"
+                    title={t("profile.deaths")}
                     value={deaths}
                     icon={Skull}
                     color="text-ink"
                   />
                   <StatCard
-                    title="K/D Ratio"
+                    title={t("profile.kdRatio")}
                     value={kdRatio}
                     icon={Scale}
                     color="text-purple"
                   />
                   <StatCard
-                    title="Shots Fired"
+                    title={t("profile.shotsFired")}
                     value={shots}
                     icon={Crosshair}
                     color="text-orange-d"
                   />
                   <StatCard
-                    title="Hits"
+                    title={t("profile.hits")}
                     value={hits}
                     icon={Target}
                     color="text-blue-d"
                   />
                   <StatCard
-                    title="Accuracy"
+                    title={t("profile.accuracy")}
                     value={accuracy}
                     icon={Target}
                     color="text-blue-d"
                   />
                   <StatCard
-                    title="Mines Planted"
+                    title={t("profile.minesPlanted")}
                     value={plants}
                     icon={Bomb}
                     color="text-red"
                   />
                   <StatCard
-                    title="Blocks Broken"
+                    title={t("profile.blocksBroken")}
                     value={blocks}
                     icon={Hammer}
                     color="text-yellow-d"
                   />
                 </Grid>
               ) : (
-                <Empty text="No multiplayer games played yet. Join a room!" />
+                <Empty text={t("profile.noMultiplayer")} />
               )}
             </TabsContent>
           </div>
@@ -256,9 +260,12 @@ const Grid = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const Loading = () => (
-  <div className="text-center py-8 text-ink-soft">Loading…</div>
-);
+const Loading = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="text-center py-8 text-ink-soft">{t("common.loading")}</div>
+  );
+};
 
 const Empty = ({ text }: { text: string }) => (
   <div className="text-center py-6 text-ink-soft">{text}</div>

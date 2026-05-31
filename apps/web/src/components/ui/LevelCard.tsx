@@ -1,6 +1,9 @@
-import { Star, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
+import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { extractBotCounts, getBotColor } from "../../utils/levelUtils";
-import { TankAvatar } from "./primitives";
+import { StarRating, TankAvatar } from "./primitives";
+import { liftable } from "../../lib/motion";
 import { cn } from "../../lib/cn";
 
 // Format milliseconds to readable time (MM:SS or HH:MM:SS)
@@ -45,25 +48,29 @@ export function LevelCard({
   soloSuccessRate = 0,
   soloBestTimeMs = null,
 }: LevelCardProps) {
+  const { t } = useTranslation();
   const botCounts = extractBotCounts(levelJson);
   const ratingValue = Number(rating) || 0;
   const bestTimeFormatted = formatTime(soloBestTimeMs);
 
   return (
-    <div
+    <motion.div
       className={cn(
-        "relative flex gap-4 p-3 rounded-xl cursor-pointer transition-all duration-150 bg-white border-[3px] shadow-[0_4px_0_rgba(0,0,0,0.12)] hover:-translate-y-0.5",
+        "relative flex gap-4 p-3 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] shadow-[0_4px_0_rgba(0,0,0,0.12)]",
         selected ? "border-blue ring-3 ring-blue/30" : "border-ink",
         locked && "opacity-80"
       )}
       onClick={locked ? undefined : onClick}
+      {...(locked ? {} : liftable)}
     >
       {locked && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/40 rounded-xl text-center">
           <span className="text-white text-lg font-bold flex items-center gap-2">
-            <Lock size={18} /> Level {levelId} Locked
+            <Lock size={18} /> {t("levelCard.locked", { id: levelId })}
           </span>
-          <p className="text-white/80 text-sm">Complete previous levels</p>
+          <p className="text-white/80 text-sm">
+            {t("levelCard.completePrevious")}
+          </p>
         </div>
       )}
 
@@ -87,23 +94,20 @@ export function LevelCard({
         <div className="flex justify-between items-start gap-2">
           <div className="flex flex-col min-w-0">
             <h3 className="text-lg font-bold text-ink truncate">
-              <span className="text-ink-soft">lvl {levelId}:</span> {levelName}
+              <span className="text-ink-soft">
+                {t("levelCard.lvlPrefix", { id: levelId })}
+              </span>{" "}
+              {levelName}
             </h3>
             <span className="text-xs font-semibold text-blue-d truncate">
-              by {author || "Unknown"}
+              {t("common.by", { name: author || t("common.unknown") })}
             </span>
           </div>
-          <div className="flex gap-0.5 shrink-0">
-            {Array.from({ length: 5 }, (_, i) => (
-              <Star
-                key={i}
-                size={15}
-                className={
-                  i < ratingValue ? "fill-yellow text-yellow-d" : "text-ink/20"
-                }
-              />
-            ))}
-          </div>
+          <StarRating
+            value={ratingValue}
+            size={15}
+            className="gap-0.5 shrink-0"
+          />
         </div>
 
         <div className="flex flex-wrap gap-1.5 mt-2">
@@ -115,7 +119,7 @@ export function LevelCard({
         {isSolo && soloTimesPlayed > 0 && (
           <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-ink-soft flex-wrap">
             <span className="bg-field border-2 border-ink/15 rounded-md px-1.5 py-0.5">
-              {soloTimesPlayed} plays
+              {t("levelCard.plays", { count: soloTimesPlayed })}
             </span>
             <span
               className={cn(
@@ -125,17 +129,17 @@ export function LevelCard({
                   : "bg-red/15 text-red-d"
               )}
             >
-              {soloSuccessRate}% win
+              {t("levelCard.winShare", { rate: soloSuccessRate })}
             </span>
             {bestTimeFormatted && (
               <span className="bg-field border-2 border-ink/15 rounded-md px-1.5 py-0.5">
-                best {bestTimeFormatted}
+                {t("levelCard.best", { time: bestTimeFormatted })}
               </span>
             )}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import { useModal, useSocket, useGame, useAuth } from "../../contexts";
+import { useTranslation } from "react-i18next";
+import {
+  useModal,
+  useSocket,
+  useGame,
+  useAuth,
+  useToast,
+} from "../../contexts";
 import { LevelSelector } from "../ui";
 import {
   Dialog,
@@ -10,10 +17,12 @@ import {
 } from "../ui/primitives";
 
 export const CreateRoomModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const { socket } = useSocket();
   const { startOnlineGame } = useGame();
   const { user } = useAuth();
+  const { addToast, TOAST_TYPES } = useToast();
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   const [roomName, setRoomName] = useState("");
   const [rounds, setRounds] = useState(10);
@@ -40,7 +49,11 @@ export const CreateRoomModal = () => {
   const handleCreateRoom = () => {
     if (!roomName || selectedLevels.length === 0) return;
     if (!user) {
-      alert("You must be logged in to create a room");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("createRoom.title"),
+        t("createRoom.mustLogin")
+      );
       return;
     }
     if (!socket) return;
@@ -62,18 +75,18 @@ export const CreateRoomModal = () => {
         showClose={!isCreating}
       >
         <DialogTitle className="text-2xl font-bold mb-4">
-          Create Room
+          {t("createRoom.title")}
         </DialogTitle>
 
         <div className="flex flex-wrap gap-3 mb-4">
           <Input
             className="flex-1 min-w-[200px]"
-            placeholder="Room name"
+            placeholder={t("createRoom.roomNamePlaceholder")}
             value={roomName}
             onChange={(e) => setRoomName(e.target.value)}
           />
           <label className="flex items-center gap-2 font-semibold text-ink">
-            Rounds
+            {t("createRoom.rounds")}
             <Input
               type="number"
               className="w-20"
@@ -91,7 +104,7 @@ export const CreateRoomModal = () => {
 
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="ghost" onClick={closeModal} disabled={isCreating}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="green"
@@ -99,8 +112,10 @@ export const CreateRoomModal = () => {
             onClick={handleCreateRoom}
           >
             {isCreating
-              ? "Creating…"
-              : `Create Room (${selectedLevels.length} levels)`}
+              ? t("createRoom.creating")
+              : t("createRoom.createWithCount", {
+                  count: selectedLevels.length,
+                })}
           </Button>
         </div>
       </DialogContent>

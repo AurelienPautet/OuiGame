@@ -1,6 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useSocket, useAuth, useModal, MODALS } from "../contexts";
+import {
+  useSocket,
+  useAuth,
+  useModal,
+  useToast,
+  useSettings,
+  MODALS,
+} from "../contexts";
 import { useSaveLevel, useLevel } from "../hooks/api";
 import { Save, X, Trash2 } from "lucide-react";
 import {
@@ -16,17 +24,27 @@ import {
   drawHole,
   drawFlag,
   drawTank,
-  type BlockShape,
-  type HoleShape,
 } from "../engine/shapes";
+// The editor renders its field / walls / holes through the SAME WebGL
+// post-processor the game uses, so the preview matches gameplay exactly
+// (animated scenery, bloom, depth-in-holes). Flags / bots / the placement ghost
+// are drawn on a 2D overlay composited on top; on no-WebGL it all falls back to
+// 2D, drawn with the same engine/shapes primitives.
+import { tryCreatePostProcessor } from "../engine/PostProcessor";
+import type { PostProcessor, EnvBlock, EnvHole } from "../engine/PostProcessor";
 
-// Constants matching the old level editor
-const CANVAS_WIDTH = 920;
-const CANVAS_HEIGHT = 640;
+// Board resolution + cell size match the game exactly (1150×800, 50px cells),
+// so the shared renderer treats the editor board identically. The canvases
+// render at this resolution and are CSS-scaled down to the display footprint.
+const CANVAS_WIDTH = 1150;
+const CANVAS_HEIGHT = 800;
 const GRID_COLS = 23;
 const GRID_ROWS = 16;
-const CELL_SIZE = 40;
+const CELL_SIZE = 50;
 const TOTAL_CELLS = GRID_COLS * GRID_ROWS; // 368
+// On-screen size of the canvas (kept compact; the board scales to fit).
+const DISPLAY_WIDTH = 920;
+const DISPLAY_HEIGHT = 640;
 
 // Block types
 const BLOCKS = {
@@ -83,6 +101,77 @@ function drawEditorBlock(
   }
 }
 
+interface EditorEntities {
+  blocks: EnvBlock[];
+  holes: EnvHole[];
+  flags: { x: number; y: number }[];
+  bots: { x: number; y: number; color: string }[];
+}
+
+// Turn the flat layout array into board-space geometry: walls/platforms and
+// holes feed the WebGL environment; flags/bots are 2D overlay markers.
+function extractEntities(layout: number[]): EditorEntities {
+  const cell = { w: CELL_SIZE, h: CELL_SIZE };
+  const blocks: EnvBlock[] = [];
+  const holes: EnvHole[] = [];
+  const flags: { x: number; y: number }[] = [];
+  const bots: { x: number; y: number; color: string }[] = [];
+  for (let i = 0; i < layout.length; i++) {
+    const block = layout[i];
+    if (block === undefined || block < 0) continue;
+    const x = (i % GRID_COLS) * CELL_SIZE;
+    const y = Math.floor(i / GRID_COLS) * CELL_SIZE;
+    if (block === BLOCKS.WALL || block === BLOCKS.PLATFORM) {
+      blocks.push({ position: { x, y }, size: cell, type: block });
+    } else if (block === BLOCKS.HOLE) {
+      holes.push({ position: { x, y }, size: cell });
+    } else if (block === BLOCKS.FLAG) {
+      flags.push({ x, y });
+    } else {
+      const color = BOT_COLOR[block];
+      if (color) bots.push({ x, y, color });
+    }
+  }
+  return { blocks, holes, flags, bots };
+}
+
+// Draw the overlay markers (spawn flags + bot tanks) — same primitives the game
+// uses for tanks, so they bloom/composite identically.
+function drawFlagsAndBots(
+  ctx: CanvasRenderingContext2D,
+  flags: { x: number; y: number }[],
+  bots: { x: number; y: number; color: string }[]
+): void {
+  flags.forEach((f) => drawFlag(ctx, f.x, f.y, CELL_SIZE));
+  bots.forEach((b) =>
+    drawTank(ctx, {
+      cx: b.x + CELL_SIZE / 2,
+      cy: b.y + CELL_SIZE / 2,
+      r: CELL_SIZE * 0.4,
+      bodyColor: b.color,
+      turretColor: b.color,
+      angle: -Math.PI / 2,
+      isBot: true,
+    })
+  );
+}
+
+// Static 2D thumbnail of the whole level (no ghost / no animation) for the saved
+// preview — decoupled from the GL canvas so it's stable and needs no readback.
+function renderThumbnail(layout: number[]): string | null {
+  const c = document.createElement("canvas");
+  c.width = CANVAS_WIDTH;
+  c.height = CANVAS_HEIGHT;
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  paintField(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, CELL_SIZE);
+  const { blocks, holes, flags, bots } = extractEntities(layout);
+  drawBlocks(ctx, blocks);
+  holes.forEach((h) => drawHole(ctx, h));
+  drawFlagsAndBots(ctx, flags, bots);
+  return c.toDataURL("image/jpeg", 0.1);
+}
+
 // Initialize level layout with border walls
 const createEmptyLayout = (): number[] => {
   const layout: number[] = new Array(TOTAL_CELLS).fill(BLOCKS.EMPTY);
@@ -128,6 +217,7 @@ function BlockThumb({ type, size = 44 }: { type: number; size?: number }) {
 }
 
 export const LevelEditor = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const levelId = searchParams.get("id");
@@ -135,8 +225,17 @@ export const LevelEditor = () => {
   const { isConnected } = useSocket()!;
   const { user } = useAuth();
   const { openModal } = useModal();
+  const { addToast, TOAST_TYPES } = useToast();
+  const { settings } = useSettings();
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Interaction surface (mouse → grid), the 2D overlay (flags/bots/ghost, and
+  // the full scene in the no-WebGL fallback), the WebGL output, and the shared
+  // post-processor instance.
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const glRef = useRef<HTMLCanvasElement | null>(null);
+  const postRef = useRef<PostProcessor | null>(null);
+  const [postActive, setPostActive] = useState(false);
   const [layout, setLayout] = useState<number[]>(createEmptyLayout);
   const [selectedBlock, setSelectedBlock] = useState(BLOCKS.WALL);
   const [mode, setMode] = useState("online"); // "online" or "solo"
@@ -171,94 +270,87 @@ export const LevelEditor = () => {
     if (saveLevelMutation.isError) {
       setSaving(false);
       console.error("Save failed:", saveLevelMutation.error);
-      alert(
-        "Failed to save level: " +
-          (saveLevelMutation.error?.message || "Unknown error")
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.failedSave", {
+          error: saveLevelMutation.error?.message || t("common.unknownError"),
+        })
       );
     }
   }, [
     saveLevelMutation.isSuccess,
     saveLevelMutation.isError,
+    saveLevelMutation.error,
     navigate,
     openModal,
+    addToast,
+    TOAST_TYPES,
+    t,
   ]);
 
-  // Draw block on canvas (shape-based, matches the in-game renderer).
-  const drawBlock = useCallback(
-    (
-      ctx: CanvasRenderingContext2D,
-      blockType: number,
-      x: number,
-      y: number
-    ) => {
-      drawEditorBlock(ctx, blockType, x, y, CELL_SIZE);
-    },
-    []
-  );
-
-  // Canvas render loop
+  // Spin up the shared WebGL post-processor against the GL canvas (same factory
+  // the game uses). Falls back to plain 2D if WebGL is unavailable.
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!glRef.current) return;
+    const post = tryCreatePostProcessor(
+      glRef.current,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT
+    );
+    postRef.current = post;
+    setPostActive(post !== null);
+    return () => {
+      post?.dispose();
+      postRef.current = null;
+    };
+  }, []);
 
-    const ctx = canvas.getContext("2d");
+  // Keep the post-processor's effect toggles in sync with user settings.
+  useEffect(() => {
+    postRef.current?.setEffects(settings.effects);
+  }, [settings.effects]);
+
+  // Render loop. The overlay 2D canvas carries the flags/bots/placement ghost
+  // (and the whole scene in the no-WebGL fallback); the post-processor draws the
+  // animated field/walls/holes and composites the overlay over them — the exact
+  // same rendering path as the live game.
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    const ctx = overlay.getContext("2d");
     if (!ctx) return;
     let animationId: number | undefined;
 
     const render = () => {
-      // Field + entities are drawn by the SAME engine/shapes primitives as the
-      // live game, so the editor preview matches gameplay exactly (including
-      // adjacent walls/platforms merging into one outlined shape).
-      paintField(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, CELL_SIZE);
+      const post = postRef.current;
+      const { blocks, holes, flags, bots } = extractEntities(layout);
 
-      const cell = { w: CELL_SIZE, h: CELL_SIZE };
-      const blocks: BlockShape[] = [];
-      const holes: HoleShape[] = [];
-      const flags: { x: number; y: number }[] = [];
-      const bots: { x: number; y: number; color: string }[] = [];
-      for (let i = 0; i < layout.length; i++) {
-        const block = layout[i];
-        if (block === undefined || block < 0) continue;
-        const x = (i % GRID_COLS) * CELL_SIZE;
-        const y = Math.floor(i / GRID_COLS) * CELL_SIZE;
-        if (block === BLOCKS.WALL || block === BLOCKS.PLATFORM) {
-          blocks.push({ position: { x, y }, size: cell, type: block });
-        } else if (block === BLOCKS.HOLE) {
-          holes.push({ position: { x, y }, size: cell });
-        } else if (block === BLOCKS.FLAG) {
-          flags.push({ x, y });
-        } else {
-          const color = BOT_COLOR[block];
-          if (color) bots.push({ x, y, color });
-        }
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Fallback only: the 2D overlay also draws the field + environment, since
+      // there's no GL layer beneath it.
+      if (!post) {
+        paintField(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, CELL_SIZE);
+        drawBlocks(ctx, blocks);
+        holes.forEach((h) => drawHole(ctx, h));
       }
+      drawFlagsAndBots(ctx, flags, bots);
 
-      drawBlocks(ctx, blocks);
-      holes.forEach((h) => drawHole(ctx, h));
-      flags.forEach((f) => drawFlag(ctx, f.x, f.y, CELL_SIZE));
-      bots.forEach((b) =>
-        drawTank(ctx, {
-          cx: b.x + CELL_SIZE / 2,
-          cy: b.y + CELL_SIZE / 2,
-          r: CELL_SIZE * 0.4,
-          bodyColor: b.color,
-          turretColor: b.color,
-          angle: -Math.PI / 2,
-          isBot: true,
-        })
-      );
-
-      // Draw ghost preview
+      // Placement ghost.
       if (onCanvas && mouseGridPos.x >= 0 && mouseGridPos.y >= 0) {
         ctx.globalAlpha = 0.5;
-        drawBlock(
+        drawEditorBlock(
           ctx,
           selectedBlock,
           mouseGridPos.x * CELL_SIZE,
-          mouseGridPos.y * CELL_SIZE
+          mouseGridPos.y * CELL_SIZE,
+          CELL_SIZE
         );
         ctx.globalAlpha = 1.0;
       }
+
+      // GL path: composite the overlay over the animated environment.
+      post?.render(overlay, blocks, holes);
 
       animationId = requestAnimationFrame(render);
     };
@@ -268,7 +360,7 @@ export const LevelEditor = () => {
     return () => {
       if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [layout, onCanvas, mouseGridPos, selectedBlock, drawBlock]);
+  }, [layout, onCanvas, mouseGridPos, selectedBlock, postActive]);
 
   // Handle mouse actions
   const handleMouseAction = useCallback(
@@ -302,43 +394,32 @@ export const LevelEditor = () => {
     [selectedBlock]
   );
 
+  // Pointer → grid cell, via the interaction surface (the board is scaled to
+  // fit, so map through the element's display rect to the 1150×800 board).
+  const gridFromEvent = (e: React.MouseEvent<HTMLDivElement>) => {
+    const stage = stageRef.current;
+    if (!stage) return { gridX: -1, gridY: -1 };
+    const rect = stage.getBoundingClientRect();
+    const boardX = ((e.clientX - rect.left) / rect.width) * CANVAS_WIDTH;
+    const boardY = ((e.clientY - rect.top) / rect.height) * CANVAS_HEIGHT;
+    return {
+      gridX: Math.floor(boardX / CELL_SIZE),
+      gridY: Math.floor(boardY / CELL_SIZE),
+    };
+  };
+
   // Mouse event handlers
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
-
-    const gridX = Math.floor(mouseX / CELL_SIZE);
-    const gridY = Math.floor(mouseY / CELL_SIZE);
-
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const { gridX, gridY } = gridFromEvent(e);
     setMouseGridPos({ x: gridX, y: gridY });
-
     if (isMouseDown) {
       handleMouseAction(gridX, gridY, mouseButton);
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
-
-    const gridX = Math.floor(mouseX / CELL_SIZE);
-    const gridY = Math.floor(mouseY / CELL_SIZE);
-
+    const { gridX, gridY } = gridFromEvent(e);
     setIsMouseDown(true);
     setMouseButton(e.button);
     setMouseGridPos({ x: gridX, y: gridY });
@@ -350,7 +431,7 @@ export const LevelEditor = () => {
     setMouseButton(null);
   };
 
-  const handleContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
 
@@ -371,7 +452,7 @@ export const LevelEditor = () => {
 
   // Clear level with confirmation
   const handleClear = () => {
-    if (window.confirm("Are you sure you want to clear the entire level?")) {
+    if (window.confirm(t("levelEditor.confirmClear"))) {
       setLayout(createEmptyLayout());
     }
   };
@@ -379,35 +460,54 @@ export const LevelEditor = () => {
   // Save level
   const handleSave = () => {
     if (!user) {
-      alert("Please log in to save levels");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.loginToSave")
+      );
       return;
     }
 
     // Validate spawn points
     const spawnCount = layout.filter((b) => b === BLOCKS.FLAG).length;
     if (spawnCount === 0) {
-      alert("You need at least one spawn point (flag) for players!");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.needSpawn")
+      );
       return;
     }
     if (spawnCount > 8) {
-      alert("You cannot have more than 8 spawn points!");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.tooManySpawns")
+      );
       return;
     }
 
     // Validate level name
     if (!levelName.trim()) {
-      alert("Level name cannot be empty!");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.nameEmpty")
+      );
       return;
     }
     if (levelName.length > 30) {
-      alert("Level name cannot be longer than 30 characters!");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.nameTooLong")
+      );
       return;
     }
 
-    // Generate thumbnail
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const lowQuality = canvas.toDataURL("image/jpeg", 0.1);
+    // Generate thumbnail (static 2D render of the whole level).
+    const lowQuality = renderThumbnail(layout);
+    if (!lowQuality) return;
     const base64Data = lowQuality.split(",")[1];
     if (base64Data === undefined) return;
 
@@ -440,32 +540,34 @@ export const LevelEditor = () => {
 
   // Block selector items (shape-based — no sprites).
   const baseBlocks = [
-    { id: BLOCKS.WALL, label: "Wall" },
-    { id: BLOCKS.PLATFORM, label: "Platform" },
-    { id: BLOCKS.HOLE, label: "Hole" },
-    { id: BLOCKS.FLAG, label: "Spawn" },
+    { id: BLOCKS.WALL, label: t("levelEditor.blocks.wall") },
+    { id: BLOCKS.PLATFORM, label: t("levelEditor.blocks.platform") },
+    { id: BLOCKS.HOLE, label: t("levelEditor.blocks.hole") },
+    { id: BLOCKS.FLAG, label: t("levelEditor.blocks.spawn") },
   ];
 
   const botBlocks = [
-    { id: BLOCKS.BOT_BLUE, label: "Blue Bot" },
-    { id: BLOCKS.BOT_GREEN, label: "Green Bot" },
-    { id: BLOCKS.BOT_ORANGE, label: "Orange Bot" },
-    { id: BLOCKS.BOT_RED, label: "Red Bot" },
+    { id: BLOCKS.BOT_BLUE, label: t("levelEditor.blocks.botBlue") },
+    { id: BLOCKS.BOT_GREEN, label: t("levelEditor.blocks.botGreen") },
+    { id: BLOCKS.BOT_ORANGE, label: t("levelEditor.blocks.botOrange") },
+    { id: BLOCKS.BOT_RED, label: t("levelEditor.blocks.botRed") },
   ];
 
   return (
     <div className="w-full h-full graph-paper text-ink flex flex-col">
       {/* Header */}
       <div className="h-24 bg-white border-b-4 border-ink flex items-center justify-between gap-4 px-8">
-        <IoTitle className="text-2xl shrink-0">EDITOR</IoTitle>
+        <IoTitle className="text-2xl shrink-0">
+          {t("levelEditor.title")}
+        </IoTitle>
 
         {/* Mode Toggle */}
         <SegmentedControl<string>
           value={mode}
           onValueChange={handleModeChange}
           options={[
-            { value: "online", label: "Online" },
-            { value: "solo", label: "Solo" },
+            { value: "online", label: t("levelEditor.online") },
+            { value: "solo", label: t("levelEditor.solo") },
           ]}
           aria-label="Level mode"
         />
@@ -473,7 +575,7 @@ export const LevelEditor = () => {
         {/* Level Name */}
         <Input
           className="max-w-xs"
-          placeholder="Enter level name"
+          placeholder={t("levelEditor.levelNamePlaceholder")}
           value={levelName}
           onChange={(e) => setLevelName(e.target.value)}
           maxLength={30}
@@ -481,17 +583,17 @@ export const LevelEditor = () => {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          <IconButton onClick={handleClear} title="Clear Level">
+          <IconButton onClick={handleClear} title={t("levelEditor.clearLevel")}>
             <Trash2 size={20} />
           </IconButton>
           <IconButton
             onClick={handleSave}
             disabled={saving || !isConnected}
-            title="Save Level"
+            title={t("levelEditor.saveLevel")}
           >
             <Save size={20} className="text-green-d" />
           </IconButton>
-          <IconButton onClick={handleClose} title="Close">
+          <IconButton onClick={handleClose} title={t("common.close")}>
             <X size={20} className="text-red" />
           </IconButton>
         </div>
@@ -502,7 +604,7 @@ export const LevelEditor = () => {
         {/* Block Palette */}
         <div className="w-48 bg-white border-r-4 border-ink flex flex-col items-center py-4">
           <h2 className="text-sm font-bold uppercase tracking-widest text-ink-soft mb-4">
-            Select a block
+            {t("levelEditor.selectBlock")}
           </h2>
 
           <div className="flex flex-col gap-2">
@@ -526,13 +628,14 @@ export const LevelEditor = () => {
           </div>
         </div>
 
-        {/* Canvas Area */}
+        {/* Canvas Area. The interaction surface holds two stacked canvases at
+            board resolution, scaled to the display footprint: the 2D overlay
+            (texture source / fallback) and the WebGL output on top. */}
         <div className="flex-1 flex items-center justify-center graph-paper">
-          <canvas
-            ref={canvasRef}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            className="block cursor-crosshair border-4 border-ink rounded-lg shadow-arcade"
+          <div
+            ref={stageRef}
+            className="relative cursor-crosshair border-4 border-ink rounded-lg shadow-arcade overflow-hidden"
+            style={{ width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT }}
             onMouseMove={handleMouseMove}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
@@ -542,7 +645,22 @@ export const LevelEditor = () => {
             }}
             onMouseEnter={() => setOnCanvas(true)}
             onContextMenu={handleContextMenu}
-          />
+          >
+            <canvas
+              ref={overlayRef}
+              width={CANVAS_WIDTH}
+              height={CANVAS_HEIGHT}
+              className="absolute inset-0 w-full h-full"
+              style={postActive ? { visibility: "hidden" } : undefined}
+            />
+            <canvas
+              ref={glRef}
+              width={CANVAS_WIDTH}
+              height={CANVAS_HEIGHT}
+              className="absolute inset-0 w-full h-full"
+              style={postActive ? undefined : { display: "none" }}
+            />
+          </div>
         </div>
       </div>
 

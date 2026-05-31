@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useModal, useAuth } from "../../contexts";
 import {
   Dialog,
@@ -53,6 +54,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 );
 
 export const AuthModal = () => {
+  const { t, i18n } = useTranslation();
   const { closeModal } = useModal();
   const {
     login,
@@ -89,11 +91,11 @@ export const AuthModal = () => {
         theme: "outline",
         size: "large",
         text: isLogin ? "signin_with" : "signup_with",
-        locale: "en",
+        locale: i18n.language,
         width: "100%",
       });
     }
-  }, [isLogin]);
+  }, [isLogin, i18n.language]);
 
   const handleCredentialResponse = (response: GoogleCredentialResponse) => {
     googleLogin(response.credential, "");
@@ -130,17 +132,15 @@ export const AuthModal = () => {
       <Dialog open onOpenChange={close}>
         <DialogContent widthClassName="w-[min(94vw,420px)]">
           <DialogTitle className="text-xl font-bold mb-2">
-            Choose a Username
+            {t("auth.chooseUsername")}
           </DialogTitle>
-          <p className="mb-4 text-ink-soft">
-            Welcome! Please choose a username for your new account.
-          </p>
+          <p className="mb-4 text-ink-soft">{t("auth.welcomeChoose")}</p>
           <form onSubmit={handleGoogleUsernameSubmit}>
             <label className="block mb-4">
-              <Label>Username</Label>
+              <Label>{t("auth.username")}</Label>
               <Input
                 className={fieldClass("username")}
-                placeholder="Enter username"
+                placeholder={t("auth.enterUsername")}
                 value={googleUsername}
                 onChange={(e) => {
                   clearAuthError();
@@ -157,10 +157,10 @@ export const AuthModal = () => {
             </label>
             <div className="flex justify-end gap-3 mt-6">
               <Button type="button" variant="ghost" onClick={closeModal}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" variant="green">
-                Create Account
+                {t("auth.createAccount")}
               </Button>
             </div>
           </form>
@@ -180,22 +180,22 @@ export const AuthModal = () => {
           }}
         >
           <DialogTitle className="sr-only">
-            {isLogin ? "Log in" : "Register"}
+            {isLogin ? t("auth.loginTitle") : t("auth.registerTitle")}
           </DialogTitle>
           <TabsList className="mb-5 border-b-[3px] border-ink">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login">{t("auth.loginTab")}</TabsTrigger>
+            <TabsTrigger value="register">{t("auth.registerTab")}</TabsTrigger>
           </TabsList>
         </Tabs>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <label className="block">
-              <Label>Username</Label>
+              <Label>{t("auth.username")}</Label>
               <Input
                 name="username"
                 className={fieldClass("username")}
-                placeholder="Enter username"
+                placeholder={t("auth.enterUsername")}
                 value={formData.username}
                 onChange={handleChange}
                 required={!isLogin}
@@ -208,12 +208,12 @@ export const AuthModal = () => {
             </label>
           )}
           <label className="block">
-            <Label>Email</Label>
+            <Label>{t("auth.email")}</Label>
             <Input
               type="email"
               name="email"
               className={fieldClass("email")}
-              placeholder="Enter email"
+              placeholder={t("auth.enterEmail")}
               value={formData.email}
               onChange={handleChange}
               required
@@ -223,12 +223,12 @@ export const AuthModal = () => {
             )}
           </label>
           <label className="block">
-            <Label>Password</Label>
+            <Label>{t("auth.password")}</Label>
             <Input
               type="password"
               name="password"
               className={fieldClass("password")}
-              placeholder="Enter password"
+              placeholder={t("auth.enterPassword")}
               value={formData.password}
               onChange={handleChange}
               required
@@ -240,16 +240,16 @@ export const AuthModal = () => {
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={closeModal}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" variant="blue">
-              {isLogin ? "Login" : "Register"}
+              {isLogin ? t("auth.loginButton") : t("auth.registerButton")}
             </Button>
           </div>
         </form>
 
         <div className="flex items-center gap-3 my-4 text-ink-soft text-sm font-semibold">
-          <span className="flex-1 h-0.5 bg-ink/15" /> OR
+          <span className="flex-1 h-0.5 bg-ink/15" /> {t("auth.or")}
           <span className="flex-1 h-0.5 bg-ink/15" />
         </div>
         <div className="flex justify-center">

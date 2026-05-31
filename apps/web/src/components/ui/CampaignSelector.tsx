@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, Layers, Plus } from "lucide-react";
 import { CampaignCard } from "./CampaignCard";
 import { useCampaigns, useMyCampaigns } from "../../hooks/api";
@@ -22,6 +23,7 @@ export function CampaignSelector({
   onDelete,
   onCreate,
 }: CampaignSelectorProps) {
+  const { t } = useTranslation();
   const [searchName, setSearchName] = useState("");
   const isMy = mode === "my";
 
@@ -43,7 +45,7 @@ export function CampaignSelector({
           />
           <Input
             className="pl-10"
-            placeholder="Search campaign name…"
+            placeholder={t("campaignSelector.searchPlaceholder")}
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
           />
@@ -51,7 +53,7 @@ export function CampaignSelector({
 
         {isMy && onCreate && (
           <Button variant="green" onClick={onCreate}>
-            <Plus size={20} /> New Campaign
+            <Plus size={20} /> {t("campaignSelector.newCampaign")}
           </Button>
         )}
       </div>
@@ -60,15 +62,15 @@ export function CampaignSelector({
       <div className="flex-1 overflow-y-auto space-y-3 pr-2">
         {isLoading ? (
           <div className="text-center py-8 text-ink-soft">
-            Loading campaigns…
+            {t("campaignSelector.loadingCampaigns")}
           </div>
         ) : campaigns.length === 0 ? (
           <div className="text-center text-ink-soft py-8">
             <Layers className="w-16 h-16 mx-auto mb-4 opacity-50" />
             <p className="font-semibold">
               {isMy
-                ? "No campaigns yet. Create your first campaign!"
-                : "No campaigns found"}
+                ? t("campaignSelector.noCampaignsMine")
+                : t("campaignSelector.noCampaigns")}
             </p>
           </div>
         ) : (

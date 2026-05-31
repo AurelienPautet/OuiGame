@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useModal } from "../../contexts";
 import { TANK_COLORS as COLORS } from "../../constants/tankColors";
 import { storage } from "../../lib/storage";
@@ -45,6 +46,7 @@ const SwatchRow = ({
 );
 
 export const TankSelectModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const [bodyIndex, setBodyIndex] = useState(() =>
     clampIndex(storage.getBodyIndex())
@@ -72,7 +74,9 @@ export const TankSelectModal = () => {
       }}
     >
       <DialogContent widthClassName="w-[min(94vw,520px)]">
-        <DialogTitle className="text-2xl font-bold mb-4">Your Tank</DialogTitle>
+        <DialogTitle className="text-2xl font-bold mb-4">
+          {t("tankSelect.title")}
+        </DialogTitle>
 
         <div className="graph-paper border-[3px] border-ink rounded-arcade flex items-center justify-center py-6 mb-5">
           <TankAvatar
@@ -83,9 +87,13 @@ export const TankSelectModal = () => {
         </div>
 
         <div className="space-y-3 mb-5">
-          <SwatchRow label="Body" selected={bodyIndex} onPick={setBodyIndex} />
           <SwatchRow
-            label="Turret"
+            label={t("tankSelect.body")}
+            selected={bodyIndex}
+            onPick={setBodyIndex}
+          />
+          <SwatchRow
+            label={t("tankSelect.turret")}
             selected={turretIndex}
             onPick={setTurretIndex}
           />
@@ -93,10 +101,10 @@ export const TankSelectModal = () => {
 
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={closeModal}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant="green" onClick={handleSave}>
-            Save
+            {t("common.save")}
           </Button>
         </div>
       </DialogContent>

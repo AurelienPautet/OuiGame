@@ -1,6 +1,9 @@
 import { Users, Lock } from "lucide-react";
+import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import type { RoomSummary } from "@ouigame/shared/api";
 import { Tooltip } from "./primitives";
+import { liftable } from "../../lib/motion";
 import { cn } from "../../lib/cn";
 
 // The in-memory room summary plus the optional password flag the card displays.
@@ -13,20 +16,24 @@ interface RoomCardProps {
 
 /** Arcade room preview card. */
 export function RoomCard({ room, onClick }: RoomCardProps) {
+  const { t } = useTranslation();
   const { id, name, creator, players, maxPlayers, hasPassword } = room;
   const isFull = players >= maxPlayers;
 
   return (
-    <div
+    <motion.div
       className={cn(
-        "relative flex flex-col gap-2 p-4 rounded-xl cursor-pointer transition-all duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)] hover:-translate-y-0.5",
-        isFull && "opacity-80 hover:translate-y-0"
+        "relative flex flex-col gap-2 p-4 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)]",
+        isFull && "opacity-80"
       )}
       onClick={isFull ? undefined : onClick}
+      {...(isFull ? {} : liftable)}
     >
       {isFull && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-ink/40 rounded-xl">
-          <span className="text-white text-lg font-bold">FULL</span>
+          <span className="text-white text-lg font-bold">
+            {t("rooms.full")}
+          </span>
         </div>
       )}
 
@@ -41,11 +48,11 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
             {name}
           </h3>
           <span className="text-blue-d text-sm font-semibold truncate">
-            by {creator}
+            {t("common.by", { name: creator })}
           </span>
         </div>
         {hasPassword && (
-          <Tooltip content="Password protected" side="left">
+          <Tooltip content={t("rooms.passwordProtected")} side="left">
             <Lock className="text-yellow-d" size={20} />
           </Tooltip>
         )}
@@ -65,6 +72,6 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
         </span>
         <span className="text-xs text-ink-soft font-mono">#{id}</span>
       </div>
-    </div>
+    </motion.div>
   );
 }

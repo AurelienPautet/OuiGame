@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useModal, useGame, useToast } from "../../contexts";
 import { CampaignSelector } from "../ui";
 import { campaignsApi } from "../../api";
 import { Dialog, DialogContent, DialogTitle } from "../ui/primitives";
 
 export const CampaignSelectorModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const { startCampaign } = useGame();
   const { addToast, TOAST_TYPES } = useToast();
@@ -19,8 +21,8 @@ export const CampaignSelectorModal = () => {
       if (levelIds.length === 0) {
         addToast(
           TOAST_TYPES.ERROR,
-          "Campaign",
-          "This campaign has no playable levels."
+          t("campaignEditor.toast.title"),
+          t("campaignSelectorModal.noPlayableLevels")
         );
         setLoadingId(null);
         return;
@@ -29,7 +31,11 @@ export const CampaignSelectorModal = () => {
       closeModal();
     } catch (err) {
       console.error("Failed to start campaign:", err);
-      addToast(TOAST_TYPES.ERROR, "Campaign", "Failed to start campaign.");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("campaignEditor.toast.title"),
+        t("campaignSelectorModal.failedStart")
+      );
       setLoadingId(null);
     }
   };
@@ -46,7 +52,7 @@ export const CampaignSelectorModal = () => {
         className="h-[82vh] flex flex-col overflow-hidden"
       >
         <DialogTitle className="text-2xl font-bold mb-4">
-          Select Campaign
+          {t("campaignSelectorModal.title")}
         </DialogTitle>
         <div className="flex-1 min-h-0">
           <CampaignSelector mode="play" onSelect={handleSelect} />

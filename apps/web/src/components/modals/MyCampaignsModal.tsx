@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useModal, useAuth } from "../../contexts";
 import { CampaignSelector } from "../ui";
@@ -5,6 +6,7 @@ import { useDeleteCampaign } from "../../hooks/api";
 import { Dialog, DialogContent, DialogTitle, Button } from "../ui/primitives";
 
 export const MyCampaignsModal = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { closeModal } = useModal();
   const { user } = useAuth();
@@ -16,11 +18,7 @@ export const MyCampaignsModal = () => {
   };
 
   const handleDelete = (campaignId: number) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this campaign? This cannot be undone."
-      )
-    ) {
+    if (window.confirm(t("myCampaigns.confirmDelete"))) {
       deleteCampaign.mutate(campaignId);
     }
   };
@@ -39,14 +37,12 @@ export const MyCampaignsModal = () => {
       <Dialog open onOpenChange={close}>
         <DialogContent widthClassName="w-[min(94vw,440px)]">
           <DialogTitle className="text-2xl font-bold mb-3">
-            Your Campaigns
+            {t("myCampaigns.title")}
           </DialogTitle>
-          <p className="text-ink-soft mb-5">
-            Please log in to create and manage campaigns.
-          </p>
+          <p className="text-ink-soft mb-5">{t("myCampaigns.loginToManage")}</p>
           <div className="flex justify-end">
             <Button variant="ghost" onClick={closeModal}>
-              Close
+              {t("common.close")}
             </Button>
           </div>
         </DialogContent>
@@ -61,7 +57,7 @@ export const MyCampaignsModal = () => {
         className="h-[82vh] flex flex-col overflow-hidden"
       >
         <DialogTitle className="text-2xl font-bold mb-4">
-          Your Campaigns
+          {t("myCampaigns.title")}
         </DialogTitle>
         <div className="flex-1 min-h-0">
           <CampaignSelector

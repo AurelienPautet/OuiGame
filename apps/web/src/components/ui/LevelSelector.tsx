@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   Gamepad2,
@@ -47,6 +48,7 @@ export function LevelSelector({
   onPick,
   pickedIds = [],
 }: LevelSelectorProps) {
+  const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const savedState = useMemo(() => {
@@ -178,7 +180,7 @@ export function LevelSelector({
     e: React.MouseEvent<HTMLButtonElement>
   ) => {
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this level?")) {
+    if (confirm(t("levelSelector.confirmDelete"))) {
       onDelete?.(levelId);
     }
   };
@@ -206,7 +208,7 @@ export function LevelSelector({
           />
           <Input
             className="pl-10"
-            placeholder="Search level name…"
+            placeholder={t("levelSelector.searchPlaceholder")}
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
           />
@@ -218,10 +220,10 @@ export function LevelSelector({
             value={String(maxPlayers)}
             onValueChange={(v) => setMaxPlayers(parseInt(v))}
             options={[
-              { value: "0", label: "Any players" },
+              { value: "0", label: t("rooms.anyPlayers") },
               ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
                 value: String(n),
-                label: `${n} player${n > 1 ? "s" : ""}`,
+                label: t("rooms.players", { count: n }),
               })),
             ]}
           />
@@ -235,15 +237,28 @@ export function LevelSelector({
               value={sortBy}
               onValueChange={setSortBy}
               options={[
-                { value: "rating", label: "Sort by Rating" },
-                { value: "success_rate", label: "Sort by Success Rate" },
-                { value: "times_played", label: "Sort by Popularity" },
-                { value: "best_time", label: "Sort by Best Time" },
+                { value: "rating", label: t("levelSelector.sortByRating") },
+                {
+                  value: "success_rate",
+                  label: t("levelSelector.sortBySuccessRate"),
+                },
+                {
+                  value: "times_played",
+                  label: t("levelSelector.sortByPopularity"),
+                },
+                {
+                  value: "best_time",
+                  label: t("levelSelector.sortByBestTime"),
+                },
               ]}
             />
             <IconButton
               onClick={toggleSortOrder}
-              title={sortOrder === "desc" ? "Descending" : "Ascending"}
+              title={
+                sortOrder === "desc"
+                  ? t("levelSelector.descending")
+                  : t("levelSelector.ascending")
+              }
             >
               {sortOrder === "desc" ? (
                 <ArrowDown size={20} />
@@ -256,7 +271,7 @@ export function LevelSelector({
 
         {mode === "myLevels" && onCreate && (
           <Button variant="green" onClick={onCreate}>
-            <Plus size={20} /> New Level
+            <Plus size={20} /> {t("levelSelector.newLevel")}
           </Button>
         )}
       </div>
@@ -264,9 +279,11 @@ export function LevelSelector({
       {/* Selection info for room mode */}
       {isMultiSelect && selectedIds.length > 0 && (
         <div className="flex items-center justify-between gap-2 mb-4 bg-blue/15 border-[3px] border-ink rounded-xl px-4 py-2 text-ink font-semibold">
-          <span>{selectedIds.length} level(s) selected</span>
+          <span>
+            {t("levelSelector.levelsSelected", { count: selectedIds.length })}
+          </span>
           <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
-            Clear
+            {t("common.clear")}
           </Button>
         </div>
       )}
@@ -288,14 +305,16 @@ export function LevelSelector({
         }}
       >
         {isLoading ? (
-          <div className="text-center py-8 text-ink-soft">Loading levels…</div>
+          <div className="text-center py-8 text-ink-soft">
+            {t("levelSelector.loadingLevels")}
+          </div>
         ) : levels.length === 0 ? (
           <div className="text-center text-ink-soft py-8">
             <Gamepad2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
             <p className="font-semibold">
               {mode === "myLevels"
-                ? "No levels yet. Create your first level!"
-                : "No levels found"}
+                ? t("levelSelector.noLevelsMine")
+                : t("levelSelector.noLevels")}
             </p>
           </div>
         ) : (
@@ -326,7 +345,7 @@ export function LevelSelector({
               {isPick && pickedIds.includes(level.level_id) && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 bg-blue text-white text-xs font-bold border-2 border-ink rounded-full px-2.5 py-1">
                   <Plus size={12} strokeWidth={3} />
-                  Added
+                  {t("levelSelector.added")}
                 </div>
               )}
 
