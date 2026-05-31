@@ -138,24 +138,7 @@ export class Renderer {
     off.height = this.height;
     const g = off.getContext("2d");
     if (!g) return null;
-    g.fillStyle = palette.field;
-    g.fillRect(0, 0, this.width, this.height);
-    // Faint 1px grid: reads as texture, not a hard lattice. Low-alpha so it
-    // sits quietly behind tanks/blocks while still hinting scale + movement.
-    g.strokeStyle = palette.fieldLine;
-    g.globalAlpha = 0.4;
-    g.lineWidth = 1;
-    g.beginPath();
-    for (let x = 0; x <= this.width; x += GRID_CELL) {
-      g.moveTo(x, 0);
-      g.lineTo(x, this.height);
-    }
-    for (let y = 0; y <= this.height; y += GRID_CELL) {
-      g.moveTo(0, y);
-      g.lineTo(this.width, y);
-    }
-    g.stroke();
-    g.globalAlpha = 1;
+    paintField(g, this.width, this.height, GRID_CELL);
     return off;
   }
 
