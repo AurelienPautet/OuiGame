@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
+import { MotionConfig } from "motion/react";
 import {
   SocketProvider,
   AuthProvider,
   ModalProvider,
   GameProvider,
   ToastProvider,
+  SettingsProvider,
   useGame,
 } from "./contexts";
 import { QueryProvider } from "./providers/QueryProvider";
@@ -56,6 +58,9 @@ const ScaledStage = ({ children }: { children: React.ReactNode }) => {
         }}
       >
         {children}
+        {/* The editors (LevelEditor/CampaignEditor) raise validation toasts;
+            without this container they'd add to state but never render. */}
+        <ToastContainer />
       </div>
     </div>
   );
@@ -149,19 +154,23 @@ const AppRouter = () => {
 function App() {
   return (
     <HashRouter>
-      <QueryProvider>
-        <SocketProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <ModalProvider>
-                <GameProvider>
-                  <AppRouter />
-                </GameProvider>
-              </ModalProvider>
-            </ToastProvider>
-          </AuthProvider>
-        </SocketProvider>
-      </QueryProvider>
+      <MotionConfig reducedMotion="user">
+        <QueryProvider>
+          <SocketProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <ModalProvider>
+                  <SettingsProvider>
+                    <GameProvider>
+                      <AppRouter />
+                    </GameProvider>
+                  </SettingsProvider>
+                </ModalProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </SocketProvider>
+        </QueryProvider>
+      </MotionConfig>
     </HashRouter>
   );
 }

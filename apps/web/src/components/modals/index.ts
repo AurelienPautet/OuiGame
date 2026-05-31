@@ -7,3 +7,4 @@ export { MyLevelsModal } from "./MyLevelsModal";
 export { TankSelectModal } from "./TankSelectModal";
 export { CampaignSelectorModal } from "./CampaignSelectorModal";
 export { MyCampaignsModal } from "./MyCampaignsModal";
+export { SettingsModal } from "./SettingsModal";

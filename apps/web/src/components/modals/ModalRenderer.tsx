@@ -44,6 +44,7 @@ const MyCampaignsModal = named(
   () => import("./MyCampaignsModal"),
   "MyCampaignsModal"
 );
+const SettingsModal = named(() => import("./SettingsModal"), "SettingsModal");
 
 /** Renders whichever overlay ModalContext currently has open (at most one). */
 export const ModalRenderer = () => {
@@ -60,6 +61,7 @@ export const ModalRenderer = () => {
       {activeModal === MODALS.TANK_SELECT && <TankSelectModal />}
       {activeModal === MODALS.CAMPAIGN_SELECTOR && <CampaignSelectorModal />}
       {activeModal === MODALS.MY_CAMPAIGNS && <MyCampaignsModal />}
+      {activeModal === MODALS.SETTINGS && <SettingsModal />}
     </Suspense>
   );
 };

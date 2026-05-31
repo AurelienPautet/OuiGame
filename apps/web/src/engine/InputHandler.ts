@@ -10,7 +10,14 @@
  * detaches without leaving stale listeners, and a subsequent game re-attaches
  * cleanly (previously, attaching once at module load meant input died for all
  * games after the first quit).
+ *
+ * Key→action mapping is configurable: `applyKeyBindings` (called by the React
+ * SettingsContext whenever the user's bindings change) rebuilds a module-level
+ * `code → action` map the handlers consult. Arrow keys are always a movement
+ * fallback regardless of the user's bindings, so arrow players never lose
+ * control even after rebinding the letter keys.
  */
+import type { GameAction, KeyBindings } from "../lib/settings";
 
 export interface GameInputState {
   direction: { x: number; y: number };
@@ -37,6 +44,46 @@ declare global {
   }
 }
 
+// --- Configurable key → action mapping ---
+//
+// Default bindings are duplicated here (rather than imported from lib/settings)
+// so the engine has a valid keymap from module load even before the React
+// SettingsContext pushes the user's saved bindings via applyKeyBindings().
+const DEFAULT_BINDINGS: KeyBindings = {
+  up: "KeyW",
+  down: "KeyS",
+  left: "KeyA",
+  right: "KeyD",
+  plant: "Space",
+};
+
+// Arrow keys are a permanent movement fallback — merged in unless the user has
+// bound that exact code to something else.
+const ARROW_FALLBACK: Record<string, GameAction> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+};
+
+function buildKeymap(bindings: KeyBindings): Record<string, GameAction> {
+  const map: Record<string, GameAction> = {};
+  (Object.keys(bindings) as GameAction[]).forEach((action) => {
+    map[bindings[action]] = action;
+  });
+  for (const [code, action] of Object.entries(ARROW_FALLBACK)) {
+    if (!(code in map)) map[code] = action;
+  }
+  return map;
+}
+
+let keymap: Record<string, GameAction> = buildKeymap(DEFAULT_BINDINGS);
+
+/** Rebuild the live code→action map from the user's bindings. */
+export function applyKeyBindings(bindings: KeyBindings): void {
+  keymap = buildKeymap(bindings);
+}
+
 // Global input state - persists across all InputHandler instances
 if (typeof window !== "undefined") {
   if (!window.gameInput) {
@@ -59,30 +106,26 @@ if (typeof window !== "undefined") {
 function globalKeyDown(event: KeyboardEvent) {
   const input = window.gameInput;
   if (!input) return;
-  switch (event.code) {
-    case "KeyD":
-    case "ArrowRight":
+  // Escape (pause) is fixed, not rebindable.
+  if (event.code === "Escape") {
+    input.escapePressed = true;
+    return;
+  }
+  switch (keymap[event.code]) {
+    case "right":
       input.direction.x = input.mvtSpeed;
       break;
-    case "KeyQ":
-    case "KeyA":
-    case "ArrowLeft":
+    case "left":
       input.direction.x = -input.mvtSpeed;
       break;
-    case "KeyZ":
-    case "KeyW":
-    case "ArrowUp":
+    case "up":
       input.direction.y = -input.mvtSpeed;
       break;
-    case "ArrowDown":
-    case "KeyS":
+    case "down":
       input.direction.y = input.mvtSpeed;
       break;
-    case "Space":
+    case "plant":
       input.plant = true;
-      break;
-    case "Escape":
-      input.escapePressed = true;
       break;
   }
 }
@@ -90,25 +133,22 @@ function globalKeyDown(event: KeyboardEvent) {
 function globalKeyUp(event: KeyboardEvent) {
   const input = window.gameInput;
   if (!input) return;
-  switch (event.code) {
-    case "KeyD":
-    case "ArrowRight":
+  // Only release the axis if it's still moving the way this key drove it, so
+  // releasing one of two opposing keys doesn't cancel the other.
+  switch (keymap[event.code]) {
+    case "right":
       if (input.direction.x > 0) input.direction.x = 0;
       break;
-    case "KeyQ":
-    case "KeyA":
-    case "ArrowLeft":
+    case "left":
       if (input.direction.x < 0) input.direction.x = 0;
       break;
-    case "KeyZ":
-    case "ArrowUp":
-    case "KeyW":
+    case "up":
       if (input.direction.y < 0) input.direction.y = 0;
       break;
-    case "KeyS":
-    case "ArrowDown":
+    case "down":
       if (input.direction.y > 0) input.direction.y = 0;
       break;
+    // plant is a one-shot action; nothing to release.
   }
 }
 
