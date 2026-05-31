@@ -19,7 +19,6 @@ const named = (
 
 const AuthModal = named(() => import("./AuthModal"), "AuthModal");
 const ProfileModal = named(() => import("./ProfileModal"), "ProfileModal");
-const RankingsModal = named(() => import("./RankingsModal"), "RankingsModal");
 const RoomSelectorModal = named(
   () => import("./RoomSelectorModal"),
   "RoomSelectorModal"
@@ -54,7 +53,6 @@ export const ModalRenderer = () => {
     <Suspense fallback={null}>
       {activeModal === MODALS.AUTH && <AuthModal />}
       {activeModal === MODALS.PROFILE && <ProfileModal />}
-      {activeModal === MODALS.RANKINGS && <RankingsModal />}
       {activeModal === MODALS.ROOM_SELECTOR && <RoomSelectorModal />}
       {activeModal === MODALS.CREATE_ROOM && <CreateRoomModal />}
       {activeModal === MODALS.LEVEL_SELECTOR && <LevelSelectorModal />}

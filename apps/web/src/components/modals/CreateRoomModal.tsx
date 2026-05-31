@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { useModal, useSocket, useGame, useAuth } from "../../contexts";
 import { LevelSelector } from "../ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Button,
+  Input,
+} from "../ui/primitives";
 
 export const CreateRoomModal = () => {
   const { closeModal } = useModal();
@@ -9,7 +16,6 @@ export const CreateRoomModal = () => {
   const { user } = useAuth();
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   const [roomName, setRoomName] = useState("");
-  const [password, setPassword] = useState("");
   const [rounds, setRounds] = useState(10);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -20,15 +26,12 @@ export const CreateRoomModal = () => {
   // Listen for room creation success to auto-join
   useEffect(() => {
     if (!socket) return;
-
     const handleRoomCreated = (roomId: number) => {
       setIsCreating(false);
       startOnlineGame(roomId);
       closeModal();
     };
-
     socket.on("room_created", handleRoomCreated);
-
     return () => {
       socket.off("room_created", handleRoomCreated);
     };
@@ -41,79 +44,66 @@ export const CreateRoomModal = () => {
       return;
     }
     if (!socket) return;
-
     setIsCreating(true);
     // Server expects signature: (name, rounds, list_id, creator)
     socket.emit("new-room", roomName, rounds, selectedLevels, user.username);
   };
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box bg-base-100 w-11/12 max-w-4xl h-3/4 flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Create Room</h2>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o && !isCreating) closeModal();
+      }}
+    >
+      <DialogContent
+        widthClassName="w-[min(94vw,920px)]"
+        className="h-[82vh] flex flex-col overflow-hidden"
+        showClose={!isCreating}
+      >
+        <DialogTitle className="text-2xl font-bold mb-4">
+          Create Room
+        </DialogTitle>
 
-        {/* Room settings */}
-        <div className="flex gap-4 mb-4">
-          <input
-            type="text"
-            className="input input-bordered flex-1 bg-base-200"
+        <div className="flex flex-wrap gap-3 mb-4">
+          <Input
+            className="flex-1 min-w-[200px]"
             placeholder="Room name"
             value={roomName}
             onChange={(e) => setRoomName(e.target.value)}
           />
-          {/* Note: Server currently doesn't seem to support password in new-room event, but keeping UI for future */}
-          <input
-            type="password"
-            className="input input-bordered w-32 bg-base-200"
-            placeholder="Password (optional)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={true} // Disabled until server support confirmed
-            title="Password protection coming soon"
-          />
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Rounds:</span>
-            <input
+          <label className="flex items-center gap-2 font-semibold text-ink">
+            Rounds
+            <Input
               type="number"
-              className="input input-bordered w-20 bg-base-200"
+              className="w-20"
               min={1}
               max={99}
               value={rounds}
               onChange={(e) => setRounds(parseInt(e.target.value) || 1)}
             />
-          </div>
+          </label>
         </div>
 
-        {/* Level selector */}
         <div className="flex-1 min-h-0">
           <LevelSelector mode="room" onMultiSelect={handleMultiSelect} />
         </div>
 
-        <div className="modal-action">
-          <button className="btn" onClick={closeModal} disabled={isCreating}>
+        <div className="flex justify-end gap-3 pt-4">
+          <Button variant="ghost" onClick={closeModal} disabled={isCreating}>
             Cancel
-          </button>
-          <button
-            className="btn btn-primary"
+          </Button>
+          <Button
+            variant="green"
             disabled={!roomName || selectedLevels.length === 0 || isCreating}
             onClick={handleCreateRoom}
           >
-            {isCreating ? (
-              <>
-                <span className="loading loading-spinner text-white"></span>
-                Creating...
-              </>
-            ) : (
-              `Create Room (${selectedLevels.length} levels)`
-            )}
-          </button>
+            {isCreating
+              ? "Creating…"
+              : `Create Room (${selectedLevels.length} levels)`}
+          </Button>
         </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={closeModal} disabled={isCreating}>
-          close
-        </button>
-      </form>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 };

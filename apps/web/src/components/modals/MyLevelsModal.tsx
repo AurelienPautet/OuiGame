@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useModal, useAuth } from "../../contexts";
 import { LevelSelector } from "../ui";
 import { useDeleteLevel } from "../../hooks/api";
+import { Dialog, DialogContent, DialogTitle, Button } from "../ui/primitives";
 
 export const MyLevelsModal = () => {
   const navigate = useNavigate();
@@ -29,32 +30,39 @@ export const MyLevelsModal = () => {
     navigate("/editor");
   };
 
+  const close = (o: boolean) => {
+    if (!o) closeModal();
+  };
+
   if (!user) {
     return (
-      <dialog className="modal modal-open">
-        <div className="modal-box bg-base-100">
-          <h2 className="text-2xl font-bold mb-4">Your Levels</h2>
-          <p className="text-base-content/70">
+      <Dialog open onOpenChange={close}>
+        <DialogContent widthClassName="w-[min(94vw,440px)]">
+          <DialogTitle className="text-2xl font-bold mb-3">
+            Your Levels
+          </DialogTitle>
+          <p className="text-ink-soft mb-5">
             Please log in to view your levels.
           </p>
-          <div className="modal-action">
-            <button className="btn" onClick={closeModal}>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={closeModal}>
               Close
-            </button>
+            </Button>
           </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button onClick={closeModal}>close</button>
-        </form>
-      </dialog>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box bg-base-100 w-11/12 max-w-4xl h-3/4 flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Your Levels</h2>
-
+    <Dialog open onOpenChange={close}>
+      <DialogContent
+        widthClassName="w-[min(94vw,920px)]"
+        className="h-[82vh] flex flex-col overflow-hidden"
+      >
+        <DialogTitle className="text-2xl font-bold mb-4">
+          Your Levels
+        </DialogTitle>
         <div className="flex-1 min-h-0">
           <LevelSelector
             mode="myLevels"
@@ -63,16 +71,7 @@ export const MyLevelsModal = () => {
             onCreate={handleCreate}
           />
         </div>
-
-        <div className="modal-action">
-          <button className="btn" onClick={closeModal}>
-            Close
-          </button>
-        </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={closeModal}>close</button>
-      </form>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 };

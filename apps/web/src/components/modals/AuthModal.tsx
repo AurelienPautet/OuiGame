@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useModal, useAuth } from "../../contexts";
-import { Tab, TabList } from "../ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  Button,
+  Input,
+} from "../ui/primitives";
+import { cn } from "../../lib/cn";
 
 // Minimal ambient typing for the Google Identity Services script (loaded via a
 // <script> tag, no npm package). Only the surface this modal actually uses.
@@ -58,14 +68,10 @@ export const AuthModal = () => {
   const [googleUsername, setGoogleUsername] = useState("");
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
-  // Close modal when user is authenticated
   useEffect(() => {
-    if (user) {
-      closeModal();
-    }
+    if (user) closeModal();
   }, [user, closeModal]);
 
-  // Initialize Google Sign-In button
   useEffect(() => {
     if (typeof google !== "undefined" && googleButtonRef.current) {
       google.accounts.id.initialize({
@@ -73,7 +79,6 @@ export const AuthModal = () => {
         callback: handleCredentialResponse,
         auto_select: false,
       });
-
       google.accounts.id.renderButton(googleButtonRef.current, {
         theme: "outline",
         size: "large",
@@ -90,196 +95,167 @@ export const AuthModal = () => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isLogin) {
-      login(formData.email, formData.password);
-    } else {
-      register(formData.username, formData.email, formData.password);
-    }
+    if (isLogin) login(formData.email, formData.password);
+    else register(formData.username, formData.email, formData.password);
   };
 
   const handleGoogleUsernameSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (googleUsername.trim()) {
-      submitGoogleUsername(googleUsername.trim());
-    }
+    if (googleUsername.trim()) submitGoogleUsername(googleUsername.trim());
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     clearAuthError();
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleTabChange = (loginTab: boolean) => {
-    setIsLogin(loginTab);
-    clearAuthError();
+  const fieldError = (name: string) =>
+    authError && authError.field === name ? authError.message : null;
+
+  const fieldClass = (name: string) =>
+    cn("mt-1", fieldError(name) && "border-red focus:ring-red/30");
+
+  const Label = ({ children }: { children: React.ReactNode }) => (
+    <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+      {children}
+    </span>
+  );
+
+  const close = (o: boolean) => {
+    if (!o) closeModal();
   };
 
-  const getFieldError = (fieldName: string) => {
-    if (authError && authError.field === fieldName) {
-      return authError.message;
-    }
-    return null;
-  };
-
-  // Show username input for new Google users
   if (needsGoogleUsername) {
     return (
-      <dialog className="modal modal-open">
-        <div className="modal-box p-0 overflow-hidden">
-          <div className="bg-primary text-primary-content p-4">
-            <h3 className="font-bold text-lg">Choose a Username</h3>
-          </div>
-          <div className="bg-base-100 p-6">
-            <p className="mb-4 text-base-content/70">
-              Welcome! Please choose a username for your new account.
-            </p>
-            <form onSubmit={handleGoogleUsernameSubmit}>
-              <fieldset className="fieldset mb-4">
-                <legend className="fieldset-legend">Username</legend>
-                <input
-                  type="text"
-                  className={`input input-bordered w-full bg-base-200 ${
-                    getFieldError("username") ? "input-error" : ""
-                  }`}
-                  placeholder="Enter username"
-                  value={googleUsername}
-                  onChange={(e) => {
-                    clearAuthError();
-                    setGoogleUsername(e.target.value);
-                  }}
-                  required
-                  autoFocus
-                />
-                {getFieldError("username") && (
-                  <span className="text-error text-sm mt-1">
-                    {getFieldError("username")}
-                  </span>
-                )}
-              </fieldset>
-
-              <div className="flex justify-center gap-4 mt-6">
-                <button type="button" className="btn" onClick={closeModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Create Account
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button onClick={closeModal}>close</button>
-        </form>
-      </dialog>
+      <Dialog open onOpenChange={close}>
+        <DialogContent widthClassName="w-[min(94vw,420px)]">
+          <DialogTitle className="text-xl font-bold mb-2">
+            Choose a Username
+          </DialogTitle>
+          <p className="mb-4 text-ink-soft">
+            Welcome! Please choose a username for your new account.
+          </p>
+          <form onSubmit={handleGoogleUsernameSubmit}>
+            <label className="block mb-4">
+              <Label>Username</Label>
+              <Input
+                className={fieldClass("username")}
+                placeholder="Enter username"
+                value={googleUsername}
+                onChange={(e) => {
+                  clearAuthError();
+                  setGoogleUsername(e.target.value);
+                }}
+                required
+                autoFocus
+              />
+              {fieldError("username") && (
+                <span className="text-red text-sm">
+                  {fieldError("username")}
+                </span>
+              )}
+            </label>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button type="button" variant="ghost" onClick={closeModal}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="green">
+                Create Account
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box p-0 overflow-hidden">
-        {/* Custom Tabs */}
-        <div className="pb-0">
-          <TabList>
-            <Tab active={isLogin} onClick={() => handleTabChange(true)} first>
-              Login
-            </Tab>
-            <Tab active={!isLogin} onClick={() => handleTabChange(false)}>
-              Register
-            </Tab>
-          </TabList>
-        </div>
+    <Dialog open onOpenChange={close}>
+      <DialogContent widthClassName="w-[min(94vw,440px)]">
+        <Tabs
+          value={isLogin ? "login" : "register"}
+          onValueChange={(v) => {
+            setIsLogin(v === "login");
+            clearAuthError();
+          }}
+        >
+          <DialogTitle className="sr-only">
+            {isLogin ? "Log in" : "Register"}
+          </DialogTitle>
+          <TabsList className="mb-5 border-b-[3px] border-ink">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Form content */}
-        <div className="bg-base-100 p-6">
-          <form onSubmit={handleSubmit}>
-            {!isLogin && (
-              <fieldset className="fieldset mb-4">
-                <legend className="fieldset-legend">Username</legend>
-                <input
-                  type="text"
-                  name="username"
-                  className={`input input-bordered w-full bg-base-200 ${
-                    getFieldError("username") ? "input-error" : ""
-                  }`}
-                  placeholder="Enter username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required={!isLogin}
-                />
-                {getFieldError("username") && (
-                  <span className="text-error text-sm mt-1">
-                    {getFieldError("username")}
-                  </span>
-                )}
-              </fieldset>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <label className="block">
+              <Label>Username</Label>
+              <Input
+                name="username"
+                className={fieldClass("username")}
+                placeholder="Enter username"
+                value={formData.username}
+                onChange={handleChange}
+                required={!isLogin}
+              />
+              {fieldError("username") && (
+                <span className="text-red text-sm">
+                  {fieldError("username")}
+                </span>
+              )}
+            </label>
+          )}
+          <label className="block">
+            <Label>Email</Label>
+            <Input
+              type="email"
+              name="email"
+              className={fieldClass("email")}
+              placeholder="Enter email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+            {fieldError("email") && (
+              <span className="text-red text-sm">{fieldError("email")}</span>
             )}
+          </label>
+          <label className="block">
+            <Label>Password</Label>
+            <Input
+              type="password"
+              name="password"
+              className={fieldClass("password")}
+              placeholder="Enter password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+            {fieldError("password") && (
+              <span className="text-red text-sm">{fieldError("password")}</span>
+            )}
+          </label>
 
-            <fieldset className="fieldset mb-4">
-              <legend className="fieldset-legend">Email</legend>
-              <input
-                type="email"
-                name="email"
-                className={`input input-bordered w-full bg-base-200 ${
-                  getFieldError("email") ? "input-error" : ""
-                }`}
-                placeholder="Enter email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-              {getFieldError("email") && (
-                <span className="text-error text-sm mt-1">
-                  {getFieldError("email")}
-                </span>
-              )}
-            </fieldset>
-
-            <fieldset className="fieldset mb-4">
-              <legend className="fieldset-legend">Password</legend>
-              <input
-                type="password"
-                name="password"
-                className={`input input-bordered w-full bg-base-200 ${
-                  getFieldError("password") ? "input-error" : ""
-                }`}
-                placeholder="Enter password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-              {getFieldError("password") && (
-                <span className="text-error text-sm mt-1">
-                  {getFieldError("password")}
-                </span>
-              )}
-            </fieldset>
-
-            <div className="flex justify-center gap-4 mt-6">
-              <button type="button" className="btn" onClick={closeModal}>
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-primary">
-                {isLogin ? "Login" : "Register"}
-              </button>
-            </div>
-          </form>
-
-          {/* Divider */}
-          <div className="divider my-4">OR</div>
-
-          {/* Google Sign-In Button */}
-          <div className="flex justify-center">
-            <div ref={googleButtonRef}></div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="blue">
+              {isLogin ? "Login" : "Register"}
+            </Button>
           </div>
+        </form>
+
+        <div className="flex items-center gap-3 my-4 text-ink-soft text-sm font-semibold">
+          <span className="flex-1 h-0.5 bg-ink/15" /> OR
+          <span className="flex-1 h-0.5 bg-ink/15" />
         </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={closeModal}>close</button>
-      </form>
-    </dialog>
+        <div className="flex justify-center">
+          <div ref={googleButtonRef} />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
