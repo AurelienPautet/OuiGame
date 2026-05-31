@@ -5,6 +5,12 @@ import { storage } from "../storage";
 // in-memory fake on window before each test (jsdom's localStorage isn't
 // reliably writable in this environment — mirrors GameContext.test.tsx).
 let store: Record<string, string>;
+// Capture the original descriptor so afterEach can restore it — otherwise the
+// redefined window.localStorage would leak into later tests in the same worker.
+const originalLocalStorage = Object.getOwnPropertyDescriptor(
+  window,
+  "localStorage"
+);
 beforeEach(() => {
   store = {};
   const fake = {
@@ -28,6 +34,9 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
+  if (originalLocalStorage) {
+    Object.defineProperty(window, "localStorage", originalLocalStorage);
+  }
 });
 
 describe("session id", () => {
