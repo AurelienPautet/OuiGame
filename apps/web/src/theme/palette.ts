@@ -91,3 +91,28 @@ export function hexToRgb(hex: string): Rgb {
     blue: parseInt(h.slice(4, 6), 16),
   };
 }
+
+/** Blend two #rrggbb colours: t=0 → a, t=1 → b. */
+export function mixHex(a: string, b: string, t: number): string {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  const ch = (x: number, y: number) =>
+    Math.round(x + (y - x) * t)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(ca.red, cb.red)}${ch(ca.green, cb.green)}${ch(ca.blue, cb.blue)}`;
+}
+
+// How far a destroyed tank's colours are charred toward ink. Shared by the
+// wreck hull (Renderer) and the flying cannon (Debris) so the body and the
+// barrel that flew off it read as the SAME burnt material — same darkness.
+export const WRECK_CHAR = 0.55;
+
+/**
+ * A tank colour NAME charred to the wreck shade: its own hue kept, darkened
+ * toward ink by WRECK_CHAR. Returns "transparent" untouched for hidden tanks.
+ */
+export function wreckFill(name: string): string {
+  const f = tankColors(name).fill;
+  return f === "transparent" ? f : mixHex(f, palette.ink, WRECK_CHAR);
+}

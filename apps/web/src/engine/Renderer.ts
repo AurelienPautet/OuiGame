@@ -7,7 +7,7 @@
  * programmatically (no per-colour sprite sheets). Colours come from the shared
  * theme/palette so the canvas matches the DOM (TankAvatar etc.).
  */
-import { palette, tankColors } from "../theme/palette";
+import { palette, tankColors, mixHex, WRECK_CHAR } from "../theme/palette";
 import { drawTank, paintField, drawBlocks, drawHole } from "./shapes";
 
 const INK = palette.ink;
@@ -324,33 +324,61 @@ export class Renderer {
     });
   }
 
-  // A destroyed tank: a desaturated hull with a dark X.
+  // A destroyed tank: a burnt-out husk that keeps the player's body hue (so you
+  // can still tell who fell) but darkened, with a scorch blotch and cracks
+  // radiating from the impact point.
   _drawWreck(player: RenderPlayer) {
     const c = this.c;
     const cx = player.position.x + player.size.w / 2;
     const cy = player.position.y + player.size.h / 2;
     const R = Math.min(player.size.w, player.size.h) * 0.4;
-    if (tankColors(player.bodyc).fill === "transparent") return;
+    const body = tankColors(player.bodyc);
+    if (body.fill === "transparent") return;
+
+    // Darkened, charred versions of the body colour — still the team hue, but
+    // clearly burnt out. The hull uses WRECK_CHAR, the shared "burnt" darkness
+    // the flying cannon (Debris) is charred to as well, so body + barrel match.
+    const husk = mixHex(body.fill, INK, WRECK_CHAR);
+    const scorch = mixHex(body.fill, INK, 0.82);
 
     c.save();
     c.lineJoin = "round";
+    c.lineCap = "round";
+
+    // Hull — same weight outline as the live tank so it sits right.
     c.beginPath();
     c.arc(cx, cy, R, 0, Math.PI * 2);
-    c.fillStyle = "#8b9097";
+    c.fillStyle = husk;
     c.fill();
-    c.lineWidth = R * 0.2;
+    c.lineWidth = R * 0.22;
     c.strokeStyle = INK;
     c.stroke();
 
-    c.lineWidth = R * 0.22;
-    c.lineCap = "round";
-    const d = R * 0.45;
+    // Everything below stays inside the hull.
+    c.clip();
+
+    // Off-centre scorch blotch for some depth.
     c.beginPath();
-    c.moveTo(cx - d, cy - d);
-    c.lineTo(cx + d, cy + d);
-    c.moveTo(cx + d, cy - d);
-    c.lineTo(cx - d, cy + d);
-    c.stroke();
+    c.arc(cx + R * 0.16, cy - R * 0.08, R * 0.55, 0, Math.PI * 2);
+    c.fillStyle = scorch;
+    c.fill();
+
+    // Cracks: three kinked spokes from the impact point out to the rim.
+    c.strokeStyle = INK;
+    c.lineWidth = R * 0.13;
+    const spokes = [-1.9, 0.5, 2.5];
+    for (const a of spokes) {
+      const mx = cx + Math.cos(a) * R * 0.5;
+      const my = cy + Math.sin(a) * R * 0.5;
+      const ex = cx + Math.cos(a + 0.3) * R;
+      const ey = cy + Math.sin(a + 0.3) * R;
+      c.beginPath();
+      c.moveTo(cx, cy);
+      c.lineTo(mx, my);
+      c.lineTo(ex, ey);
+      c.stroke();
+    }
+
     c.restore();
   }
 

@@ -30,6 +30,7 @@ import type { ReceiveJsonFromId } from "@ouigame/shared/api";
 import { Renderer } from "./Renderer.js";
 import { InputHandler } from "./InputHandler.js";
 import { ParticleSystem } from "./ParticleSystem.js";
+import { DebrisSystem } from "./Debris.js";
 import { SoundManager, type SoundEvents } from "./SoundManager.js";
 
 // The engine consumes the SAME strictly-typed socket the app creates, so every
@@ -126,6 +127,8 @@ export class GameEngine {
   renderer: Renderer;
   input: InputHandler;
   particles: ParticleSystem;
+  // Physics-driven wreck pieces (the cannon that flies off a destroyed tank).
+  debris: DebrisSystem;
   sounds: SoundManager;
 
   // Game state
@@ -153,6 +156,9 @@ export class GameEngine {
   roomId: number | string | null;
   serverId: string | null;
   playerId: number | null;
+  // Per-player alive flag last frame, so we can fire the flying-cannon debris on
+  // any tank's alive→dead transition (solo + online). Keyed by socket id.
+  prevAlive: Record<string, boolean>;
 
   // Game entities (received from server in online mode)
   players: Record<string, RoomPlayer>;
@@ -190,6 +196,7 @@ export class GameEngine {
     this.renderer = new Renderer(canvas, fadingCanvas);
     this.input = new InputHandler(canvas);
     this.particles = new ParticleSystem();
+    this.debris = new DebrisSystem();
     this.sounds = new SoundManager();
 
     // Game state
@@ -216,6 +223,7 @@ export class GameEngine {
     this.roomId = null;
     this.serverId = null;
     this.playerId = null;
+    this.prevAlive = {};
 
     // Game entities (received from server in online mode)
     this.players = {};
@@ -599,11 +607,58 @@ export class GameEngine {
     this.Bcollision = data.Bcollision;
   }
 
+  // Fire the flying-cannon debris on any tank's alive→dead transition, then
+  // refresh the per-player alive snapshot. Works for both solo (room.players)
+  // and online (tick snapshot) since both keep dead players in the map with
+  // alive=false until they respawn. Position freezes at the death spot because
+  // the dead Player skips its movement step.
+  _spawnDeathDebris() {
+    const next: Record<string, boolean> = {};
+    for (const id in this.players) {
+      const p = this.players[id] as unknown as {
+        alive?: boolean;
+        position?: { x: number; y: number };
+        size?: { w: number; h: number };
+        angle?: number;
+        turretc?: string;
+      };
+      const alive = p.alive !== false; // undefined → treat as alive
+      next[id] = alive;
+
+      // Fire only on a real alive→dead transition we actually witnessed: require
+      // the player to have been seen ALIVE last frame. A player first observed
+      // already-dead (e.g. joining mid-round) has no prior entry and is skipped,
+      // so we don't spew cannons for tanks that died before we were watching.
+      const wasAlive = this.prevAlive[id] === true;
+      if (wasAlive && !alive && p.position && p.size) {
+        const w = p.size.w;
+        const h = p.size.h;
+        this.debris.spawnCannon({
+          cx: p.position.x + w / 2,
+          cy: p.position.y + h / 2,
+          // Same hull radius the Renderer scales the live tank from.
+          r: Math.min(w, h) * 0.46,
+          // Renderer draws the barrel at player.angle + PI, so launch to match.
+          barrelAngle: (p.angle ?? 0) + Math.PI,
+          turretColor: p.turretc ?? "none",
+        });
+      }
+    }
+    this.prevAlive = next;
+  }
+
   _renderLoop() {
     if (!this.running) return;
 
     // Update particles
     this.particles.update();
+
+    // Spawn a flying cannon for any tank that died since last frame, then step
+    // the debris physics against the level walls.
+    this._spawnDeathDebris();
+    this.debris.update(
+      this.Bcollision as Parameters<DebrisSystem["update"]>[0]
+    );
 
     // Trigger fast bullet particles (Rocket trails)
     if (this.bullets) {
@@ -637,6 +692,11 @@ export class GameEngine {
       bullets: this.bullets,
       players: this.players,
     } as unknown as Parameters<typeof this.renderer.draw>[0]);
+
+    // Flying cannon debris sits above the wrecks/tanks but below the spark
+    // particles. Drawn on the renderer's 2D context so post-processing (bloom)
+    // picks it up alongside everything else.
+    this.debris.draw(this.renderer.c);
 
     // Render particles
     this.particles.draw(this.renderer.c);
@@ -689,6 +749,8 @@ export class GameEngine {
 
     // Clear particles and sounds
     this.particles.clear();
+    this.debris.clear();
+    this.prevAlive = {};
     this.sounds.clear();
 
     // Leave room if online
