@@ -44,6 +44,90 @@
   --noise: 0;
 }
 
+/* ========================================================================
+   ARCADE DESIGN SYSTEM TOKENS — mirror of apps/web/src/theme/palette.ts.
+   Keep the two in sync; the engine imports the .ts, Tailwind reads these.
+   ======================================================================== */
+@theme {
+  /* field + ink */
+  --color-ink: #2b2f36;
+  --color-ink-soft: #555b66;
+  --color-field: #c9cdd2;
+  --color-field-line: #b8bdc4;
+  --color-panel-dark: #1f232a;
+
+  /* team / shape palette (fill + `-d` outline) */
+  --color-blue: #00b2e1;
+  --color-blue-d: #0085a8;
+  --color-red: #f14e54;
+  --color-red-d: #b8383d;
+  --color-green: #00e06a;
+  --color-green-d: #00a64e;
+  --color-yellow: #ffe869;
+  --color-yellow-d: #c9b53f;
+  --color-purple: #bf7ff5;
+  --color-purple-d: #9355c9;
+  --color-orange: #ffb142;
+  --color-orange-d: #c98821;
+  --color-teal: #2dd4bf;
+  --color-teal-d: #1c9c8d;
+
+  /* bold rounded type everywhere */
+  --font-sans:
+    "Fredoka Variable", "Fredoka", system-ui, -apple-system, sans-serif;
+  --font-display:
+    "Fredoka Variable", "Fredoka", system-ui, -apple-system, sans-serif;
+
+  /* chunky arcade radii + shadows */
+  --radius-arcade: 16px;
+  --shadow-arcade: 0 6px 0 rgba(0, 0, 0, 0.18), 0 10px 22px rgba(0, 0, 0, 0.16);
+  --shadow-btn: 0 5px 0 rgba(0, 0, 0, 0.25);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* GRAPH-PAPER FIELD — the io backdrop for every menu surface. */
+@utility graph-paper {
+  background-color: var(--color-field);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      var(--color-field-line) 0 2px,
+      transparent 2px 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--color-field-line) 0 2px,
+      transparent 2px 32px
+    );
+}
+
+/* A fainter inner-card grid accent (e.g. inside hero / thumbnails). */
+@utility graph-paper-soft {
+  background-image:
+    repeating-linear-gradient(0deg, #bcc1c8 0 2px, transparent 2px 30px),
+    repeating-linear-gradient(90deg, #bcc1c8 0 2px, transparent 2px 30px);
+}
+
+/* io-style outlined heading text (white fill, dark outline stack). */
+@utility io-title {
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow:
+    -2px -2px 0 var(--color-ink),
+    2px -2px 0 var(--color-ink),
+    -2px 2px 0 var(--color-ink),
+    2px 2px 0 var(--color-ink),
+    0 3px 0 var(--color-ink),
+    4px 6px 0 rgba(0, 0, 0, 0.18);
+}
+
 /* Blur background when modal is open */
 .modal-backdrop {
   background-color: transparent !important;
@@ -81,5 +165,25 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes arcadeFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes arcadePop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
