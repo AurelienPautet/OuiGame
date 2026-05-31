@@ -10,7 +10,9 @@
 import { palette, tankColors } from "../theme/palette";
 
 const INK = palette.ink;
-const GRID_CELL = 40;
+// Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
+// map = 1150×800), so grid lines fall exactly on block edges.
+const GRID_CELL = 50;
 // Bullets cycle through warm team colours by bounce count.
 const BULLET_COLORS = [
   palette.yellow,

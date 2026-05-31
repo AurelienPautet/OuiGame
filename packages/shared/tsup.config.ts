@@ -11,7 +11,14 @@ import { defineConfig } from "tsup";
 // platform "neutral": game is pure JS, and zod is externalized (a dep), so no
 // node builtins are bundled. dts is off — the api types are consumed from source
 // by the web; the (JS) api only needs the runtime validators.
-export default defineConfig({
+//
+// clean is gated on !watch: a one-shot `tsup` build cleans dist for a fresh
+// output, but `tsup --watch` (the `dev` task) must NOT wipe dist on startup.
+// Under `turbo run dev`, `^build` first populates dist/game.js, then the watch
+// and `api#dev` start concurrently; a clean here would delete that file in the
+// window before the watch's first rebuild finishes, crashing api#dev with
+// ERR_MODULE_NOT_FOUND. Skipping clean in watch keeps dist present throughout.
+export default defineConfig((options) => ({
   entry: { game: "src/game/index.js", api: "src/api/index.ts" },
   format: ["esm", "cjs"],
   outDir: "dist",
@@ -19,6 +26,6 @@ export default defineConfig({
   platform: "neutral",
   splitting: false,
   sourcemap: true,
-  clean: true,
+  clean: !options.watch,
   dts: false,
-});
+}));
