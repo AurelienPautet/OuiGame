@@ -1,0 +1,355 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "done": "Done",
+    "save": "Save",
+    "saving": "Saving…",
+    "back": "Back",
+    "reload": "Reload",
+    "clear": "Clear",
+    "edit": "Edit",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "you": "You",
+    "youParens": "(you)",
+    "by": "by {{name}}",
+    "unknown": "Unknown",
+    "unknownError": "Unknown error",
+    "guest": "Guest"
+  },
+  "nav": {
+    "home": "Home",
+    "playSolo": "Play Solo",
+    "rankings": "Rankings",
+    "editor": "Editor",
+    "campaigns": "Campaigns"
+  },
+  "topbar": {
+    "online": "online",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "settings": "Settings",
+    "login": "Log in",
+    "profile": "Your profile"
+  },
+  "landing": {
+    "welcomeBack": "Welcome back, {{name}}",
+    "welcome": "Welcome, commander",
+    "tagline": "Roll out, blast bots and friends. Build your own levels, climb the leaderboard, win the field.",
+    "namePlaceholder": "Type your name…",
+    "playOnline": "Play Online",
+    "playOnlineSub": "Jump into a live room",
+    "playSolo": "Play Solo",
+    "playSoloSub": "Battle bots on any map",
+    "playCampaign": "Play Campaign",
+    "playCampaignSub": "Cleared levels, one life pool",
+    "yourTank": "YOUR TANK",
+    "customizeTank": "Customize tank",
+    "customize": "Customize",
+    "leaderboard": "Leaderboard",
+    "noRankings": "No rankings yet — be the first.",
+    "contact": "Contact",
+    "about": "About",
+    "github": "GitHub",
+    "copyright": "OUI TANK © 2026 — a cute io tank battler"
+  },
+  "auth": {
+    "chooseUsername": "Choose a Username",
+    "welcomeChoose": "Welcome! Please choose a username for your new account.",
+    "username": "Username",
+    "enterUsername": "Enter username",
+    "createAccount": "Create Account",
+    "loginTab": "Login",
+    "registerTab": "Register",
+    "loginTitle": "Log in",
+    "registerTitle": "Register",
+    "email": "Email",
+    "password": "Password",
+    "enterEmail": "Enter email",
+    "enterPassword": "Enter password",
+    "loginButton": "Login",
+    "registerButton": "Register",
+    "or": "OR"
+  },
+  "profile": {
+    "noEmail": "No email",
+    "logout": "Logout",
+    "solo": "Solo",
+    "multiplayer": "Multiplayer",
+    "noSolo": "No solo games played yet. Try some solo levels!",
+    "noMultiplayer": "No multiplayer games played yet. Join a room!",
+    "levelsCompleted": "Levels Completed",
+    "soloRounds": "Solo Rounds",
+    "victories": "Victories",
+    "winRate": "Win Rate",
+    "soloKills": "Solo Kills",
+    "soloKd": "Solo K/D",
+    "soloAccuracy": "Solo Accuracy",
+    "roundsPlayed": "Rounds Played",
+    "wins": "Wins",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "kdRatio": "K/D Ratio",
+    "shotsFired": "Shots Fired",
+    "hits": "Hits",
+    "accuracy": "Accuracy",
+    "minesPlanted": "Mines Planted",
+    "blocksBroken": "Blocks Broken"
+  },
+  "rooms": {
+    "playOnline": "Play Online",
+    "searchPlaceholder": "Search room name…",
+    "anyPlayers": "Any players",
+    "players_one": "{{count}} player",
+    "players_other": "{{count}} players",
+    "createNewRoom": "Create a New Room",
+    "publicOrPrivate": "Public or private",
+    "loadingRooms": "Loading rooms…",
+    "noRooms": "No rooms available",
+    "createToStart": "Create one to get started!",
+    "full": "FULL",
+    "passwordProtected": "Password protected"
+  },
+  "createRoom": {
+    "title": "Create Room",
+    "roomNamePlaceholder": "Room name",
+    "rounds": "Rounds",
+    "creating": "Creating…",
+    "createWithCount": "Create Room ({{count}} levels)",
+    "mustLogin": "You must be logged in to create a room."
+  },
+  "levelSelector": {
+    "searchPlaceholder": "Search level name…",
+    "sortByRating": "Sort by Rating",
+    "sortBySuccessRate": "Sort by Success Rate",
+    "sortByPopularity": "Sort by Popularity",
+    "sortByBestTime": "Sort by Best Time",
+    "descending": "Descending",
+    "ascending": "Ascending",
+    "newLevel": "New Level",
+    "levelsSelected": "{{count}} level(s) selected",
+    "loadingLevels": "Loading levels…",
+    "noLevelsMine": "No levels yet. Create your first level!",
+    "noLevels": "No levels found",
+    "added": "Added",
+    "confirmDelete": "Are you sure you want to delete this level?"
+  },
+  "levelCard": {
+    "locked": "Level {{id}} Locked",
+    "completePrevious": "Complete previous levels",
+    "lvlPrefix": "lvl {{id}}:",
+    "plays": "{{count}} plays",
+    "winShare": "{{rate}}% win",
+    "best": "best {{time}}"
+  },
+  "campaignSelector": {
+    "searchPlaceholder": "Search campaign name…",
+    "newCampaign": "New Campaign",
+    "loadingCampaigns": "Loading campaigns…",
+    "noCampaignsMine": "No campaigns yet. Create your first campaign!",
+    "noCampaigns": "No campaigns found"
+  },
+  "campaignCard": {
+    "levels_one": "{{count}} level",
+    "levels_other": "{{count}} levels",
+    "done": "Done",
+    "progress": "Progress"
+  },
+  "levelSelectorModal": {
+    "title": "Select Level"
+  },
+  "campaignSelectorModal": {
+    "title": "Select Campaign",
+    "noPlayableLevels": "This campaign has no playable levels.",
+    "failedStart": "Failed to start campaign."
+  },
+  "myLevels": {
+    "title": "Your Levels",
+    "loginToView": "Please log in to view your levels.",
+    "confirmDelete": "Are you sure you want to delete this level? This cannot be undone."
+  },
+  "myCampaigns": {
+    "title": "Your Campaigns",
+    "loginToManage": "Please log in to create and manage campaigns.",
+    "confirmDelete": "Are you sure you want to delete this campaign? This cannot be undone."
+  },
+  "tankSelect": {
+    "title": "Your Tank",
+    "body": "Body",
+    "turret": "Turret"
+  },
+  "settings": {
+    "title": "Settings",
+    "controls": "Controls",
+    "effects": "Effects",
+    "language": "Language",
+    "pressKey": "Press a key…",
+    "aimNote": "Aim and fire stay on the mouse. Arrow keys always work for movement.",
+    "reset": "Reset",
+    "actions": {
+      "up": "Move up",
+      "down": "Move down",
+      "left": "Move left",
+      "right": "Move right",
+      "plant": "Plant mine"
+    },
+    "effectLabels": {
+      "bloom": "Bloom glow",
+      "screenShake": "Screen shake",
+      "aberration": "Chromatic aberration",
+      "vignette": "Vignette",
+      "shockwaves": "Shockwaves",
+      "particles": "Particles",
+      "flashes": "Damage / kill flashes",
+      "scenery": "Animated scenery",
+      "sound": "Sound effects"
+    }
+  },
+  "stats": {
+    "time": "Time",
+    "shots": "Shots",
+    "accuracy": "Accuracy",
+    "kills": "Kills",
+    "bombs": "Bombs",
+    "blocks": "Blocks"
+  },
+  "endGame": {
+    "youWon": "You Won!",
+    "youLost": "You Lost :(",
+    "someoneWon": "{{name}} Won :(",
+    "draw": "Draw",
+    "bestTimes": "Best Times",
+    "results": "Results",
+    "levelThumbnailAlt": "Level thumbnail",
+    "ratedToast": "You rated the level with {{count}} stars",
+    "success": "Success",
+    "error": "Error",
+    "cantRate": "Can't rate: {{error}}",
+    "needLoginRate": "You need to be logged in to rate a level",
+    "noLevelRate": "No level to rate",
+    "playAgain": "Play Again",
+    "quit": "Quit"
+  },
+  "campaignEnd": {
+    "complete": "Campaign Complete!",
+    "runOver": "Run Over",
+    "completeSub": "You cleared every level. Nice work!",
+    "runOverSub": "You ran out of lives.",
+    "levelsCleared": "Levels cleared",
+    "livesLeft": "Lives left",
+    "totalTime": "Total time"
+  },
+  "interstitial": {
+    "levelCleared": "Level Cleared!",
+    "youDied": "You Died",
+    "levelXofY": "Level {{current}} of {{total}}",
+    "nextLevel": "Next level…",
+    "retrying": "Retrying…",
+    "plusLife": "+1 life!",
+    "livesLeft": "{{count}} lives left",
+    "minusLife": "-1 life · {{count}} left"
+  },
+  "countdown": {
+    "go": "GO!"
+  },
+  "pause": {
+    "title": "Paused",
+    "resume": "Resume",
+    "retry": "Retry",
+    "settings": "Settings",
+    "quit": "Quit"
+  },
+  "livesHud": {
+    "level": "Level {{current}}/{{total}}"
+  },
+  "rankings": {
+    "title": "RANKINGS",
+    "topPlayers": "top players",
+    "online": "Online",
+    "solo": "Solo",
+    "kills": "Kills",
+    "wins": "Wins",
+    "rounds": "Rounds",
+    "completed": "Completed",
+    "played": "Played",
+    "loadingRankings": "Loading rankings…",
+    "noRankings": "No rankings available",
+    "playSoloToRank": "Play solo to rank",
+    "playOnlineToRank": "Play online to rank",
+    "loginToRank": "Log in to rank"
+  },
+  "levelsScreen": {
+    "title": "PLAY SOLO",
+    "vsBots": "vs bots"
+  },
+  "levelEditor": {
+    "title": "EDITOR",
+    "online": "Online",
+    "solo": "Solo",
+    "levelNamePlaceholder": "Enter level name",
+    "clearLevel": "Clear Level",
+    "saveLevel": "Save Level",
+    "selectBlock": "Select a block",
+    "confirmClear": "Are you sure you want to clear the entire level?",
+    "blocks": {
+      "wall": "Wall",
+      "platform": "Platform",
+      "hole": "Hole",
+      "spawn": "Spawn",
+      "botBlue": "Blue Bot",
+      "botGreen": "Green Bot",
+      "botOrange": "Orange Bot",
+      "botRed": "Red Bot"
+    },
+    "toast": {
+      "title": "Level",
+      "failedSave": "Failed to save level: {{error}}",
+      "loginToSave": "Please log in to save levels.",
+      "needSpawn": "You need at least one spawn point (flag) for players!",
+      "tooManySpawns": "You cannot have more than 8 spawn points!",
+      "nameEmpty": "Level name cannot be empty!",
+      "nameTooLong": "Level name cannot be longer than 30 characters!"
+    }
+  },
+  "campaignEditor": {
+    "headerTitle": "CAMPAIGN",
+    "loginToCreate": "Please log in to create campaigns.",
+    "fullTitle": "CAMPAIGN EDITOR",
+    "namePlaceholder": "Campaign name",
+    "descriptionPlaceholder": "Short description",
+    "saveCampaign": "Save Campaign",
+    "addSoloLevels": "Add solo levels",
+    "clickToAddRemove": "— click a level to add or remove",
+    "campaignLevels": "Campaign levels",
+    "dragToReorder": "Drag to reorder — played top to bottom",
+    "noLevels": "No levels yet.",
+    "noLevelsHint": "Click levels on the left to build your campaign.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "toast": {
+      "title": "Campaign",
+      "nameEmpty": "Campaign name cannot be empty.",
+      "addOne": "Add at least one level.",
+      "saved": "Campaign saved!",
+      "nameTaken": "That campaign name is already taken.",
+      "failedSave": "Failed to save campaign."
+    }
+  },
+  "toasts": {
+    "connection": "Connection",
+    "disconnection": "Disconnection",
+    "kill": "Kill",
+    "connected": "{{name}} connected",
+    "disconnected": "{{name}} disconnected",
+    "killedBullet": "{{killer}} killed {{victim}}",
+    "killedMine": "{{killer}} blew up {{victim}}"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "The game hit an unexpected error. Reloading usually fixes it.",
+    "reload": "Reload"
+  }
+}

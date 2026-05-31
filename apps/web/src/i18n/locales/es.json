@@ -1,0 +1,355 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "done": "Listo",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "back": "Atrás",
+    "reload": "Recargar",
+    "clear": "Limpiar",
+    "edit": "Editar",
+    "delete": "Borrar",
+    "refresh": "Actualizar",
+    "loading": "Cargando…",
+    "you": "Tú",
+    "youParens": "(tú)",
+    "by": "por {{name}}",
+    "unknown": "Desconocido",
+    "unknownError": "Error desconocido",
+    "guest": "Invitado"
+  },
+  "nav": {
+    "home": "Inicio",
+    "playSolo": "Juego Solo",
+    "rankings": "Clasificaciones",
+    "editor": "Editor",
+    "campaigns": "Campañas"
+  },
+  "topbar": {
+    "online": "en línea",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "settings": "Configuración",
+    "login": "Iniciar sesión",
+    "profile": "Tu perfil"
+  },
+  "landing": {
+    "welcomeBack": "¡Bienvenido, {{name}}!",
+    "welcome": "¡Bienvenido, comandante!",
+    "tagline": "Rueda, dispara a bots y amigos. Construye tus propios niveles, sube en la tabla, domina el campo.",
+    "namePlaceholder": "Escribe tu nombre…",
+    "playOnline": "Juego en Línea",
+    "playOnlineSub": "Entra en una sala en vivo",
+    "playSolo": "Juego Solo",
+    "playSoloSub": "Batalla contra bots en cualquier mapa",
+    "playCampaign": "Juega Campaña",
+    "playCampaignSub": "Niveles superados, un solo pool de vidas",
+    "yourTank": "TU TANQUE",
+    "customizeTank": "Personaliza tu tanque",
+    "customize": "Personalizar",
+    "leaderboard": "Tabla de Clasificación",
+    "noRankings": "Sin clasificaciones aún — sé el primero.",
+    "contact": "Contacto",
+    "about": "Acerca de",
+    "github": "GitHub",
+    "copyright": "OUI TANK © 2026 — un adorable juego de tanques io"
+  },
+  "auth": {
+    "chooseUsername": "Elige un Nombre de Usuario",
+    "welcomeChoose": "¡Bienvenido! Por favor, elige un nombre de usuario para tu nueva cuenta.",
+    "username": "Nombre de usuario",
+    "enterUsername": "Ingresa nombre de usuario",
+    "createAccount": "Crear Cuenta",
+    "loginTab": "Iniciar Sesión",
+    "registerTab": "Registrarse",
+    "loginTitle": "Iniciar sesión",
+    "registerTitle": "Registrarse",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "enterEmail": "Ingresa tu correo",
+    "enterPassword": "Ingresa tu contraseña",
+    "loginButton": "Iniciar Sesión",
+    "registerButton": "Registrarse",
+    "or": "O"
+  },
+  "profile": {
+    "noEmail": "Sin correo",
+    "logout": "Cerrar Sesión",
+    "solo": "Solo",
+    "multiplayer": "Multijugador",
+    "noSolo": "Sin partidas solo aún. ¡Intenta algunos niveles solo!",
+    "noMultiplayer": "Sin partidas multijugador aún. ¡Entra en una sala!",
+    "levelsCompleted": "Niveles Completados",
+    "soloRounds": "Rondas Solo",
+    "victories": "Victorias",
+    "winRate": "Tasa de Victoria",
+    "soloKills": "Asesinatos Solo",
+    "soloKd": "K/D Solo",
+    "soloAccuracy": "Precisión Solo",
+    "roundsPlayed": "Rondas Jugadas",
+    "wins": "Victorias",
+    "kills": "Asesinatos",
+    "deaths": "Muertes",
+    "kdRatio": "Ratio K/D",
+    "shotsFired": "Disparos Realizados",
+    "hits": "Aciertos",
+    "accuracy": "Precisión",
+    "minesPlanted": "Minas Plantadas",
+    "blocksBroken": "Bloques Destruidos"
+  },
+  "rooms": {
+    "playOnline": "Juego en Línea",
+    "searchPlaceholder": "Buscar sala…",
+    "anyPlayers": "Cualquier número de jugadores",
+    "players_one": "{{count}} jugador",
+    "players_other": "{{count}} jugadores",
+    "createNewRoom": "Crear una Nueva Sala",
+    "publicOrPrivate": "Pública o privada",
+    "loadingRooms": "Cargando salas…",
+    "noRooms": "Sin salas disponibles",
+    "createToStart": "¡Crea una para empezar!",
+    "full": "LLENA",
+    "passwordProtected": "Protegida con contraseña"
+  },
+  "createRoom": {
+    "title": "Crear Sala",
+    "roomNamePlaceholder": "Nombre de la sala",
+    "rounds": "Rondas",
+    "creating": "Creando…",
+    "createWithCount": "Crear Sala ({{count}} niveles)",
+    "mustLogin": "Debes estar conectado para crear una sala."
+  },
+  "levelSelector": {
+    "searchPlaceholder": "Buscar nivel…",
+    "sortByRating": "Ordenar por Calificación",
+    "sortBySuccessRate": "Ordenar por Tasa de Éxito",
+    "sortByPopularity": "Ordenar por Popularidad",
+    "sortByBestTime": "Ordenar por Mejor Tiempo",
+    "descending": "Descendente",
+    "ascending": "Ascendente",
+    "newLevel": "Nuevo Nivel",
+    "levelsSelected": "{{count}} nivel(es) seleccionado(s)",
+    "loadingLevels": "Cargando niveles…",
+    "noLevelsMine": "Sin niveles aún. ¡Crea tu primer nivel!",
+    "noLevels": "Sin niveles encontrados",
+    "added": "Añadido",
+    "confirmDelete": "¿Estás seguro de que quieres borrar este nivel?"
+  },
+  "levelCard": {
+    "locked": "Nivel {{id}} Bloqueado",
+    "completePrevious": "Completa los niveles anteriores",
+    "lvlPrefix": "niv {{id}}:",
+    "plays": "{{count}} partidas",
+    "winShare": "{{rate}}% victorias",
+    "best": "mejor {{time}}"
+  },
+  "campaignSelector": {
+    "searchPlaceholder": "Buscar campaña…",
+    "newCampaign": "Nueva Campaña",
+    "loadingCampaigns": "Cargando campañas…",
+    "noCampaignsMine": "Sin campañas aún. ¡Crea tu primera campaña!",
+    "noCampaigns": "Sin campañas encontradas"
+  },
+  "campaignCard": {
+    "levels_one": "{{count}} nivel",
+    "levels_other": "{{count}} niveles",
+    "done": "Hecho",
+    "progress": "Progreso"
+  },
+  "levelSelectorModal": {
+    "title": "Seleccionar Nivel"
+  },
+  "campaignSelectorModal": {
+    "title": "Seleccionar Campaña",
+    "noPlayableLevels": "Esta campaña no tiene niveles jugables.",
+    "failedStart": "Error al iniciar la campaña."
+  },
+  "myLevels": {
+    "title": "Mis Niveles",
+    "loginToView": "Por favor inicia sesión para ver tus niveles.",
+    "confirmDelete": "¿Estás seguro de que quieres borrar este nivel? Esto no se puede deshacer."
+  },
+  "myCampaigns": {
+    "title": "Mis Campañas",
+    "loginToManage": "Por favor inicia sesión para crear y gestionar campañas.",
+    "confirmDelete": "¿Estás seguro de que quieres borrar esta campaña? Esto no se puede deshacer."
+  },
+  "tankSelect": {
+    "title": "Tu Tanque",
+    "body": "Cuerpo",
+    "turret": "Torreta"
+  },
+  "settings": {
+    "title": "Configuración",
+    "controls": "Controles",
+    "effects": "Efectos",
+    "language": "Idioma",
+    "pressKey": "Presiona una tecla…",
+    "aimNote": "Apuntar y disparar están en el mouse. Las flechas siempre funcionan para movimiento.",
+    "reset": "Reiniciar",
+    "actions": {
+      "up": "Mover arriba",
+      "down": "Mover abajo",
+      "left": "Mover izquierda",
+      "right": "Mover derecha",
+      "plant": "Plantar mina"
+    },
+    "effectLabels": {
+      "bloom": "Resplandor",
+      "screenShake": "Temblor de pantalla",
+      "aberration": "Aberración cromática",
+      "vignette": "Viñeta",
+      "shockwaves": "Ondas de choque",
+      "particles": "Partículas",
+      "flashes": "Destello de daño / muerte",
+      "scenery": "Escenario animado",
+      "sound": "Efectos de sonido"
+    }
+  },
+  "stats": {
+    "time": "Tiempo",
+    "shots": "Disparos",
+    "accuracy": "Precisión",
+    "kills": "Asesinatos",
+    "bombs": "Bombas",
+    "blocks": "Bloques"
+  },
+  "endGame": {
+    "youWon": "¡Ganaste!",
+    "youLost": "Perdiste :(",
+    "someoneWon": "{{name}} Ganó :(",
+    "draw": "Empate",
+    "bestTimes": "Mejores Tiempos",
+    "results": "Resultados",
+    "levelThumbnailAlt": "Miniatura del nivel",
+    "ratedToast": "Calificaste el nivel con {{count}} estrellas",
+    "success": "Éxito",
+    "error": "Error",
+    "cantRate": "No se puede calificar: {{error}}",
+    "needLoginRate": "Debes estar conectado para calificar un nivel",
+    "noLevelRate": "Sin nivel para calificar",
+    "playAgain": "Jugar de Nuevo",
+    "quit": "Salir"
+  },
+  "campaignEnd": {
+    "complete": "¡Campaña Completada!",
+    "runOver": "Partida Terminada",
+    "completeSub": "Completaste todos los niveles. ¡Buen trabajo!",
+    "runOverSub": "Se acabaron las vidas.",
+    "levelsCleared": "Niveles superados",
+    "livesLeft": "Vidas restantes",
+    "totalTime": "Tiempo total"
+  },
+  "interstitial": {
+    "levelCleared": "¡Nivel Superado!",
+    "youDied": "Moriste",
+    "levelXofY": "Nivel {{current}} de {{total}}",
+    "nextLevel": "Siguiente nivel…",
+    "retrying": "Reintentando…",
+    "plusLife": "¡+1 vida!",
+    "livesLeft": "{{count}} vidas restantes",
+    "minusLife": "-1 vida · {{count}} restantes"
+  },
+  "countdown": {
+    "go": "GO!"
+  },
+  "pause": {
+    "title": "Pausado",
+    "resume": "Continuar",
+    "retry": "Reintentar",
+    "settings": "Configuración",
+    "quit": "Salir"
+  },
+  "livesHud": {
+    "level": "Nivel {{current}}/{{total}}"
+  },
+  "rankings": {
+    "title": "CLASIFICACIONES",
+    "topPlayers": "mejores jugadores",
+    "online": "En Línea",
+    "solo": "Solo",
+    "kills": "Asesinatos",
+    "wins": "Victorias",
+    "rounds": "Rondas",
+    "completed": "Completadas",
+    "played": "Jugadas",
+    "loadingRankings": "Cargando clasificaciones…",
+    "noRankings": "Sin clasificaciones disponibles",
+    "playSoloToRank": "Juega solo para clasificarte",
+    "playOnlineToRank": "Juega en línea para clasificarte",
+    "loginToRank": "Inicia sesión para clasificarte"
+  },
+  "levelsScreen": {
+    "title": "JUEGO SOLO",
+    "vsBots": "vs bots"
+  },
+  "levelEditor": {
+    "title": "EDITOR",
+    "online": "En Línea",
+    "solo": "Solo",
+    "levelNamePlaceholder": "Ingresa nombre del nivel",
+    "clearLevel": "Limpiar Nivel",
+    "saveLevel": "Guardar Nivel",
+    "selectBlock": "Selecciona un bloque",
+    "confirmClear": "¿Estás seguro de que quieres limpiar todo el nivel?",
+    "blocks": {
+      "wall": "Muro",
+      "platform": "Plataforma",
+      "hole": "Hoyo",
+      "spawn": "Punto de Salida",
+      "botBlue": "Bot Azul",
+      "botGreen": "Bot Verde",
+      "botOrange": "Bot Naranja",
+      "botRed": "Bot Rojo"
+    },
+    "toast": {
+      "title": "Nivel",
+      "failedSave": "Error al guardar nivel: {{error}}",
+      "loginToSave": "Por favor inicia sesión para guardar niveles.",
+      "needSpawn": "¡Necesitas al menos un punto de salida (bandera) para los jugadores!",
+      "tooManySpawns": "¡No puedes tener más de 8 puntos de salida!",
+      "nameEmpty": "¡El nombre del nivel no puede estar vacío!",
+      "nameTooLong": "¡El nombre del nivel no puede tener más de 30 caracteres!"
+    }
+  },
+  "campaignEditor": {
+    "headerTitle": "CAMPAÑA",
+    "loginToCreate": "Por favor inicia sesión para crear campañas.",
+    "fullTitle": "EDITOR DE CAMPAÑA",
+    "namePlaceholder": "Nombre de campaña",
+    "descriptionPlaceholder": "Descripción breve",
+    "saveCampaign": "Guardar Campaña",
+    "addSoloLevels": "Añade niveles solo",
+    "clickToAddRemove": "— haz clic en un nivel para añadir o quitar",
+    "campaignLevels": "Niveles de campaña",
+    "dragToReorder": "Arrastra para reordenar — jugados de arriba a abajo",
+    "noLevels": "Sin niveles aún.",
+    "noLevelsHint": "Haz clic en niveles a la izquierda para construir tu campaña.",
+    "moveUp": "Mover arriba",
+    "moveDown": "Mover abajo",
+    "remove": "Quitar",
+    "toast": {
+      "title": "Campaña",
+      "nameEmpty": "El nombre de la campaña no puede estar vacío.",
+      "addOne": "Añade al menos un nivel.",
+      "saved": "¡Campaña guardada!",
+      "nameTaken": "Ese nombre de campaña ya está en uso.",
+      "failedSave": "Error al guardar campaña."
+    }
+  },
+  "toasts": {
+    "connection": "Conexión",
+    "disconnection": "Desconexión",
+    "kill": "Asesinato",
+    "connected": "{{name}} se conectó",
+    "disconnected": "{{name}} se desconectó",
+    "killedBullet": "{{killer}} mató a {{victim}}",
+    "killedMine": "{{killer}} detonó a {{victim}}"
+  },
+  "errorBoundary": {
+    "title": "Algo salió mal",
+    "message": "El juego encontró un error inesperado. Recargar generalmente lo soluciona.",
+    "reload": "Recargar"
+  }
+}
