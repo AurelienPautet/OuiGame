@@ -10,6 +10,8 @@ import {
   SegmentedControl,
 } from "../components/ui/primitives";
 import { cn } from "../lib/cn";
+import { palette } from "../theme/palette";
+import { drawTank } from "../engine/tankShape";
 
 // Constants matching the old level editor
 const CANVAS_WIDTH = 920;
@@ -127,7 +129,6 @@ const createEmptyLayout = (): number[] => {
   return layout;
 };
 
-// Load images helper
 // A palette thumbnail: renders a block/bot via the SAME drawEditorBlock used on
 // the canvas, so the picker matches exactly what gets placed.
 function BlockThumb({ type, size = 44 }: { type: number; size?: number }) {
@@ -452,51 +453,19 @@ export const LevelEditor = () => {
     openModal(MODALS.MY_LEVELS);
   };
 
-  // Block selector items
+  // Block selector items (shape-based — no sprites).
   const baseBlocks = [
-    {
-      id: BLOCKS.WALL,
-      src: `ressources/image/block/Cube${theme}-1.png`,
-      label: "Wall",
-    },
-    {
-      id: BLOCKS.PLATFORM,
-      src: `ressources/image/block/Cube${theme}-2.png`,
-      label: "Platform",
-    },
-    { id: BLOCKS.HOLE, src: `ressources/image/block/hole.png`, label: "Hole" },
-    {
-      id: BLOCKS.FLAG,
-      src: `ressources/image/block/flag.png`,
-      label: "Spawn",
-    },
+    { id: BLOCKS.WALL, label: "Wall" },
+    { id: BLOCKS.PLATFORM, label: "Platform" },
+    { id: BLOCKS.HOLE, label: "Hole" },
+    { id: BLOCKS.FLAG, label: "Spawn" },
   ];
 
   const botBlocks = [
-    {
-      id: BLOCKS.BOT_BLUE,
-      body: `ressources/image/tank_player/body_blue.png`,
-      turret: `ressources/image/tank_player/turret_blue.png`,
-      label: "Blue Bot",
-    },
-    {
-      id: BLOCKS.BOT_GREEN,
-      body: `ressources/image/tank_player/body_green.png`,
-      turret: `ressources/image/tank_player/turret_green.png`,
-      label: "Green Bot",
-    },
-    {
-      id: BLOCKS.BOT_ORANGE,
-      body: `ressources/image/tank_player/body_orange.png`,
-      turret: `ressources/image/tank_player/turret_orange.png`,
-      label: "Orange Bot",
-    },
-    {
-      id: BLOCKS.BOT_RED,
-      body: `ressources/image/tank_player/body_red.png`,
-      turret: `ressources/image/tank_player/turret_red.png`,
-      label: "Red Bot",
-    },
+    { id: BLOCKS.BOT_BLUE, label: "Blue Bot" },
+    { id: BLOCKS.BOT_GREEN, label: "Green Bot" },
+    { id: BLOCKS.BOT_ORANGE, label: "Orange Bot" },
+    { id: BLOCKS.BOT_RED, label: "Red Bot" },
   ];
 
   return (
@@ -545,60 +514,30 @@ export const LevelEditor = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex">
-        {/* Block Panel */}
-        <div className="w-48 bg-panel-dark border-r-4 border-ink flex flex-col items-center py-4">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-white/70 mb-4">
+        {/* Block Palette */}
+        <div className="w-48 bg-white border-r-4 border-ink flex flex-col items-center py-4">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-ink-soft mb-4">
             Select a block
           </h2>
 
           <div className="flex flex-col gap-2">
-            {/* Base blocks */}
-            {baseBlocks.map((block) => (
-              <button
-                key={block.id}
-                onClick={() => setSelectedBlock(block.id)}
-                className={cn(
-                  "w-14 h-14 relative rounded-lg border-[3px] hover:scale-110 transition-transform",
-                  selectedBlock === block.id
-                    ? "border-yellow ring-2 ring-yellow/50"
-                    : "border-ink"
-                )}
-                title={block.label}
-              >
-                <img
-                  src={block.src}
-                  alt={block.label}
-                  className="w-full h-full object-contain"
-                />
-              </button>
-            ))}
-
-            {/* Bot blocks - only show in solo mode (for playing against AI bots) */}
-            {mode === "solo" &&
-              botBlocks.map((block) => (
+            {[...baseBlocks, ...(mode === "solo" ? botBlocks : [])].map(
+              (block) => (
                 <button
                   key={block.id}
                   onClick={() => setSelectedBlock(block.id)}
                   className={cn(
-                    "w-14 h-14 relative rounded-lg border-[3px] hover:scale-110 transition-transform",
+                    "size-14 grid place-items-center rounded-lg border-[3px] bg-field hover:scale-110 transition-transform",
                     selectedBlock === block.id
                       ? "border-yellow ring-2 ring-yellow/50"
                       : "border-ink"
                   )}
                   title={block.label}
                 >
-                  <img
-                    src={block.body}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-contain"
-                  />
-                  <img
-                    src={block.turret}
-                    alt=""
-                    className="absolute top-1 -left-2 w-full h-2/3 object-contain"
-                  />
+                  <BlockThumb type={block.id} />
                 </button>
-              ))}
+              )
+            )}
           </div>
         </div>
 
