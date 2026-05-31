@@ -35,12 +35,17 @@ export class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="w-screen h-screen flex flex-col items-center justify-center gap-4 bg-base-300 text-base-content">
-          <h1 className="text-3xl font-bold">Something went wrong</h1>
-          <p className="opacity-70">
+        <div className="graph-paper w-screen h-screen flex flex-col items-center justify-center gap-4 text-ink">
+          <h1 className="io-title font-display text-4xl">
+            Something went wrong
+          </h1>
+          <p className="font-semibold text-ink-soft">
             The game hit an unexpected error. Reloading usually fixes it.
           </p>
-          <button className="btn btn-primary" onClick={this.handleReload}>
+          <button
+            className="font-display font-bold text-white bg-blue border-4 border-ink rounded-[14px] px-5 py-3 shadow-[0_5px_0_rgba(0,0,0,0.25)] active:translate-y-1 active:shadow-none cursor-pointer"
+            onClick={this.handleReload}
+          >
             Reload
           </button>
         </div>

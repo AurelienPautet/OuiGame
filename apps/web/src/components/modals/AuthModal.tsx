@@ -46,6 +46,12 @@ declare global {
 const GOOGLE_CLIENT_ID =
   "403445313450-kvueoci8r29rcpqk2p8jle1escfn6cc9.apps.googleusercontent.com";
 
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+    {children}
+  </span>
+);
+
 export const AuthModal = () => {
   const { closeModal } = useModal();
   const {
@@ -114,12 +120,6 @@ export const AuthModal = () => {
 
   const fieldClass = (name: string) =>
     cn("mt-1", fieldError(name) && "border-red focus:ring-red/30");
-
-  const Label = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-      {children}
-    </span>
-  );
 
   const close = (o: boolean) => {
     if (!o) closeModal();

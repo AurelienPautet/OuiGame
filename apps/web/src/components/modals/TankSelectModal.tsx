@@ -15,6 +15,35 @@ import { cn } from "../../lib/cn";
 const clampIndex = (saved: number | null) =>
   Math.max(0, Math.min(saved ?? 1, COLORS.length - 1));
 
+const SwatchRow = ({
+  label,
+  selected,
+  onPick,
+}: {
+  label: string;
+  selected: number;
+  onPick: (i: number) => void;
+}) => (
+  <div className="flex items-center gap-2 flex-wrap">
+    <span className="text-sm font-semibold text-ink w-16">{label}</span>
+    {COLORS.map((name, i) => (
+      <button
+        key={name}
+        type="button"
+        aria-label={`${label} ${name}`}
+        aria-pressed={i === selected}
+        onClick={() => onPick(i)}
+        className={cn(
+          "size-8 rounded-lg border-[3px] border-ink cursor-pointer transition-transform shadow-[0_3px_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5",
+          i === selected &&
+            "outline-3 outline-white -outline-offset-[7px] -translate-y-0.5 scale-110"
+        )}
+        style={{ background: tankColors(name).fill }}
+      />
+    ))}
+  </div>
+);
+
 export const TankSelectModal = () => {
   const { closeModal } = useModal();
   const [bodyIndex, setBodyIndex] = useState(() =>
@@ -34,35 +63,6 @@ export const TankSelectModal = () => {
     );
     closeModal();
   };
-
-  const SwatchRow = ({
-    label,
-    selected,
-    onPick,
-  }: {
-    label: string;
-    selected: number;
-    onPick: (i: number) => void;
-  }) => (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-sm font-semibold text-ink w-16">{label}</span>
-      {COLORS.map((name, i) => (
-        <button
-          key={name}
-          type="button"
-          aria-label={`${label} ${name}`}
-          aria-pressed={i === selected}
-          onClick={() => onPick(i)}
-          className={cn(
-            "size-8 rounded-lg border-[3px] border-ink cursor-pointer transition-transform shadow-[0_3px_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5",
-            i === selected &&
-              "outline-3 outline-white -outline-offset-[7px] -translate-y-0.5 scale-110"
-          )}
-          style={{ background: tankColors(name).fill }}
-        />
-      ))}
-    </div>
-  );
 
   return (
     <Dialog
