@@ -1,5 +1,7 @@
 import { Users, Lock } from "lucide-react";
 import type { RoomSummary } from "@ouigame/shared/api";
+import { Tooltip } from "./primitives";
+import { cn } from "../../lib/cn";
 
 // The in-memory room summary plus the optional password flag the card displays.
 type Room = RoomSummary & { hasPassword?: boolean };
@@ -9,78 +11,59 @@ interface RoomCardProps {
   onClick: () => void;
 }
 
-/**
- * RoomCard - Displays a room preview card with details
- */
+/** Arcade room preview card. */
 export function RoomCard({ room, onClick }: RoomCardProps) {
   const { id, name, creator, players, maxPlayers, hasPassword } = room;
   const isFull = players >= maxPlayers;
 
   return (
     <div
-      className={`
-        relative flex gap-4 p-4 rounded-lg cursor-pointer
-        transition-all duration-200
-        bg-base-300
-        border-4 border-base-300
-        hover:bg-base-200
-        ${isFull ? "opacity-70" : ""}
-      `}
+      className={cn(
+        "relative flex flex-col gap-2 p-4 rounded-xl cursor-pointer transition-all duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)] hover:-translate-y-0.5",
+        isFull && "opacity-80 hover:translate-y-0"
+      )}
       onClick={isFull ? undefined : onClick}
     >
-      {/* Full overlay */}
       {isFull && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/30 rounded-lg">
-          <span className="text-white text-xl font-bold flex items-center gap-2">
-            FULL
-          </span>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-ink/40 rounded-xl">
+          <span className="text-white text-lg font-bold">FULL</span>
         </div>
       )}
 
-      {/* Content */}
       <div
-        className={`flex-1 flex flex-col justify-between ${
-          isFull ? "blur-sm" : ""
-        }`}
+        className={cn(
+          "flex justify-between items-start gap-2",
+          isFull && "blur-sm"
+        )}
       >
-        {/* Title row */}
-        <div className="flex justify-between items-start">
-          <div className="flex flex-col">
-            <h3
-              className="text-lg font-bold truncate max-w-[200px]"
-              title={name}
-            >
-              {name}
-            </h3>
-            <span className="text-base-content/60 text-sm">by {creator}</span>
-          </div>
-
-          <div className="flex gap-2">
-            {hasPassword && (
-              <div
-                className="tooltip tooltip-left"
-                data-tip="Password Protected"
-              >
-                <Lock className="w-5 h-5 text-warning" />
-              </div>
-            )}
-          </div>
+        <div className="flex flex-col min-w-0">
+          <h3 className="text-lg font-bold text-ink truncate" title={name}>
+            {name}
+          </h3>
+          <span className="text-blue-d text-sm font-semibold truncate">
+            by {creator}
+          </span>
         </div>
+        {hasPassword && (
+          <Tooltip content="Password protected" side="left">
+            <Lock className="text-yellow-d" size={20} />
+          </Tooltip>
+        )}
+      </div>
 
-        {/* Bottom row */}
-        <div className="flex justify-between items-end mt-2">
-          <div className="flex items-center gap-2">
-            <div
-              className={`badge badge-lg gap-1 ${
-                isFull ? "badge-error" : "badge-neutral"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              {players}/{maxPlayers}
-            </div>
-            <div className="text-xs text-base-content/40 font-mono">#{id}</div>
-          </div>
-        </div>
+      <div
+        className={cn("flex justify-between items-center", isFull && "blur-sm")}
+      >
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 font-bold text-sm border-[3px] border-ink rounded-lg px-2.5 py-1",
+            isFull ? "bg-red text-white" : "bg-field text-ink"
+          )}
+        >
+          <Users size={16} />
+          {players}/{maxPlayers}
+        </span>
+        <span className="text-xs text-ink-soft font-mono">#{id}</span>
       </div>
     </div>
   );

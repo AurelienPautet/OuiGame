@@ -1,5 +1,7 @@
-import { Star, Gamepad2, Clock, TrendingUp } from "lucide-react";
+import { Star, Lock } from "lucide-react";
 import { extractBotCounts, getBotColor } from "../../utils/levelUtils";
+import { TankAvatar } from "./primitives";
+import { cn } from "../../lib/cn";
 
 // Format milliseconds to readable time (MM:SS or HH:MM:SS)
 function formatTime(ms: number | null): string | null {
@@ -10,9 +12,6 @@ function formatTime(ms: number | null): string | null {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-/**
- * LevelCard - Displays a level preview card with thumbnail, title, rating, and bot counts
- */
 interface LevelCardProps {
   levelId: number;
   levelName: string;
@@ -30,6 +29,7 @@ interface LevelCardProps {
   soloBestTimeMs?: number | null;
 }
 
+/** Arcade level preview card — thumbnail, title, rating, bot spawns, solo stats. */
 export function LevelCard({
   levelId,
   levelName,
@@ -46,104 +46,91 @@ export function LevelCard({
   soloBestTimeMs = null,
 }: LevelCardProps) {
   const botCounts = extractBotCounts(levelJson);
-
-  // Generate star rating display (rating can arrive as a numeric string).
   const ratingValue = Number(rating) || 0;
-  const stars: boolean[] = [];
-  for (let i = 0; i < 5; i++) {
-    stars.push(i < ratingValue);
-  }
-
   const bestTimeFormatted = formatTime(soloBestTimeMs);
 
   return (
     <div
-      className={`
-        relative flex gap-4 p-4 rounded-lg cursor-pointer
-        transition-all duration-200
-        bg-base-300
-        border-4 border-base-300
-        ${selected ? "border-primary bg-base-300" : "hover:bg-base-200"}
-        ${locked ? "opacity-70" : ""}
-      `}
+      className={cn(
+        "relative flex gap-4 p-3 rounded-xl cursor-pointer transition-all duration-150 bg-white border-[3px] shadow-[0_4px_0_rgba(0,0,0,0.12)] hover:-translate-y-0.5",
+        selected ? "border-blue ring-3 ring-blue/30" : "border-ink",
+        locked && "opacity-80"
+      )}
       onClick={locked ? undefined : onClick}
     >
-      {/* Lock overlay */}
       {locked && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/30 rounded-lg">
-          <span className="text-white text-xl font-bold flex items-center gap-2">
-            🔒 Level {levelId} Locked
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/40 rounded-xl text-center">
+          <span className="text-white text-lg font-bold flex items-center gap-2">
+            <Lock size={18} /> Level {levelId} Locked
           </span>
-          <p className="text-white/80 text-sm">
-            Complete previous levels to unlock
-          </p>
+          <p className="text-white/80 text-sm">Complete previous levels</p>
         </div>
       )}
 
-      {/* Thumbnail */}
-      <div className={`flex-shrink-0 ${locked ? "blur-sm" : ""}`}>
+      <div className={cn("shrink-0", locked && "blur-sm")}>
         <img
           src={thumbnailSrc || "ressources/image/minia/test.png"}
           alt={`Level ${levelId} preview`}
           loading="lazy"
           width={128}
           height={96}
-          className="w-32 h-24 object-cover rounded border-2 border-base-content/20"
+          className="w-32 h-24 object-cover rounded-lg border-[3px] border-ink"
         />
       </div>
 
-      {/* Content */}
       <div
-        className={`flex-1 flex flex-col justify-between ${
-          locked ? "blur-sm" : ""
-        }`}
+        className={cn(
+          "flex-1 flex flex-col justify-between min-w-0",
+          locked && "blur-sm"
+        )}
       >
-        {/* Title row */}
-        <div className="flex justify-between items-start">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-bold">
-              <span className="text-base-content/60">level {levelId}:</span>
-              <span className="ml-2">{levelName}</span>
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex flex-col min-w-0">
+            <h3 className="text-lg font-bold text-ink truncate">
+              <span className="text-ink-soft">lvl {levelId}:</span> {levelName}
             </h3>
-            <span className="text-xs text-base-content/50">
+            <span className="text-xs font-semibold text-blue-d truncate">
               by {author || "Unknown"}
             </span>
           </div>
-
-          {/* Star rating */}
-          <div className="flex gap-0.5">
-            {stars.map((filled, i) => (
+          <div className="flex gap-0.5 shrink-0">
+            {Array.from({ length: 5 }, (_, i) => (
               <Star
                 key={i}
-                size={16}
+                size={15}
                 className={
-                  filled ? "fill-warning text-warning" : "text-base-content/30"
+                  i < ratingValue ? "fill-yellow text-yellow-d" : "text-ink/20"
                 }
               />
             ))}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {Object.entries(botCounts).map(([botType, count]) => (
             <BotBadge key={botType} botType={Number(botType)} count={count} />
           ))}
         </div>
 
         {isSolo && soloTimesPlayed > 0 && (
-          <div className="flex items-center gap-3 mt-1 text-xs text-base-content/60">
-            <span>{soloTimesPlayed} plays</span>
-            <span>•</span>
+          <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-ink-soft flex-wrap">
+            <span className="bg-field border-2 border-ink/15 rounded-md px-1.5 py-0.5">
+              {soloTimesPlayed} plays
+            </span>
             <span
-              className={soloSuccessRate >= 50 ? "text-success" : "text-error"}
+              className={cn(
+                "border-2 border-ink/15 rounded-md px-1.5 py-0.5",
+                soloSuccessRate >= 50
+                  ? "bg-green/15 text-green-d"
+                  : "bg-red/15 text-red-d"
+              )}
             >
-              {soloSuccessRate}% win rate
+              {soloSuccessRate}% win
             </span>
             {bestTimeFormatted && (
-              <>
-                <span>•</span>
-                <span className="text-warning">Best: {bestTimeFormatted}</span>
-              </>
+              <span className="bg-field border-2 border-ink/15 rounded-md px-1.5 py-0.5">
+                best {bestTimeFormatted}
+              </span>
             )}
           </div>
         )}
@@ -152,9 +139,6 @@ export function LevelCard({
   );
 }
 
-/**
- * BotBadge - Displays a bot count with tank icon
- */
 interface BotBadgeProps {
   botType: number;
   count: number;
@@ -162,22 +146,10 @@ interface BotBadgeProps {
 
 function BotBadge({ botType, count }: BotBadgeProps) {
   const color = getBotColor(botType);
-
   return (
-    <div className="flex items-center gap-1 bg-base-100 border border-base-content/10 px-2 py-1 rounded">
-      <span className="text-sm font-medium">{count}*</span>
-      <div className="relative w-8 h-6">
-        <img
-          src={`ressources/image/tank_player/body_${color}.png`}
-          alt=""
-          className="absolute w-6 h-6"
-        />
-        <img
-          src={`ressources/image/tank_player/turret_${color}.png`}
-          alt=""
-          className="absolute w-8 h-5 -left-3"
-        />
-      </div>
+    <div className="flex items-center gap-1 bg-field border-2 border-ink rounded-lg px-1.5 py-0.5">
+      <span className="text-xs font-bold text-ink">{count}×</span>
+      <TankAvatar bodyColor={color} turretColor={color} size={20} />
     </div>
   );
 }

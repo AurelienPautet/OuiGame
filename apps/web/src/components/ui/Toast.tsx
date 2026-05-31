@@ -21,16 +21,15 @@ const TOAST_ICONS: Record<string, LucideIcon> = {
   [TOAST_TYPES.SUCCESS]: CheckCircle,
 };
 
-// Color classes for each toast type
+// Arcade colour per toast type — solid team colour + ink outline.
 const TOAST_COLORS: Record<string, string> = {
-  [TOAST_TYPES.CONNECTION]:
-    "bg-success/90 border-success/50 text-success-content",
-  [TOAST_TYPES.DISCONNECTION]: "bg-error/90 border-error/50 text-error-content",
-  [TOAST_TYPES.BULLET]: "bg-pink-500/90 border-pink-500/50 text-white",
-  [TOAST_TYPES.MINE]: "bg-warning/90 border-warning/50 text-warning-content",
-  [TOAST_TYPES.INFO]: "bg-info/90 border-info/50 text-info-content",
-  [TOAST_TYPES.ERROR]: "bg-error/90 border-error/50 text-error-content",
-  [TOAST_TYPES.SUCCESS]: "bg-success/90 border-success/50 text-success-content",
+  [TOAST_TYPES.CONNECTION]: "bg-green text-white",
+  [TOAST_TYPES.DISCONNECTION]: "bg-red text-white",
+  [TOAST_TYPES.BULLET]: "bg-purple text-white",
+  [TOAST_TYPES.MINE]: "bg-orange text-ink",
+  [TOAST_TYPES.INFO]: "bg-blue text-white",
+  [TOAST_TYPES.ERROR]: "bg-red text-white",
+  [TOAST_TYPES.SUCCESS]: "bg-green text-white",
 };
 
 interface ToastProps {
@@ -48,7 +47,7 @@ export const Toast = ({ type, title, text, exiting }: ToastProps) => {
     <div
       role="alert"
       aria-live="polite"
-      className={`w-full min-h-16 p-3 rounded-lg flex flex-col gap-1 backdrop-blur-md border shadow-lg ${colorClass} ${
+      className={`w-full min-h-16 p-3 rounded-xl flex flex-col gap-1 border-[3px] border-ink shadow-arcade ${colorClass} ${
         exiting
           ? "animate-[slideOutRight_0.5s_ease-in_forwards]"
           : "animate-[slideInRight_0.3s_ease-out_forwards]"
