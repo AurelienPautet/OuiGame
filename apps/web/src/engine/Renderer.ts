@@ -166,41 +166,13 @@ export class Renderer {
   }
 
   _loadImages() {
-    const colors = [
-      "blue",
-      "orange",
-      "red",
-      "green",
-      "violet",
-      "yellow",
-      "blueF",
-      "turquoise",
-      "violetF",
-    ];
-
-    // Load tank images
-    colors.forEach((color) => {
-      this.images[`body_${color}`] = this._loadImage(
-        `ressources/image/tank_player/body_${color}.png`
-      );
-      this.images[`turret_${color}`] = this._loadImage(
-        `ressources/image/tank_player/turret_${color}.png`
-      );
-    });
-
-    // Load other images
+    // The arcade renderer draws tanks/blocks/bullets/holes as shapes, so the
+    // only remaining raster assets are the track-trail decal and the dead
+    // marker (both still blitted onto the fading canvas).
     this.images.body_tracks = this._loadImage(
       "ressources/image/tank_player/body_tracks.png"
     );
-    this.images.turret_decalc_bot = this._loadImage(
-      "ressources/image/tank_player/turret_decalc_bot.png"
-    );
     this.images.dead = this._loadImage("ressources/image/dead.png");
-    this.images.hole = this._loadImage("ressources/image/block/hole.png");
-    this.images.flag = this._loadImage("ressources/image/block/flag.png");
-
-    // Theme-based images
-    this._loadThemeImages(this.theme);
   }
 
   _loadImage(src: string): HTMLImageElement {
@@ -209,22 +181,11 @@ export class Renderer {
     return img;
   }
 
-  _loadThemeImages(theme: number) {
-    this.images.block1 = this._loadImage(
-      `ressources/image/block/Cube${theme}-1.png`
-    );
-    this.images.block2 = this._loadImage(
-      `ressources/image/block/Cube${theme}-2.png`
-    );
-    this.images.bullet = this._loadImage(
-      `ressources/image/bullet/bullet-${theme}.png`
-    );
-    this.images.bg = this._loadImage(`ressources/image/bg${theme}.png`);
-  }
-
+  // The theme number still drives gameplay elsewhere; the renderer no longer
+  // swaps art per theme (everything is palette-driven), so this is a no-op kept
+  // for the GameEngine.setTheme call site.
   setTheme(theme: number) {
     this.theme = theme;
-    this._loadThemeImages(theme);
   }
 
   clear() {
@@ -529,21 +490,6 @@ export class Renderer {
     ctx.rotate(rad);
     ctx.drawImage(img, -width / 2, -height / 2, width, height);
     ctx.restore();
-  }
-
-  _drawTurretRot(
-    img: CanvasImageSource,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    rad: number
-  ) {
-    this.c.save();
-    this.c.translate(x + 0.4 * width, y + height * 0.6);
-    this.c.rotate(rad);
-    this.c.drawImage(img, -0.75 * width, -height / 2, width, height);
-    this.c.restore();
   }
 
   // Draw particles and shockwaves
