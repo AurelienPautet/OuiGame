@@ -84,59 +84,10 @@
     4px 6px 0 rgba(0, 0, 0, 0.18);
 }
 
-/* Animation keyframes for Tailwind arbitrary animations */
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideOutRight {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-}
-
-@keyframes scoreCascade {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes arcadeFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes arcadePop {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
+/* Dialog / overlay / toast entrances + list cascades now live in Motion
+   (src/lib/motion.tsx and the components themselves). The keyframes that
+   remain below are the self-contained in-game cues — countdown badge, life
+   hearts, auto-advance bar — which stay plain CSS. */
 
 /* ========================================================================
    GAME-OVERLAY DESIGN SYSTEM — the rules every in-game overlay follows
@@ -153,22 +104,12 @@
      5. One stat    — Stat / StatGrid on the bg-white/10 border-2 border-ink chip,
                       numbers use tabular-nums (never font-mono).
      6. One actions — OverlayActions: green "Play Again" + ghost "Quit".
-     7. Animations  — defined here, referenced via animate-[name_...].
+     7. Animations  — scrim fade + panel/stat cascade come from Motion
+                      (OverlayScrim/OverlayPanel); the bespoke in-game cues
+                      (countdown, life hearts, auto-advance bar) stay as the
+                      keyframes below, referenced via animate-[name_...].
      8. z-index     — HUD z-40, overlays z-50.
    ======================================================================== */
-
-/* Scale-only pop for flex-centered overlay panels (arcadePop bakes in the
-   translate(-50%,-50%) used by Radix dialogs and would mis-position these). */
-@keyframes arcadePopCentered {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 
 /* Countdown badge: container pop + number swap. */
 @keyframes countdownPop {

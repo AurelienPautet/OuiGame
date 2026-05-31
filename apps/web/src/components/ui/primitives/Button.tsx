@@ -1,11 +1,14 @@
 import { forwardRef } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { motion, type HTMLMotionProps } from "motion/react";
 import { cn } from "../../../lib/cn";
+import { pressable } from "../../../lib/motion";
 
-// Chunky, flat, thick-outlined arcade button: 4px ink border, a hard drop shadow
-// that the button "presses into" on :active (translate down + shadow collapses).
+// Chunky, flat, thick-outlined arcade button: 4px ink border, a hard drop
+// shadow it presses toward. Motion owns the transform (springy hover-lift +
+// tactile press); CSS keeps only the colour transition.
 const button = cva(
-  "inline-flex items-center justify-center gap-2 font-display font-bold cursor-pointer select-none whitespace-nowrap border-4 border-ink text-white transition-[transform,box-shadow,background-color] duration-100 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/25",
+  "inline-flex items-center justify-center gap-2 font-display font-bold cursor-pointer select-none whitespace-nowrap border-4 border-ink text-white transition-colors duration-100 disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/25",
   {
     variants: {
       variant: {
@@ -28,16 +31,15 @@ const button = cva(
 );
 
 export interface ButtonProps
-  extends
-    React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof button> {}
+  extends Omit<HTMLMotionProps<"button">, "ref">, VariantProps<typeof button> {}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, type = "button", ...props }, ref) => (
-    <button
+    <motion.button
       ref={ref}
       type={type}
       className={cn(button({ variant, size }), className)}
+      {...pressable}
       {...props}
     />
   )

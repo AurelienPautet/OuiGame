@@ -23,3 +23,4 @@ export { Tabs, TabsList, TabsTrigger, TabsContent } from "./Tabs";
 export { Select, type SelectOption } from "./Select";
 export { Switch } from "./Switch";
 export { Tooltip } from "./Tooltip";
+export { StarRating } from "./StarRating";

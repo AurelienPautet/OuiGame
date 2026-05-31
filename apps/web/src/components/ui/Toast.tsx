@@ -1,4 +1,6 @@
+import { motion } from "motion/react";
 import { TOAST_TYPES } from "../../contexts/ToastContext";
+import { springs } from "../../lib/motion";
 import {
   Wifi,
   WifiOff,
@@ -36,28 +38,28 @@ interface ToastProps {
   type: string;
   title: string;
   text: string;
-  exiting?: boolean;
 }
 
-export const Toast = ({ type, title, text, exiting }: ToastProps) => {
+export const Toast = ({ type, title, text }: ToastProps) => {
   const Icon = TOAST_ICONS[type] || Info;
   const colorClass = TOAST_COLORS[type] || TOAST_COLORS[TOAST_TYPES.INFO];
 
   return (
-    <div
+    <motion.div
       role="alert"
       aria-live="polite"
-      className={`w-full min-h-16 p-3 rounded-xl flex flex-col gap-1 border-[3px] border-ink shadow-arcade ${colorClass} ${
-        exiting
-          ? "animate-[slideOutRight_0.5s_ease-in_forwards]"
-          : "animate-[slideInRight_0.3s_ease-out_forwards]"
-      }`}
+      layout
+      initial={{ opacity: 0, x: 60, scale: 0.85 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 60, scale: 0.85, transition: { duration: 0.22 } }}
+      transition={springs.snappy}
+      className={`w-full min-h-16 p-3 rounded-xl flex flex-col gap-1 border-[3px] border-ink shadow-arcade ${colorClass}`}
     >
       <div className="flex items-center gap-2">
         <Icon size={20} className="shrink-0" />
         <span className="text-sm font-bold">{title}</span>
       </div>
       <span className="text-xs ml-7 leading-tight">{text}</span>
-    </div>
+    </motion.div>
   );
 };
