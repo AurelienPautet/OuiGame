@@ -7,6 +7,24 @@ import react from "@vitejs/plugin-react";
 // harness there: Jest owns apps/api/__tests__, Vitest owns apps/web + shared.
 export default defineConfig({
   test: {
+    // Coverage is reporting-only for now (no thresholds): `pnpm test:unit:coverage`
+    // prints a summary and writes html/lcov under coverage/. Thresholds can be
+    // ratcheted up later per-directory once a baseline is established.
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"],
+      include: ["apps/web/src/**", "packages/shared/src/**"],
+      exclude: [
+        "**/__tests__/**",
+        "**/*.d.ts",
+        "**/index.{ts,js}",
+        "apps/web/src/main.tsx",
+        "apps/web/src/test/**",
+        // Canvas drawing + Howler audio: jsdom stubs make assertions meaningless.
+        "apps/web/src/engine/Renderer.ts",
+        "apps/web/src/engine/SoundManager.ts",
+      ],
+    },
     projects: [
       {
         plugins: [react()],
