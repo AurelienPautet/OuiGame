@@ -32,6 +32,83 @@ const BLOCKS = {
   BOT_RED: 14,
 };
 
+const INK = palette.ink;
+
+// Bot block id → tank colour name (shared with the game palette).
+const BOT_COLOR: Record<number, string> = {
+  [BLOCKS.BOT_BLUE]: "blue",
+  [BLOCKS.BOT_GREEN]: "green",
+  [BLOCKS.BOT_ORANGE]: "orange",
+  [BLOCKS.BOT_RED]: "red",
+};
+
+// Draw one editor cell as a flat arcade shape — the same visual language as the
+// in-game Renderer, so the editor preview matches what you'll actually play.
+function drawEditorBlock(
+  ctx: CanvasRenderingContext2D,
+  blockType: number,
+  x: number,
+  y: number,
+  s: number
+) {
+  switch (blockType) {
+    case BLOCKS.WALL:
+    case BLOCKS.PLATFORM: {
+      ctx.fillStyle = blockType === BLOCKS.WALL ? "#7d848e" : "#cbb287";
+      ctx.fillRect(x, y, s, s);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = INK;
+      ctx.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
+      break;
+    }
+    case BLOCKS.HOLE: {
+      ctx.beginPath();
+      ctx.roundRect(x + 3, y + 3, s - 6, s - 6, 6);
+      ctx.fillStyle = "#13161b";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#000";
+      ctx.stroke();
+      break;
+    }
+    case BLOCKS.FLAG: {
+      // Spawn-point marker: a little yellow pennant on an ink pole.
+      const px = x + s * 0.34;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(px, y + s * 0.2);
+      ctx.lineTo(px, y + s * 0.82);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(px, y + s * 0.22);
+      ctx.lineTo(x + s * 0.74, y + s * 0.36);
+      ctx.lineTo(px, y + s * 0.5);
+      ctx.closePath();
+      ctx.fillStyle = palette.yellow;
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+    default: {
+      const color = BOT_COLOR[blockType];
+      if (color) {
+        drawTank(ctx, {
+          cx: x + s / 2,
+          cy: y + s / 2,
+          r: s * 0.4,
+          bodyColor: color,
+          turretColor: color,
+          angle: -Math.PI / 2,
+          isBot: true,
+        });
+      }
+    }
+  }
+}
+
 // Initialize level layout with border walls
 const createEmptyLayout = (): number[] => {
   const layout: number[] = new Array(TOTAL_CELLS).fill(BLOCKS.EMPTY);
@@ -51,16 +128,31 @@ const createEmptyLayout = (): number[] => {
 };
 
 // Load images helper
-const loadImage = (src: string): Promise<HTMLImageElement | null> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-};
-
-type ImageMap = Record<string, HTMLImageElement | null>;
+// A palette thumbnail: renders a block/bot via the SAME drawEditorBlock used on
+// the canvas, so the picker matches exactly what gets placed.
+function BlockThumb({ type, size = 44 }: { type: number; size?: number }) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+    drawEditorBlock(ctx, type, 0, 0, size);
+  }, [type, size]);
+  return (
+    <canvas
+      ref={ref}
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+    />
+  );
+}
 
 export const LevelEditor = () => {
   const navigate = useNavigate();
@@ -80,41 +172,9 @@ export const LevelEditor = () => {
   const [mouseButton, setMouseButton] = useState<number | null>(null);
   const [mouseGridPos, setMouseGridPos] = useState({ x: -1, y: -1 });
   const [onCanvas, setOnCanvas] = useState(false);
-  const [images, setImages] = useState<ImageMap>({});
   const [saving, setSaving] = useState(false);
 
-  const theme = 6; // Default theme
-
   const saveLevelMutation = useSaveLevel();
-
-  // Load images on mount
-  useEffect(() => {
-    const loadAllImages = async () => {
-      const imgPaths = {
-        block1: `ressources/image/block/Cube${theme}-1.png`,
-        block2: `ressources/image/block/Cube${theme}-2.png`,
-        flag: `ressources/image/block/flag.png`,
-        hole: `ressources/image/block/hole.png`,
-        bg: `ressources/image/bg${theme}.png`,
-        body_blue: `ressources/image/tank_player/body_blue.png`,
-        turret_blue: `ressources/image/tank_player/turret_blue.png`,
-        body_green: `ressources/image/tank_player/body_green.png`,
-        turret_green: `ressources/image/tank_player/turret_green.png`,
-        body_orange: `ressources/image/tank_player/body_orange.png`,
-        turret_orange: `ressources/image/tank_player/turret_orange.png`,
-        body_red: `ressources/image/tank_player/body_red.png`,
-        turret_red: `ressources/image/tank_player/turret_red.png`,
-      };
-
-      const loaded: ImageMap = {};
-      for (const [key, src] of Object.entries(imgPaths)) {
-        loaded[key] = await loadImage(src);
-      }
-      setImages(loaded);
-    };
-
-    loadAllImages();
-  }, [theme]);
 
   // 0 (falsy) keeps the query disabled (enabled: !!id) when there's no id.
   const { data: levelData } = useLevel(levelId ? parseInt(levelId) : 0);
@@ -150,7 +210,7 @@ export const LevelEditor = () => {
     openModal,
   ]);
 
-  // Draw block on canvas
+  // Draw block on canvas (shape-based, matches the in-game renderer).
   const drawBlock = useCallback(
     (
       ctx: CanvasRenderingContext2D,
@@ -158,50 +218,9 @@ export const LevelEditor = () => {
       x: number,
       y: number
     ) => {
-      switch (blockType) {
-        case BLOCKS.WALL:
-          if (images.block1)
-            ctx.drawImage(images.block1, x, y, CELL_SIZE, CELL_SIZE);
-          break;
-        case BLOCKS.PLATFORM:
-          if (images.block2)
-            ctx.drawImage(images.block2, x, y, CELL_SIZE, CELL_SIZE);
-          break;
-        case BLOCKS.FLAG:
-          if (images.flag)
-            ctx.drawImage(images.flag, x, y, CELL_SIZE, CELL_SIZE);
-          break;
-        case BLOCKS.HOLE:
-          if (images.hole)
-            ctx.drawImage(images.hole, x, y, CELL_SIZE, CELL_SIZE);
-          break;
-        case BLOCKS.BOT_BLUE:
-          if (images.body_blue && images.turret_blue) {
-            ctx.drawImage(images.body_blue, x, y, CELL_SIZE, CELL_SIZE);
-            ctx.drawImage(images.turret_blue, x - 6, y + 3, CELL_SIZE, 25);
-          }
-          break;
-        case BLOCKS.BOT_GREEN:
-          if (images.body_green && images.turret_green) {
-            ctx.drawImage(images.body_green, x, y, CELL_SIZE, CELL_SIZE);
-            ctx.drawImage(images.turret_green, x - 6, y + 3, CELL_SIZE, 25);
-          }
-          break;
-        case BLOCKS.BOT_ORANGE:
-          if (images.body_orange && images.turret_orange) {
-            ctx.drawImage(images.body_orange, x, y, CELL_SIZE, CELL_SIZE);
-            ctx.drawImage(images.turret_orange, x - 6, y + 3, CELL_SIZE, 25);
-          }
-          break;
-        case BLOCKS.BOT_RED:
-          if (images.body_red && images.turret_red) {
-            ctx.drawImage(images.body_red, x, y, CELL_SIZE, CELL_SIZE);
-            ctx.drawImage(images.turret_red, x - 6, y + 3, CELL_SIZE, 25);
-          }
-          break;
-      }
+      drawEditorBlock(ctx, blockType, x, y, CELL_SIZE);
     },
-    [images]
+    []
   );
 
   // Canvas render loop
@@ -214,13 +233,23 @@ export const LevelEditor = () => {
     let animationId: number | undefined;
 
     const render = () => {
-      // Draw background
-      if (images.bg) {
-        ctx.drawImage(images.bg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      } else {
-        ctx.fillStyle = "#374151";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Graph-paper field — same light arcade backdrop as the game / menus.
+      ctx.fillStyle = palette.field;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.strokeStyle = palette.fieldLine;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let gx = 0; gx <= CANVAS_WIDTH; gx += CELL_SIZE) {
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, CANVAS_HEIGHT);
       }
+      for (let gy = 0; gy <= CANVAS_HEIGHT; gy += CELL_SIZE) {
+        ctx.moveTo(0, gy);
+        ctx.lineTo(CANVAS_WIDTH, gy);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
 
       // Draw all blocks
       for (let i = 0; i < layout.length; i++) {
@@ -253,7 +282,7 @@ export const LevelEditor = () => {
     return () => {
       if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [layout, images, onCanvas, mouseGridPos, selectedBlock, drawBlock]);
+  }, [layout, onCanvas, mouseGridPos, selectedBlock, drawBlock]);
 
   // Handle mouse actions
   const handleMouseAction = useCallback(
@@ -471,9 +500,9 @@ export const LevelEditor = () => {
   ];
 
   return (
-    <div className="w-full h-full bg-ink text-white flex flex-col">
+    <div className="w-full h-full graph-paper text-ink flex flex-col">
       {/* Header */}
-      <div className="h-24 bg-panel-dark border-b-4 border-ink flex items-center justify-between gap-4 px-8">
+      <div className="h-24 bg-white border-b-4 border-ink flex items-center justify-between gap-4 px-8">
         <IoTitle className="text-2xl shrink-0">EDITOR</IoTitle>
 
         {/* Mode Toggle */}
@@ -594,7 +623,7 @@ export const LevelEditor = () => {
       </div>
 
       {/* Footer */}
-      <div className="h-16 bg-panel-dark border-t-4 border-ink" />
+      <div className="h-16 bg-white border-t-4 border-ink" />
     </div>
   );
 };

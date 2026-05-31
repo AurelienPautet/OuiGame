@@ -177,9 +177,9 @@ export const CampaignEditor = () => {
   const canSave = !saving && !!name.trim() && picked.length >= 1;
 
   return (
-    <div className="w-full h-full bg-ink text-white flex flex-col">
+    <div className="w-full h-full graph-paper text-ink flex flex-col">
       {/* Header */}
-      <div className="h-24 bg-panel-dark flex items-center justify-between px-8 gap-4 border-b-4 border-ink shrink-0">
+      <div className="h-24 bg-white flex items-center justify-between px-8 gap-4 border-b-4 border-ink shrink-0">
         <div className="flex items-center gap-3 whitespace-nowrap">
           <span className="bg-blue/20 text-blue border-[3px] border-ink rounded-lg p-2">
             <Swords className="w-6 h-6" />
@@ -240,21 +240,21 @@ export const CampaignEditor = () => {
         </div>
 
         {/* Ordered campaign list */}
-        <div className="w-96 flex flex-col bg-panel-dark border-4 border-ink rounded-arcade shadow-arcade p-4 min-h-0">
+        <div className="w-96 flex flex-col bg-white border-4 border-ink rounded-arcade shadow-arcade p-4 min-h-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Campaign levels</h2>
+            <h2 className="text-lg font-bold text-ink">Campaign levels</h2>
             <span className="inline-flex items-center justify-center min-w-8 h-8 px-2 bg-blue text-white border-[3px] border-ink rounded-full font-bold">
               {picked.length}
             </span>
           </div>
-          <p className="text-xs text-white/50 mt-1 mb-3 flex items-center gap-1">
+          <p className="text-xs text-ink-soft mt-1 mb-3 flex items-center gap-1">
             <GripVertical className="w-3 h-3" />
             Drag to reorder — played top to bottom
           </p>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {picked.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center text-white/50 gap-3 border-2 border-dashed border-white/20 rounded-xl p-6">
+              <div className="h-full flex flex-col items-center justify-center text-center text-ink-soft gap-3 border-2 border-dashed border-ink/20 rounded-xl p-6">
                 <Layers className="w-10 h-10 opacity-50" />
                 <p className="text-sm">
                   No levels yet.
@@ -282,20 +282,20 @@ export const CampaignEditor = () => {
                   }}
                   onDragEnd={endDrag}
                   className={cn(
-                    "group flex items-center gap-2 rounded-lg p-2 bg-white/10 border-2 transition-all cursor-grab active:cursor-grabbing",
+                    "group flex items-center gap-2 rounded-lg p-2 bg-field border-2 transition-all cursor-grab active:cursor-grabbing",
                     dragIndex === index
                       ? "opacity-40 border-ink"
-                      : "border-ink/40 hover:border-white/40",
+                      : "border-ink/30 hover:border-ink/60",
                     overIndex === index &&
                       dragIndex !== index &&
                       "ring-2 ring-blue border-blue"
                   )}
                 >
-                  <GripVertical className="w-4 h-4 text-white/30 shrink-0" />
-                  <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-blue/30 text-white text-xs font-bold">
+                  <GripVertical className="w-4 h-4 text-ink/40 shrink-0" />
+                  <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-blue text-white text-xs font-bold border-2 border-ink">
                     {index + 1}
                   </span>
-                  <span className="flex-1 truncate text-sm text-white">
+                  <span className="flex-1 truncate text-sm text-ink font-medium">
                     {p.name}
                   </span>
                   <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
