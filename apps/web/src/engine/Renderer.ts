@@ -194,7 +194,7 @@ export class Renderer {
     }
 
     if (blocks) {
-      blocks.forEach((block) => this._drawBlock(block));
+      this._drawBlocks(blocks);
     }
 
     // Draw collision debug
