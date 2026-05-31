@@ -1,14 +1,6 @@
-import type { ReactNode } from "react";
-import {
-  Trophy,
-  Skull,
-  Clock,
-  Layers,
-  Heart,
-  RotateCcw,
-  LogOut,
-} from "lucide-react";
-import { Button, IoTitle } from "../ui/primitives";
+import { Trophy, Skull, Clock, Layers, Heart } from "lucide-react";
+import { formatTimeMs } from "../../lib/formatTime";
+import { OverlayScrim, OverlayPanel, Stat, OverlayActions } from "./overlay";
 
 /**
  * Terminal result of a campaign run, computed by GameContext's run state
@@ -20,14 +12,6 @@ export interface CampaignRunResult {
   levelsCleared: number;
   livesLeft: number;
   timeMs: number;
-}
-
-function formatTime(ms: number): string {
-  if (!ms) return "0:00";
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -51,24 +35,25 @@ export const CampaignEndScreen = ({
   const { completed, levelsCleared, livesLeft, timeMs } = result;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm">
-      <div className="bg-panel-dark text-white rounded-arcade p-8 w-96 max-w-[90%] flex flex-col items-center gap-4 border-4 border-ink shadow-arcade">
-        {completed ? (
-          <Trophy className="w-16 h-16 text-yellow" />
-        ) : (
-          <Skull className="w-16 h-16 text-red" />
-        )}
-
-        <IoTitle className="text-3xl text-center">
-          {completed ? "Campaign Complete!" : "Run Over"}
-        </IoTitle>
-        <p className="text-white/60 text-center -mt-2">
-          {completed
+    <OverlayScrim>
+      <OverlayPanel
+        tone={completed ? "win" : "lose"}
+        icon={
+          completed ? (
+            <Trophy className="w-16 h-16 text-yellow" />
+          ) : (
+            <Skull className="w-16 h-16 text-red" />
+          )
+        }
+        title={completed ? "Campaign Complete!" : "Run Over"}
+        subtitle={
+          completed
             ? "You cleared every level. Nice work!"
-            : "You ran out of lives."}
-        </p>
-
-        <div className="w-full flex flex-col gap-2 mt-2">
+            : "You ran out of lives."
+        }
+        footer={<OverlayActions onReplay={onReplay} onQuit={onQuit} />}
+      >
+        <div className="w-full flex flex-col gap-2">
           <Stat
             icon={<Layers className="w-5 h-5 text-blue" />}
             label="Levels cleared"
@@ -82,39 +67,10 @@ export const CampaignEndScreen = ({
           <Stat
             icon={<Clock className="w-5 h-5 text-blue" />}
             label="Total time"
-            value={formatTime(timeMs)}
+            value={formatTimeMs(timeMs)}
           />
         </div>
-
-        <div className="flex gap-3 mt-4 w-full">
-          <Button variant="green" className="flex-1" onClick={onReplay}>
-            <RotateCcw className="w-4 h-4" />
-            Play Again
-          </Button>
-          <Button variant="ghost" className="flex-1" onClick={onQuit}>
-            <LogOut className="w-4 h-4" />
-            Quit
-          </Button>
-        </div>
-      </div>
-    </div>
+      </OverlayPanel>
+    </OverlayScrim>
   );
 };
-
-interface StatProps {
-  icon: ReactNode;
-  label: string;
-  value: ReactNode;
-}
-
-function Stat({ icon, label, value }: StatProps) {
-  return (
-    <div className="flex items-center justify-between bg-white/10 border-2 border-ink rounded-lg px-4 py-2">
-      <span className="flex items-center gap-2 text-white/70">
-        {icon}
-        {label}
-      </span>
-      <span className="font-bold">{value}</span>
-    </div>
-  );
-}

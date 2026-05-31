@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 
 /**
- * CountdownOverlay - Displays a 3-2-1-GO countdown before game starts
- * Smaller and more subtle design
+ * CountdownOverlay - Displays a 3-2-1-GO countdown before game starts.
+ * Arcade badge: ink-outlined dark disc with an outlined (io-title) number, so
+ * it matches the rest of the overlay design system.
  */
 interface CountdownOverlayProps {
   isActive: boolean;
@@ -38,6 +39,7 @@ export const CountdownOverlay = ({
 
       return () => clearInterval(timer);
     }
+    return undefined;
   }, [isActive, onComplete]);
 
   if (!visible) return null;
@@ -46,35 +48,14 @@ export const CountdownOverlay = ({
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-      <div
-        className="flex items-center justify-center w-24 h-24 rounded-full border-4 border-white/60 bg-black/40"
-        style={{
-          animation: "countdownPop 0.3s ease-out",
-        }}
-      >
+      <div className="flex items-center justify-center size-28 rounded-full border-4 border-ink bg-panel-dark/[0.92] shadow-arcade backdrop-blur-sm animate-[countdownPop_0.3s_ease-out]">
         <span
-          className="text-5xl font-bold text-white"
           key={count}
-          style={{
-            animation: "countdownScale 0.3s ease-out",
-          }}
+          className="io-title font-display text-5xl animate-[countdownScale_0.3s_ease-out]"
         >
           {displayText}
         </span>
       </div>
-
-      {/* Inline keyframes */}
-      <style>{`
-        @keyframes countdownPop {
-          0% { transform: scale(0.5); opacity: 0; }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes countdownScale {
-          0% { transform: scale(1.5); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };

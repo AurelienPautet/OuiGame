@@ -137,3 +137,102 @@
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
+/* ========================================================================
+   GAME-OVERLAY DESIGN SYSTEM — the rules every in-game overlay follows
+   (countdown, pause, end screens, interstitial). Primitives live in
+   src/components/game/overlay/. Keep new overlays on these rules:
+
+     1. One scrim   — OverlayScrim: inset-0 z-50, bg-ink/70 backdrop-blur-sm.
+     2. One surface — OverlayPanel: dark arcade card (border-4 border-ink,
+                      rounded-arcade, shadow-arcade) + optional result accent bar.
+     3. One heading — IoTitle (outlined); result colour rides the icon/accent,
+                      never the title fill.
+     4. One palette — arcade tokens only (green/red/yellow/blue/ink/white),
+                      mapped via RESULT_TONE. No raw Tailwind *-400/*-500/gray-*.
+     5. One stat    — Stat / StatGrid on the bg-white/10 border-2 border-ink chip,
+                      numbers use tabular-nums (never font-mono).
+     6. One actions — OverlayActions: green "Play Again" + ghost "Quit".
+     7. Animations  — defined here, referenced via animate-[name_...].
+     8. z-index     — HUD z-40, overlays z-50.
+   ======================================================================== */
+
+/* Scale-only pop for flex-centered overlay panels (arcadePop bakes in the
+   translate(-50%,-50%) used by Radix dialogs and would mis-position these). */
+@keyframes arcadePopCentered {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Countdown badge: container pop + number swap. */
+@keyframes countdownPop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes countdownScale {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Interstitial life-change hearts. */
+@keyframes lifeGain {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.4) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes lifeLoss {
+  0% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.3) rotate(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.4) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+/* Interstitial auto-advance progress bar (drains right-to-left). */
+@keyframes barCountdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}

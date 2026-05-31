@@ -8,6 +8,7 @@
  * theme/palette so the canvas matches the DOM (TankAvatar etc.).
  */
 import { palette, tankColors } from "../theme/palette";
+import { drawTank } from "./tankShape";
 
 const INK = palette.ink;
 // Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
@@ -378,69 +379,18 @@ export class Renderer {
     }
   }
 
-  // Draw a tank as flat cartoon shapes (diep.io style), matching TankAvatar.
+  // Draw a tank via the shared shape fn so it matches the menu TankAvatar
+  // exactly. The barrel points at the aim angle (player.angle).
   _drawTank(player: RenderPlayer, isBot: boolean) {
-    const c = this.c;
-    const cx = player.position.x + player.size.w / 2;
-    const cy = player.position.y + player.size.h / 2;
-    const R = Math.min(player.size.w, player.size.h) * 0.46;
-    const body = tankColors(player.bodyc);
-    const turret = tankColors(player.turretc);
-    if (body.fill === "transparent") return;
-
-    const ink = R * 0.16; // shared outline width
-
-    c.save();
-    c.lineJoin = "round";
-    c.strokeStyle = INK;
-
-    // Tread plates run along the hull's facing (body rotation, in degrees).
-    const rot = (player.rotation * Math.PI) / 180;
-    c.save();
-    c.translate(cx, cy);
-    c.rotate(rot);
-    const tw = R * 0.46;
-    const th = R * 1.75;
-    c.fillStyle = "#9aa2ad";
-    c.lineWidth = ink;
-    for (const side of [-1, 1]) {
-      c.beginPath();
-      c.roundRect(side * R - tw / 2, -th / 2, tw, th, tw * 0.45);
-      c.fill();
-      c.stroke();
-    }
-    c.restore();
-
-    // Long barrel pointing along the turret angle; drawn before the hull so its
-    // base tucks under the hull and only the protruding length shows.
-    const barrelW = R * 0.55;
-    c.save();
-    c.translate(cx, cy);
-    c.rotate(player.angle);
-    c.beginPath();
-    c.roundRect(-R * 0.1, -barrelW / 2, R * 2.0, barrelW, barrelW * 0.3);
-    c.fillStyle = turret.fill;
-    c.lineWidth = ink;
-    c.fill();
-    c.stroke();
-    c.restore();
-
-    // Hull.
-    c.beginPath();
-    c.arc(cx, cy, R, 0, Math.PI * 2);
-    c.fillStyle = body.fill;
-    c.fill();
-    c.lineWidth = R * 0.2;
-    c.stroke();
-
-    // Small flat centre dot (a subtle hub, not a concentric gear ring). Bots
-    // get a solid dark dot so they read as AI at a glance.
-    c.beginPath();
-    c.arc(cx, cy, R * 0.22, 0, Math.PI * 2);
-    c.fillStyle = isBot ? INK : "rgba(0,0,0,0.18)";
-    c.fill();
-
-    c.restore();
+    drawTank(this.c, {
+      cx: player.position.x + player.size.w / 2,
+      cy: player.position.y + player.size.h / 2,
+      r: Math.min(player.size.w, player.size.h) * 0.46,
+      bodyColor: player.bodyc,
+      turretColor: player.turretc,
+      angle: player.angle,
+      isBot,
+    });
   }
 
   // A destroyed tank: a desaturated hull with a dark X.
