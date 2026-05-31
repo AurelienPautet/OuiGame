@@ -50,7 +50,12 @@ jobs:
         with:
           # Mirror the engine declared in package.json.
           node-version: 24.x
-          cache: pnpm
+          # Deliberately NO `cache: pnpm`: this job runs in workflow_run's
+          # privileged context (write access to the default branch's shared
+          # Actions cache) while checking out the deployed commit, so populating
+          # the cache here is a cache-poisoning vector (CodeQL
+          # actions/cache-poisoning/poisonable-step). A cold install is cheap for
+          # a job that only runs on master pushes.
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
