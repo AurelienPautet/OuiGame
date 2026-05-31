@@ -10,8 +10,15 @@ import {
   SegmentedControl,
 } from "../components/ui/primitives";
 import { cn } from "../lib/cn";
-import { palette } from "../theme/palette";
-import { drawTank } from "../engine/tankShape";
+import {
+  paintField,
+  drawBlocks,
+  drawHole,
+  drawFlag,
+  drawTank,
+  type BlockShape,
+  type HoleShape,
+} from "../engine/shapes";
 
 // Constants matching the old level editor
 const CANVAS_WIDTH = 920;
@@ -34,8 +41,6 @@ const BLOCKS = {
   BOT_RED: 14,
 };
 
-const INK = palette.ink;
-
 // Bot block id → tank colour name (shared with the game palette).
 const BOT_COLOR: Record<number, string> = {
   [BLOCKS.BOT_BLUE]: "blue",
@@ -44,8 +49,9 @@ const BOT_COLOR: Record<number, string> = {
   [BLOCKS.BOT_RED]: "red",
 };
 
-// Draw one editor cell as a flat arcade shape — the same visual language as the
-// in-game Renderer, so the editor preview matches what you'll actually play.
+// Draw a single editor cell via the SHARED arcade primitives (engine/shapes) —
+// the exact same code the in-game Renderer uses. Used for the ghost preview and
+// the palette thumbnails (single cell, so no neighbour merging here).
 function drawEditorBlock(
   ctx: CanvasRenderingContext2D,
   blockType: number,
@@ -53,60 +59,26 @@ function drawEditorBlock(
   y: number,
   s: number
 ) {
-  switch (blockType) {
-    case BLOCKS.WALL:
-    case BLOCKS.PLATFORM: {
-      ctx.fillStyle = blockType === BLOCKS.WALL ? "#7d848e" : "#cbb287";
-      ctx.fillRect(x, y, s, s);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = INK;
-      ctx.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
-      break;
-    }
-    case BLOCKS.HOLE: {
-      ctx.beginPath();
-      ctx.roundRect(x + 3, y + 3, s - 6, s - 6, 6);
-      ctx.fillStyle = "#13161b";
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "#000";
-      ctx.stroke();
-      break;
-    }
-    case BLOCKS.FLAG: {
-      // Spawn-point marker: a little yellow pennant on an ink pole.
-      const px = x + s * 0.34;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(px, y + s * 0.2);
-      ctx.lineTo(px, y + s * 0.82);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(px, y + s * 0.22);
-      ctx.lineTo(x + s * 0.74, y + s * 0.36);
-      ctx.lineTo(px, y + s * 0.5);
-      ctx.closePath();
-      ctx.fillStyle = palette.yellow;
-      ctx.fill();
-      ctx.stroke();
-      break;
-    }
-    default: {
-      const color = BOT_COLOR[blockType];
-      if (color) {
-        drawTank(ctx, {
-          cx: x + s / 2,
-          cy: y + s / 2,
-          r: s * 0.4,
-          bodyColor: color,
-          turretColor: color,
-          angle: -Math.PI / 2,
-          isBot: true,
-        });
-      }
+  if (blockType === BLOCKS.WALL || blockType === BLOCKS.PLATFORM) {
+    drawBlocks(ctx, [
+      { position: { x, y }, size: { w: s, h: s }, type: blockType },
+    ]);
+  } else if (blockType === BLOCKS.HOLE) {
+    drawHole(ctx, { position: { x, y }, size: { w: s, h: s } });
+  } else if (blockType === BLOCKS.FLAG) {
+    drawFlag(ctx, x, y, s);
+  } else {
+    const color = BOT_COLOR[blockType];
+    if (color) {
+      drawTank(ctx, {
+        cx: x + s / 2,
+        cy: y + s / 2,
+        r: s * 0.4,
+        bodyColor: color,
+        turretColor: color,
+        angle: -Math.PI / 2,
+        isBot: true,
+      });
     }
   }
 }
@@ -234,34 +206,47 @@ export const LevelEditor = () => {
     let animationId: number | undefined;
 
     const render = () => {
-      // Graph-paper field — same light arcade backdrop as the game / menus.
-      ctx.fillStyle = palette.field;
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      ctx.strokeStyle = palette.fieldLine;
-      ctx.globalAlpha = 0.4;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let gx = 0; gx <= CANVAS_WIDTH; gx += CELL_SIZE) {
-        ctx.moveTo(gx, 0);
-        ctx.lineTo(gx, CANVAS_HEIGHT);
-      }
-      for (let gy = 0; gy <= CANVAS_HEIGHT; gy += CELL_SIZE) {
-        ctx.moveTo(0, gy);
-        ctx.lineTo(CANVAS_WIDTH, gy);
-      }
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+      // Field + entities are drawn by the SAME engine/shapes primitives as the
+      // live game, so the editor preview matches gameplay exactly (including
+      // adjacent walls/platforms merging into one outlined shape).
+      paintField(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, CELL_SIZE);
 
-      // Draw all blocks
+      const cell = { w: CELL_SIZE, h: CELL_SIZE };
+      const blocks: BlockShape[] = [];
+      const holes: HoleShape[] = [];
+      const flags: { x: number; y: number }[] = [];
+      const bots: { x: number; y: number; color: string }[] = [];
       for (let i = 0; i < layout.length; i++) {
         const block = layout[i];
-        // i is bounded by layout.length, so block is always defined.
-        if (block !== undefined && block >= 0) {
-          const x = (i % GRID_COLS) * CELL_SIZE;
-          const y = Math.floor(i / GRID_COLS) * CELL_SIZE;
-          drawBlock(ctx, block, x, y);
+        if (block === undefined || block < 0) continue;
+        const x = (i % GRID_COLS) * CELL_SIZE;
+        const y = Math.floor(i / GRID_COLS) * CELL_SIZE;
+        if (block === BLOCKS.WALL || block === BLOCKS.PLATFORM) {
+          blocks.push({ position: { x, y }, size: cell, type: block });
+        } else if (block === BLOCKS.HOLE) {
+          holes.push({ position: { x, y }, size: cell });
+        } else if (block === BLOCKS.FLAG) {
+          flags.push({ x, y });
+        } else {
+          const color = BOT_COLOR[block];
+          if (color) bots.push({ x, y, color });
         }
       }
+
+      drawBlocks(ctx, blocks);
+      holes.forEach((h) => drawHole(ctx, h));
+      flags.forEach((f) => drawFlag(ctx, f.x, f.y, CELL_SIZE));
+      bots.forEach((b) =>
+        drawTank(ctx, {
+          cx: b.x + CELL_SIZE / 2,
+          cy: b.y + CELL_SIZE / 2,
+          r: CELL_SIZE * 0.4,
+          bodyColor: b.color,
+          turretColor: b.color,
+          angle: -Math.PI / 2,
+          isBot: true,
+        })
+      );
 
       // Draw ghost preview
       if (onCanvas && mouseGridPos.x >= 0 && mouseGridPos.y >= 0) {

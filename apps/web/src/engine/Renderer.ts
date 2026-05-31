@@ -8,7 +8,7 @@
  * theme/palette so the canvas matches the DOM (TankAvatar etc.).
  */
 import { palette, tankColors } from "../theme/palette";
-import { drawTank } from "./tankShape";
+import { drawTank, paintField, drawBlocks, drawHole } from "./shapes";
 
 const INK = palette.ink;
 // Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
