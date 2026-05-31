@@ -431,7 +431,7 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
     isEndGameVisible || interstitial ? { filter: "blur(4px)" } : {};
 
   return (
-    <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
+    <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-field">
       {/* Fading canvas for track trails */}
       <canvas
         ref={fadingCanvasRef}
