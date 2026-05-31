@@ -3,6 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSocket, useAuth, useModal, MODALS } from "../contexts";
 import { useSaveLevel, useLevel } from "../hooks/api";
 import { Save, X, Trash2 } from "lucide-react";
+import {
+  IoTitle,
+  Input,
+  IconButton,
+  SegmentedControl,
+} from "../components/ui/primitives";
+import { cn } from "../lib/cn";
 
 // Constants matching the old level editor
 const CANVAS_WIDTH = 920;
@@ -464,80 +471,56 @@ export const LevelEditor = () => {
   ];
 
   return (
-    <div className="w-full h-full bg-base-300 text-white flex flex-col">
+    <div className="w-full h-full bg-ink text-white flex flex-col">
       {/* Header */}
-      <div className="h-24 bg-base-200 flex items-center justify-between px-8">
-        <h1 className="text-xl font-bold">Level Editor</h1>
+      <div className="h-24 bg-panel-dark border-b-4 border-ink flex items-center justify-between gap-4 px-8">
+        <IoTitle className="text-2xl shrink-0">EDITOR</IoTitle>
 
         {/* Mode Toggle */}
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="mode"
-              className="radio radio-primary"
-              checked={mode === "online"}
-              onChange={() => handleModeChange("online")}
-            />
-            <span className="font-bold">Online</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="mode"
-              className="radio radio-primary"
-              checked={mode === "solo"}
-              onChange={() => handleModeChange("solo")}
-            />
-            <span className="font-bold">Solo</span>
-          </label>
-        </div>
+        <SegmentedControl<string>
+          value={mode}
+          onValueChange={handleModeChange}
+          options={[
+            { value: "online", label: "Online" },
+            { value: "solo", label: "Solo" },
+          ]}
+          aria-label="Level mode"
+        />
 
         {/* Level Name */}
-        <div className="flex items-center gap-4">
-          <span className="text-lg">Level Name:</span>
-          <input
-            type="text"
-            className="input input-bordered bg-base-100"
-            placeholder="Enter level name"
-            value={levelName}
-            onChange={(e) => setLevelName(e.target.value)}
-            maxLength={30}
-          />
-        </div>
+        <Input
+          className="max-w-xs"
+          placeholder="Enter level name"
+          value={levelName}
+          onChange={(e) => setLevelName(e.target.value)}
+          maxLength={30}
+        />
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            className="btn btn-ghost btn-square"
-            onClick={handleClear}
-            title="Clear Level"
-          >
-            <Trash2 size={24} />
-          </button>
-          <button
-            className={`btn btn-ghost btn-square ${saving ? "loading" : ""}`}
+        <div className="flex items-center gap-2 shrink-0">
+          <IconButton onClick={handleClear} title="Clear Level">
+            <Trash2 size={20} />
+          </IconButton>
+          <IconButton
             onClick={handleSave}
             disabled={saving || !isConnected}
             title="Save Level"
           >
-            {!saving && <Save size={24} className="text-primary" />}
-          </button>
-          <button
-            className="btn btn-ghost btn-square"
-            onClick={handleClose}
-            title="Close"
-          >
-            <X size={24} className="text-error" />
-          </button>
+            <Save size={20} className="text-green-d" />
+          </IconButton>
+          <IconButton onClick={handleClose} title="Close">
+            <X size={20} className="text-red" />
+          </IconButton>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex bg-base-300">
+      <div className="flex-1 flex">
         {/* Block Panel */}
-        <div className="w-48 bg-base-200 flex flex-col items-center py-4">
-          <h2 className="text-lg font-bold mb-4">Select a block:</h2>
+        <div className="w-48 bg-panel-dark border-r-4 border-ink flex flex-col items-center py-4">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-white/70 mb-4">
+            Select a block
+          </h2>
 
           <div className="flex flex-col gap-2">
             {/* Base blocks */}
@@ -545,11 +528,12 @@ export const LevelEditor = () => {
               <button
                 key={block.id}
                 onClick={() => setSelectedBlock(block.id)}
-                className={`w-14 h-14 relative hover:scale-110 transition-transform ${
+                className={cn(
+                  "w-14 h-14 relative rounded-lg border-[3px] hover:scale-110 transition-transform",
                   selectedBlock === block.id
-                    ? "ring-2 ring-primary translate-x-2"
-                    : ""
-                }`}
+                    ? "border-yellow ring-2 ring-yellow/50"
+                    : "border-ink"
+                )}
                 title={block.label}
               >
                 <img
@@ -566,11 +550,12 @@ export const LevelEditor = () => {
                 <button
                   key={block.id}
                   onClick={() => setSelectedBlock(block.id)}
-                  className={`w-14 h-14 relative hover:scale-110 transition-transform ${
+                  className={cn(
+                    "w-14 h-14 relative rounded-lg border-[3px] hover:scale-110 transition-transform",
                     selectedBlock === block.id
-                      ? "ring-2 ring-primary translate-x-2"
-                      : ""
-                  }`}
+                      ? "border-yellow ring-2 ring-yellow/50"
+                      : "border-ink"
+                  )}
                   title={block.label}
                 >
                   <img
@@ -589,12 +574,12 @@ export const LevelEditor = () => {
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 flex items-center justify-center bg-base-100">
+        <div className="flex-1 flex items-center justify-center graph-paper">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="block cursor-crosshair"
+            className="block cursor-crosshair border-4 border-ink rounded-lg shadow-arcade"
             onMouseMove={handleMouseMove}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
@@ -609,7 +594,7 @@ export const LevelEditor = () => {
       </div>
 
       {/* Footer */}
-      <div className="h-16 bg-base-200" />
+      <div className="h-16 bg-panel-dark border-t-4 border-ink" />
     </div>
   );
 };

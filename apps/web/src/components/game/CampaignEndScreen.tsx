@@ -8,6 +8,7 @@ import {
   RotateCcw,
   LogOut,
 } from "lucide-react";
+import { Button, IoTitle } from "../ui/primitives";
 
 /**
  * Terminal result of a campaign run, computed by GameContext's run state
@@ -50,18 +51,18 @@ export const CampaignEndScreen = ({
   const { completed, levelsCleared, livesLeft, timeMs } = result;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-base-100 rounded-2xl p-8 w-96 max-w-[90%] flex flex-col items-center gap-4 border-4 border-base-300">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm">
+      <div className="bg-panel-dark text-white rounded-arcade p-8 w-96 max-w-[90%] flex flex-col items-center gap-4 border-4 border-ink shadow-arcade">
         {completed ? (
-          <Trophy className="w-16 h-16 text-warning" />
+          <Trophy className="w-16 h-16 text-yellow" />
         ) : (
-          <Skull className="w-16 h-16 text-error" />
+          <Skull className="w-16 h-16 text-red" />
         )}
 
-        <h2 className="text-3xl font-extrabold text-center">
+        <IoTitle className="text-3xl text-center">
           {completed ? "Campaign Complete!" : "Run Over"}
-        </h2>
-        <p className="text-base-content/60 text-center -mt-2">
+        </IoTitle>
+        <p className="text-white/60 text-center -mt-2">
           {completed
             ? "You cleared every level. Nice work!"
             : "You ran out of lives."}
@@ -69,31 +70,31 @@ export const CampaignEndScreen = ({
 
         <div className="w-full flex flex-col gap-2 mt-2">
           <Stat
-            icon={<Layers className="w-5 h-5 text-primary" />}
+            icon={<Layers className="w-5 h-5 text-blue" />}
             label="Levels cleared"
             value={`${levelsCleared} / ${totalLevels}`}
           />
           <Stat
-            icon={<Heart className="w-5 h-5 text-error" />}
+            icon={<Heart className="w-5 h-5 text-red" />}
             label="Lives left"
             value={livesLeft}
           />
           <Stat
-            icon={<Clock className="w-5 h-5 text-info" />}
+            icon={<Clock className="w-5 h-5 text-blue" />}
             label="Total time"
             value={formatTime(timeMs)}
           />
         </div>
 
         <div className="flex gap-3 mt-4 w-full">
-          <button className="btn btn-primary flex-1 gap-2" onClick={onReplay}>
+          <Button variant="green" className="flex-1" onClick={onReplay}>
             <RotateCcw className="w-4 h-4" />
             Play Again
-          </button>
-          <button className="btn btn-ghost flex-1 gap-2" onClick={onQuit}>
+          </Button>
+          <Button variant="ghost" className="flex-1" onClick={onQuit}>
             <LogOut className="w-4 h-4" />
             Quit
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -108,8 +109,8 @@ interface StatProps {
 
 function Stat({ icon, label, value }: StatProps) {
   return (
-    <div className="flex items-center justify-between bg-base-200 rounded-lg px-4 py-2">
-      <span className="flex items-center gap-2 text-base-content/70">
+    <div className="flex items-center justify-between bg-white/10 border-2 border-ink rounded-lg px-4 py-2">
+      <span className="flex items-center gap-2 text-white/70">
         {icon}
         {label}
       </span>

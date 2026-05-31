@@ -33,12 +33,10 @@ export const LivesHud = ({
         }`}
       >
         {Array.from({ length: heartCount }).map((_, i) => (
-          <Heart key={i} className="w-5 h-5 fill-error text-error" />
+          <Heart key={i} className="w-5 h-5 fill-red text-red" />
         ))}
-        {lives > 8 && (
-          <span className="ml-1 font-bold text-error">x{lives}</span>
-        )}
-        {lives === 0 && <span className="font-bold text-error/70">0</span>}
+        {lives > 8 && <span className="ml-1 font-bold text-red">x{lives}</span>}
+        {lives === 0 && <span className="font-bold text-red/70">0</span>}
       </div>
     </div>
   );

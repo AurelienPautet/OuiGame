@@ -5,6 +5,7 @@ import { useRateLevel, useLevelLeaderboard } from "../../hooks/api";
 import type { WinnerPayload } from "@ouigame/shared/types";
 import type { LevelDTO } from "@ouigame/shared/api";
 import type { LevelStats } from "./CampaignInterstitial";
+import { Button } from "../ui/primitives";
 import {
   Clock,
   Crosshair,
@@ -409,9 +410,7 @@ export const EndGameScreen = ({
                     <div
                       key={entry.rank}
                       className={`flex items-center justify-between text-sm px-2 py-1 rounded ${
-                        isMe
-                          ? "bg-primary/30 text-primary-content"
-                          : "text-white"
+                        isMe ? "bg-blue/30 text-white" : "text-white"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -444,7 +443,7 @@ export const EndGameScreen = ({
                 {myLeaderboardEntry && myLeaderboardEntry.rank > 5 && (
                   <>
                     <div className="text-center text-xs text-gray-500">...</div>
-                    <div className="flex items-center justify-between text-sm px-2 py-1 rounded bg-primary/30 text-primary-content">
+                    <div className="flex items-center justify-between text-sm px-2 py-1 rounded bg-blue/30 text-white">
                       <div className="flex items-center gap-2">
                         <span className="w-5 text-center font-bold">
                           {myLeaderboardEntry.rank}
@@ -467,20 +466,14 @@ export const EndGameScreen = ({
 
           {/* Action Buttons */}
           <div className="flex gap-4">
-            <button
-              onClick={onReplay}
-              className="btn btn-success btn-lg text-white gap-2"
-            >
+            <Button variant="green" size="lg" onClick={onReplay}>
               <RotateCcw className="w-5 h-5" />
               Play Again
-            </button>
-            <button
-              onClick={onQuit}
-              className="btn btn-error btn-lg text-white gap-2"
-            >
+            </Button>
+            <Button variant="red" size="lg" onClick={onQuit}>
               <LogOut className="w-5 h-5" />
               Quit
-            </button>
+            </Button>
           </div>
         </div>
       ) : (

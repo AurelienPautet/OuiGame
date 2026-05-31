@@ -12,9 +12,16 @@ import {
 } from "lucide-react";
 import { useModal, useAuth, useToast, MODALS } from "../contexts";
 import { LevelSelector } from "../components/ui";
+import {
+  IoTitle,
+  Input,
+  Button,
+  IconButton,
+} from "../components/ui/primitives";
 import { useCampaign, useSaveCampaign } from "../hooks/api";
 import type { LevelDTO } from "@ouigame/shared/api";
 import type { ApiRequestError } from "../api/client";
+import { cn } from "../lib/cn";
 
 // One entry in the ordered campaign list the editor builds.
 interface PickedLevel {
@@ -155,14 +162,14 @@ export const CampaignEditor = () => {
 
   if (!user) {
     return (
-      <div className="w-full h-full bg-base-300 text-white flex flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">Campaign Editor</h1>
-        <p className="text-base-content/70">
+      <div className="w-full h-full bg-ink text-white flex flex-col items-center justify-center gap-4 graph-paper">
+        <IoTitle className="text-3xl">CAMPAIGN EDITOR</IoTitle>
+        <p className="text-ink bg-white/80 px-3 py-1 rounded-lg font-semibold">
           Please log in to create campaigns.
         </p>
-        <button className="btn" onClick={() => navigate("/")}>
+        <Button variant="ghost" onClick={() => navigate("/")}>
           Back
-        </button>
+        </Button>
       </div>
     );
   }
@@ -170,28 +177,26 @@ export const CampaignEditor = () => {
   const canSave = !saving && !!name.trim() && picked.length >= 1;
 
   return (
-    <div className="w-full h-full bg-base-300 text-base-content flex flex-col">
+    <div className="w-full h-full bg-ink text-white flex flex-col">
       {/* Header */}
-      <div className="h-24 bg-base-200 flex items-center justify-between px-8 gap-4 border-b border-base-100 shrink-0">
+      <div className="h-24 bg-panel-dark flex items-center justify-between px-8 gap-4 border-b-4 border-ink shrink-0">
         <div className="flex items-center gap-3 whitespace-nowrap">
-          <span className="bg-primary/15 text-primary rounded-lg p-2">
+          <span className="bg-blue/20 text-blue border-[3px] border-ink rounded-lg p-2">
             <Swords className="w-6 h-6" />
           </span>
-          <h1 className="text-xl font-bold">Campaign Editor</h1>
+          <IoTitle className="text-xl">CAMPAIGN</IoTitle>
         </div>
 
         <div className="flex items-center gap-3 flex-1 justify-center max-w-2xl">
-          <input
-            type="text"
-            className="input input-bordered bg-base-100 w-56 focus:outline-primary"
+          <Input
+            className="w-56"
             placeholder="Campaign name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={30}
           />
-          <input
-            type="text"
-            className="input input-bordered bg-base-100 flex-1 focus:outline-primary"
+          <Input
+            className="flex-1"
             placeholder="Short description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -200,32 +205,28 @@ export const CampaignEditor = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            className={`btn btn-primary gap-2 ${saving ? "loading" : ""}`}
+          <Button
+            variant="green"
             onClick={handleSave}
             disabled={!canSave}
             title="Save Campaign"
           >
-            {!saving && <Save size={18} />}
-            Save
-          </button>
-          <button
-            className="btn btn-ghost btn-square"
-            onClick={handleClose}
-            title="Close"
-          >
-            <X size={22} className="text-error" />
-          </button>
+            <Save size={18} />
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          <IconButton onClick={handleClose} title="Close">
+            <X size={20} className="text-red" />
+          </IconButton>
         </div>
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex min-h-0 gap-4 p-4">
+      <div className="flex-1 flex min-h-0 gap-4 p-4 graph-paper">
         {/* Level picker */}
-        <div className="flex-1 min-w-0 flex flex-col bg-base-200/40 rounded-xl p-4">
-          <h2 className="text-lg font-bold mb-3">
+        <div className="flex-1 min-w-0 flex flex-col bg-white border-4 border-ink rounded-arcade shadow-arcade p-4">
+          <h2 className="text-lg font-bold text-ink mb-3">
             Add solo levels{" "}
-            <span className="text-sm font-normal text-base-content/50">
+            <span className="text-sm font-normal text-ink-soft">
               — click a level to add or remove
             </span>
           </h2>
@@ -239,21 +240,21 @@ export const CampaignEditor = () => {
         </div>
 
         {/* Ordered campaign list */}
-        <div className="w-96 flex flex-col bg-base-200/40 rounded-xl p-4 min-h-0">
+        <div className="w-96 flex flex-col bg-panel-dark border-4 border-ink rounded-arcade shadow-arcade p-4 min-h-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">Campaign levels</h2>
-            <span className="badge badge-primary badge-lg font-bold">
+            <h2 className="text-lg font-bold text-white">Campaign levels</h2>
+            <span className="inline-flex items-center justify-center min-w-8 h-8 px-2 bg-blue text-white border-[3px] border-ink rounded-full font-bold">
               {picked.length}
             </span>
           </div>
-          <p className="text-xs text-base-content/50 mt-1 mb-3 flex items-center gap-1">
+          <p className="text-xs text-white/50 mt-1 mb-3 flex items-center gap-1">
             <GripVertical className="w-3 h-3" />
             Drag to reorder — played top to bottom
           </p>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {picked.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center text-base-content/50 gap-3 border-2 border-dashed border-base-content/15 rounded-xl p-6">
+              <div className="h-full flex flex-col items-center justify-center text-center text-white/50 gap-3 border-2 border-dashed border-white/20 rounded-xl p-6">
                 <Layers className="w-10 h-10 opacity-50" />
                 <p className="text-sm">
                   No levels yet.
@@ -280,45 +281,47 @@ export const CampaignEditor = () => {
                     reorderTo(index);
                   }}
                   onDragEnd={endDrag}
-                  className={`group flex items-center gap-2 rounded-lg p-2 bg-base-100 border transition-all cursor-grab active:cursor-grabbing ${
+                  className={cn(
+                    "group flex items-center gap-2 rounded-lg p-2 bg-white/10 border-2 transition-all cursor-grab active:cursor-grabbing",
                     dragIndex === index
-                      ? "opacity-40 border-base-300"
-                      : "border-base-300 hover:border-base-content/20"
-                  } ${
-                    overIndex === index && dragIndex !== index
-                      ? "ring-2 ring-primary border-primary"
-                      : ""
-                  }`}
+                      ? "opacity-40 border-ink"
+                      : "border-ink/40 hover:border-white/40",
+                    overIndex === index &&
+                      dragIndex !== index &&
+                      "ring-2 ring-blue border-blue"
+                  )}
                 >
-                  <GripVertical className="w-4 h-4 text-base-content/30 shrink-0" />
-                  <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-primary/15 text-primary text-xs font-bold">
+                  <GripVertical className="w-4 h-4 text-white/30 shrink-0" />
+                  <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-blue/30 text-white text-xs font-bold">
                     {index + 1}
                   </span>
-                  <span className="flex-1 truncate text-sm">{p.name}</span>
-                  <div className="flex items-center opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button
-                      className="btn btn-xs btn-ghost btn-square"
+                  <span className="flex-1 truncate text-sm text-white">
+                    {p.name}
+                  </span>
+                  <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <IconButton
+                      size="sm"
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
                       title="Move up"
                     >
                       <ArrowUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-ghost btn-square"
+                    </IconButton>
+                    <IconButton
+                      size="sm"
                       onClick={() => move(index, 1)}
                       disabled={index === picked.length - 1}
                       title="Move down"
                     >
                       <ArrowDown className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-ghost btn-square text-error"
+                    </IconButton>
+                    <IconButton
+                      size="sm"
                       onClick={() => remove(p.id)}
                       title="Remove"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 className="w-4 h-4 text-red" />
+                    </IconButton>
                   </div>
                 </div>
               ))

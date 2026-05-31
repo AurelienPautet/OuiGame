@@ -120,18 +120,18 @@ export const CampaignInterstitial = ({
         .campaign-life-loss { animation: campaign-life-loss 0.9s ease-in both 0.2s; }
       `}</style>
 
-      <div className="bg-base-100 rounded-2xl p-8 w-96 max-w-[90%] flex flex-col items-center gap-4 border-4 border-base-300">
+      <div className="bg-panel-dark text-white rounded-arcade p-8 w-96 max-w-[90%] flex flex-col items-center gap-4 border-4 border-ink shadow-arcade">
         {isWin ? (
-          <CheckCircle2 className="w-14 h-14 text-success" />
+          <CheckCircle2 className="w-14 h-14 text-green" />
         ) : (
-          <Skull className="w-14 h-14 text-error" />
+          <Skull className="w-14 h-14 text-red" />
         )}
 
         <div className="text-center -mt-1">
           <h2 className="text-2xl font-extrabold">
             {isWin ? "Level Cleared!" : "You Died"}
           </h2>
-          <p className="text-base-content/50 text-sm">
+          <p className="text-white/50 text-sm">
             Level {levelNumber} of {totalLevels}
           </p>
         </div>
@@ -139,22 +139,22 @@ export const CampaignInterstitial = ({
         {/* Lives row with the changing heart animated */}
         <div className="flex items-center gap-1 h-10">
           {Array.from({ length: steady }).map((_, i) => (
-            <Heart key={i} className="w-7 h-7 fill-error text-error" />
+            <Heart key={i} className="w-7 h-7 fill-red text-red" />
           ))}
           {showDelta &&
             (isWin ? (
-              <Heart className="w-7 h-7 fill-success text-success campaign-life-gain" />
+              <Heart className="w-7 h-7 fill-green text-green campaign-life-gain" />
             ) : (
-              <HeartCrack className="w-7 h-7 fill-error text-error campaign-life-loss" />
+              <HeartCrack className="w-7 h-7 fill-red text-red campaign-life-loss" />
             ))}
         </div>
         <p
           className={`-mt-2 text-sm font-bold ${
             isWin && gainedLife
-              ? "text-success"
+              ? "text-green"
               : isWin
-                ? "text-base-content/50"
-                : "text-error"
+                ? "text-white/50"
+                : "text-red"
           }`}
         >
           {isWin && gainedLife
@@ -167,28 +167,28 @@ export const CampaignInterstitial = ({
         {/* Level stats */}
         <div className="w-full grid grid-cols-2 gap-2">
           <Stat
-            icon={<Clock className="w-4 h-4 text-info" />}
+            icon={<Clock className="w-4 h-4 text-blue" />}
             label="Time"
             value={formatTime(timeMs)}
           />
           <Stat
-            icon={<Skull className="w-4 h-4 text-primary" />}
+            icon={<Skull className="w-4 h-4 text-blue" />}
             label="Kills"
             value={stats.kills || 0}
           />
           <Stat
-            icon={<Target className="w-4 h-4 text-success" />}
+            icon={<Target className="w-4 h-4 text-green" />}
             label="Accuracy"
             value={`${accuracy}%`}
           />
           <Stat
-            icon={<Crosshair className="w-4 h-4 text-warning" />}
+            icon={<Crosshair className="w-4 h-4 text-yellow" />}
             label="Shots"
             value={stats.shots || 0}
           />
           {(stats.blocksDestroyed || 0) > 0 && (
             <Stat
-              icon={<Hammer className="w-4 h-4 text-base-content/70" />}
+              icon={<Hammer className="w-4 h-4 text-white/70" />}
               label="Blocks"
               value={stats.blocksDestroyed}
             />
@@ -197,15 +197,15 @@ export const CampaignInterstitial = ({
 
         {/* Auto-advance timer cue */}
         <div className="w-full mt-2">
-          <div className="h-1.5 w-full bg-base-300 rounded-full overflow-hidden">
+          <div className="h-1.5 w-full bg-white/15 rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary"
+              className="h-full bg-blue"
               style={{
                 animation: `campaign-timer ${delayMs}ms linear forwards`,
               }}
             />
           </div>
-          <p className="text-center text-xs text-base-content/40 mt-1.5">
+          <p className="text-center text-xs text-white/40 mt-1.5">
             {isWin ? "Next level…" : "Retrying…"}
           </p>
         </div>
@@ -222,8 +222,8 @@ interface StatProps {
 
 function Stat({ icon, label, value }: StatProps) {
   return (
-    <div className="flex items-center justify-between bg-base-200 rounded-lg px-3 py-2">
-      <span className="flex items-center gap-1.5 text-xs text-base-content/70">
+    <div className="flex items-center justify-between bg-white/10 border-2 border-ink rounded-lg px-3 py-2">
+      <span className="flex items-center gap-1.5 text-xs text-white/70">
         {icon}
         {label}
       </span>

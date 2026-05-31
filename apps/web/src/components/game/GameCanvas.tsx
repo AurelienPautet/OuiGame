@@ -11,6 +11,7 @@ import type { InterstitialData, LevelStats } from "./CampaignInterstitial";
 import type { WinnerPayload } from "@ouigame/shared/types";
 import { useSubmitSoloRound, useSubmitCampaignRun } from "../../hooks/api";
 import { LIFE_EVERY } from "../../constants/campaign";
+import { Button, IoTitle } from "../ui/primitives";
 
 interface GameCanvasProps {
   scale?: number;
@@ -461,15 +462,15 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
 
       {/* Pause overlay */}
       {isPaused && !showCountdown && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black/50">
-          <h2 className="text-4xl font-bold text-white mb-8">PAUSED</h2>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-ink/60 backdrop-blur-sm">
+          <IoTitle className="text-5xl mb-8">PAUSED</IoTitle>
           <div className="flex gap-4">
-            <button className="btn btn-primary btn-lg" onClick={handlePause}>
+            <Button variant="green" size="lg" onClick={handlePause}>
               Resume
-            </button>
-            <button className="btn btn-error btn-lg" onClick={handleQuit}>
+            </Button>
+            <Button variant="red" size="lg" onClick={handleQuit}>
               Quit
-            </button>
+            </Button>
           </div>
         </div>
       )}
