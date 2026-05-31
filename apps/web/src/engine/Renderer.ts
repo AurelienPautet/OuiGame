@@ -258,26 +258,53 @@ export class Renderer {
     }
   }
 
-  _drawBlock(block: Block) {
-    // type 1 = wall (gray), type 2 = platform (tan). Flat fill + thick ink edge.
-    const { x, y } = block.position;
-    const { w, h } = block.size;
-    const isWall = block.type === 1;
-    const fill = isWall ? "#7d848e" : "#cbb287";
-    const edge = isWall ? "#4c5057" : "#9c8556";
-    const r = Math.min(w, h) * 0.16;
+  // Draw all blocks so adjacent same-type blocks merge into one solid shape:
+  // fills are flush (no inset/rounding) so neighbours tile seamlessly, and the
+  // thick ink outline is stroked ONLY on edges that face empty space.
+  _drawBlocks(blocks: Block[]) {
+    const c = this.c;
+    // Occupancy map keyed by quantised top-left → block type, so we can ask
+    // "is there a same-type block touching this edge?".
+    const key = (x: number, y: number) => `${Math.round(x)},${Math.round(y)}`;
+    const occ = new Map<string, number>();
+    for (const b of blocks) {
+      occ.set(key(b.position.x, b.position.y), b.type);
+    }
 
-    this.c.beginPath();
-    this.c.roundRect(x + 2, y + 2, w - 4, h - 4, r);
-    this.c.fillStyle = fill;
-    this.c.fill();
-    this.c.lineWidth = 4;
-    this.c.strokeStyle = INK;
-    this.c.stroke();
-    // subtle inner edge highlight
-    this.c.lineWidth = 2;
-    this.c.strokeStyle = edge;
-    this.c.stroke();
+    // Pass 1 — flush fills (adjacent blocks merge with no seam).
+    for (const b of blocks) {
+      c.fillStyle = b.type === 1 ? "#7d848e" : "#cbb287";
+      c.fillRect(b.position.x, b.position.y, b.size.w, b.size.h);
+    }
+
+    // Pass 2 — ink outline only on exposed (no same-type neighbour) edges.
+    c.strokeStyle = INK;
+    c.lineWidth = 4;
+    c.lineCap = "square";
+    for (const b of blocks) {
+      const { x, y } = b.position;
+      const { w, h } = b.size;
+      const t = b.type;
+      const has = (nx: number, ny: number) => occ.get(key(nx, ny)) === t;
+      c.beginPath();
+      if (!has(x, y - h)) {
+        c.moveTo(x, y);
+        c.lineTo(x + w, y);
+      }
+      if (!has(x + w, y)) {
+        c.moveTo(x + w, y);
+        c.lineTo(x + w, y + h);
+      }
+      if (!has(x, y + h)) {
+        c.moveTo(x + w, y + h);
+        c.lineTo(x, y + h);
+      }
+      if (!has(x - w, y)) {
+        c.moveTo(x, y + h);
+        c.lineTo(x, y);
+      }
+      c.stroke();
+    }
   }
 
   _drawCollisionDebug(Bcollision: CollisionBox[]) {
