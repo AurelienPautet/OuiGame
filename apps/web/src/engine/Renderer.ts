@@ -380,7 +380,9 @@ export class Renderer {
   }
 
   // Draw a tank via the shared shape fn so it matches the menu TankAvatar
-  // exactly. The barrel points at the aim angle (player.angle).
+  // exactly. The old turret sprite's art faced left at angle 0, so player.angle
+  // is calibrated for a left-facing barrel; drawTank draws right-facing at
+  // angle 0, hence the +PI flip.
   _drawTank(player: RenderPlayer, isBot: boolean) {
     drawTank(this.c, {
       cx: player.position.x + player.size.w / 2,
@@ -388,7 +390,7 @@ export class Renderer {
       r: Math.min(player.size.w, player.size.h) * 0.46,
       bodyColor: player.bodyc,
       turretColor: player.turretc,
-      angle: player.angle,
+      angle: player.angle + Math.PI,
       isBot,
     });
   }
