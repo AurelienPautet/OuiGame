@@ -22,4 +22,14 @@ module.exports = {
   // one file truncating tables while another is mid-test.
   maxWorkers: 1,
   clearMocks: true,
+  // Coverage settings are inert unless `--coverage` is passed (`pnpm test:coverage`),
+  // so the default `pnpm test` run is unchanged. Reporting-only — no thresholds yet.
+  collectCoverageFrom: [
+    "apps/api/**/*.{ts,js}",
+    "!apps/api/**/__tests__/**",
+    "!apps/api/**/*.d.ts",
+    "!apps/api/scripts/**",
+  ],
+  coverageDirectory: "coverage/api",
+  coverageReporters: ["text", "lcov"],
 };
