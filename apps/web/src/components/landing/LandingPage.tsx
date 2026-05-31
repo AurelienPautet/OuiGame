@@ -1,45 +1,58 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  User,
-  Trophy,
-  Pencil,
+  Play,
+  Gamepad2,
+  Flag,
+  Paintbrush,
   Mail,
   ExternalLink,
   Github,
-  Paintbrush,
-  Swords,
+  Star,
 } from "lucide-react";
 import { useModal, useAuth, MODALS } from "../../contexts";
-import { TANK_COLORS as COLORS } from "../../constants/tankColors";
+import { colorFromIndex } from "../../constants/tankColors";
 import { storage } from "../../lib/storage";
+import { useRankings } from "../../hooks/api";
+import {
+  Button,
+  Panel,
+  DarkPanel,
+  IoTitle,
+  SectionLabel,
+  Input,
+  IconButton,
+  TankAvatar,
+} from "../ui/primitives";
+import { palette } from "../../theme/palette";
 
-// Fixed dimensions matching original
-const CANVAS_WIDTH = 1150;
-const CANVAS_HEIGHT = 800;
+const BAR_COLORS = [
+  palette.blue,
+  palette.red,
+  palette.green,
+  palette.purple,
+  palette.yellow,
+];
 
 export const LandingPage = () => {
+  const navigate = useNavigate();
   const { openModal, activeModal } = useModal();
   const { user } = useAuth();
+  const { data: topPlayers = [] } = useRankings("KILLS");
 
-  // Player name from localStorage
-  const [playerName, setPlayerName] = useState(() => {
-    return storage.getPlayerName() || "";
-  });
-
-  // Tank colors from localStorage
+  const [playerName, setPlayerName] = useState(
+    () => storage.getPlayerName() || ""
+  );
   const [tankColors, setTankColors] = useState({
     body: "orange",
     turret: "orange",
   });
 
-  // Save player name to localStorage on change
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
-    setPlayerName(name);
-    storage.setPlayerName(name);
+    setPlayerName(e.target.value);
+    storage.setPlayerName(e.target.value);
   };
 
-  // When logged in, use account username as player name
   useEffect(() => {
     if (user?.username) {
       storage.setPlayerName(user.username);
@@ -47,184 +60,191 @@ export const LandingPage = () => {
     }
   }, [user]);
 
-  // Load tank colors from localStorage on mount and when modal closes
+  // Reload tank colours on mount and whenever an overlay (e.g. Tank Select) closes.
   useEffect(() => {
-    const loadTankColors = () => {
-      const bodyIdx = storage.getBodyIndex();
-      const turretIdx = storage.getTurretIndex();
-
-      setTankColors({
-        // The `idx >= 0 && idx < COLORS.length` guards prove the index is in range.
-        body:
-          bodyIdx !== null && bodyIdx >= 0 && bodyIdx < COLORS.length
-            ? COLORS[bodyIdx]!
-            : "orange",
-        turret:
-          turretIdx !== null && turretIdx >= 0 && turretIdx < COLORS.length
-            ? COLORS[turretIdx]!
-            : "orange",
-      });
-    };
-
-    loadTankColors();
-
-    // Reload when tank select modal closes
-    if (activeModal === null) {
-      loadTankColors();
-    }
+    setTankColors({
+      body: colorFromIndex(storage.getBodyIndex()),
+      turret: colorFromIndex(storage.getTurretIndex()),
+    });
   }, [activeModal]);
 
+  const leaders = topPlayers.slice(0, 5);
+  const maxData = leaders.reduce(
+    (m, p) => Math.max(m, Number(p.total_data)),
+    1
+  );
+
   return (
-    <div className="bg-base-200 w-full h-full absolute flex flex-col justify-center items-center">
-      {/* Title */}
-      <h1 className="text-white text-7xl font-bold m-10 z-50">OUI TANK</h1>
+    <div className="pt-8">
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] items-stretch">
+        {/* LEFT — branding + play buttons */}
+        <Panel className="relative overflow-hidden rounded-[22px] p-8 bg-gradient-to-b from-white to-[#f3f5f8]">
+          <div className="absolute inset-0 opacity-50 pointer-events-none graph-paper-soft" />
+          <div className="relative z-10">
+            <SectionLabel className="mb-3.5">
+              {user ? `Welcome back, ${user.username}` : "Welcome, commander"}
+            </SectionLabel>
+            <IoTitle as="h1" className="text-6xl leading-[0.95] my-1">
+              OUI&nbsp;TANK
+            </IoTitle>
+            <p className="text-lg text-ink-soft font-medium max-w-[440px] mt-3 mb-6">
+              Roll out, blast bots and friends across community arenas. Build
+              your own, climb the leaderboard, win the field.
+            </p>
 
-      {/* Login/Profile Button - Top Left */}
-      <div className="absolute w-44 h-56 left-5 top-5 z-50">
-        <div className="flex w-full h-full justify-center items-center flex-col">
-          <button
-            className="btn btn-ghost btn-circle btn-lg"
-            onClick={() => openModal(user ? MODALS.PROFILE : MODALS.AUTH)}
-          >
-            <User className="w-12 h-12 text-primary" />
-          </button>
-          <h3 className="font-bold text-white mt-2">
-            {user ? user.username : "Not logged in"}
-          </h3>
+            {!user && (
+              <Input
+                className="max-w-[280px] mb-4"
+                placeholder="Type your name…"
+                maxLength={20}
+                value={playerName}
+                onChange={handleNameChange}
+              />
+            )}
+
+            <div className="flex flex-col gap-3 max-w-[440px]">
+              <Button
+                variant="green"
+                size="lg"
+                className="justify-start gap-4 py-5 text-xl"
+                onClick={() => openModal(MODALS.ROOM_SELECTOR)}
+              >
+                <Play size={26} strokeWidth={3} className="shrink-0" />
+                <span className="text-left leading-tight">
+                  Play Online
+                  <span className="block text-sm font-medium opacity-85">
+                    Jump into a live room
+                  </span>
+                </span>
+              </Button>
+              <Button
+                variant="blue"
+                size="lg"
+                className="justify-start gap-4"
+                onClick={() => navigate("/levels")}
+              >
+                <Gamepad2 size={24} strokeWidth={3} className="shrink-0" />
+                <span className="text-left leading-tight">
+                  Play Solo
+                  <span className="block text-sm font-medium opacity-85">
+                    Community arenas vs bots
+                  </span>
+                </span>
+              </Button>
+              <Button
+                variant="yellow"
+                size="lg"
+                className="justify-start gap-4"
+                onClick={() => openModal(MODALS.CAMPAIGN_SELECTOR)}
+              >
+                <Flag size={24} strokeWidth={3} className="shrink-0" />
+                <span className="text-left leading-tight">
+                  Play Campaign
+                  <span className="block text-sm font-medium opacity-85">
+                    Cleared levels, one life pool
+                  </span>
+                </span>
+              </Button>
+            </div>
+          </div>
+        </Panel>
+
+        {/* RIGHT — tank stage + leaderboard */}
+        <div className="flex flex-col gap-4">
+          <Panel className="relative flex-1 flex flex-col items-center rounded-[22px] p-5 graph-paper">
+            <span className="absolute top-3.5 left-3.5 bg-panel-dark/[0.86] text-white text-xs font-semibold tracking-wide px-2.5 py-1 rounded-lg border-2 border-ink">
+              YOUR TANK
+            </span>
+            <IconButton
+              className="absolute top-3.5 right-3.5"
+              onClick={() => openModal(MODALS.TANK_SELECT)}
+              title="Customize tank"
+            >
+              <Paintbrush size={18} strokeWidth={2.5} />
+            </IconButton>
+            <div className="flex-1 flex items-center justify-center py-4">
+              <TankAvatar
+                bodyColor={tankColors.body}
+                turretColor={tankColors.turret}
+                size={190}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openModal(MODALS.TANK_SELECT)}
+            >
+              Customize
+            </Button>
+          </Panel>
+
+          <DarkPanel className="p-4">
+            <h4 className="flex items-center gap-1.5 m-0 mb-2.5 text-sm tracking-[2px] uppercase">
+              <Star size={15} className="fill-yellow text-yellow" /> Leaderboard
+            </h4>
+            {leaders.length === 0 ? (
+              <p className="text-white/50 text-sm py-2">
+                No rankings yet — be the first.
+              </p>
+            ) : (
+              leaders.map((p, i) => (
+                <div
+                  key={p.username}
+                  className="flex items-center gap-2.5 mb-2 last:mb-0"
+                >
+                  <span className="text-[13px] text-white w-24 font-semibold truncate">
+                    {p.username}
+                  </span>
+                  <div className="flex-1 h-4 rounded-lg border-2 border-ink bg-white/10 overflow-hidden">
+                    <span
+                      className="block h-full"
+                      style={{
+                        width: `${Math.max(8, (Number(p.total_data) / maxData) * 100)}%`,
+                        background: BAR_COLORS[i % BAR_COLORS.length],
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs text-white/70 w-12 text-right">
+                    {p.total_data}
+                  </span>
+                </div>
+              ))
+            )}
+          </DarkPanel>
         </div>
       </div>
 
-      {/* Level Editor Button - Bottom Left */}
-      <div className="absolute w-44 left-5 bottom-12 z-50">
-        <div className="flex w-full justify-center items-center flex-col">
-          <button
-            className="btn btn-ghost btn-circle btn-lg"
-            onClick={() => openModal(MODALS.MY_LEVELS)}
-          >
-            <Pencil className="w-12 h-12 text-primary" />
-          </button>
-          <h3 className="font-bold text-white mt-2">Level editor</h3>
-        </div>
-      </div>
-
-      {/* My Campaigns Button - Left (above Level Editor) */}
-      <div className="absolute w-44 left-5 bottom-44 z-50">
-        <div className="flex w-full justify-center items-center flex-col">
-          <button
-            className="btn btn-ghost btn-circle btn-lg"
-            onClick={() => openModal(MODALS.MY_CAMPAIGNS)}
-          >
-            <Swords className="w-12 h-12 text-primary" />
-          </button>
-          <h3 className="font-bold text-white mt-2">Campaigns</h3>
-        </div>
-      </div>
-
-      {/* Rankings Button - Top Right */}
-      <div className="absolute w-44 h-56 right-5 top-5 z-50">
-        <div className="flex w-full h-full justify-center items-center flex-col">
-          <button
-            className="btn btn-ghost btn-circle btn-lg"
-            onClick={() => openModal(MODALS.RANKINGS)}
-          >
-            <Trophy className="w-12 h-12 text-primary" />
-          </button>
-          <h3 className="font-bold text-white mt-2">Rankings</h3>
-        </div>
-      </div>
-
-      {/* Footer Links - Bottom Right */}
-      <div className="absolute right-5 bottom-5 z-50">
-        <div className="font-bold text-white flex items-center gap-4">
+      <footer className="mt-8 text-center text-ink-soft font-medium text-sm">
+        <div className="flex items-center justify-center gap-4">
           <a
             href="https://aurelien.pautet.net/contact"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:underline hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1 text-blue-d font-semibold hover:underline"
           >
-            <Mail className="w-6 h-6" />
-            <span>Contact</span>
+            <Mail size={16} /> Contact
           </a>
           <a
             href="https://aurelien.pautet.net/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:underline hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1 text-blue-d font-semibold hover:underline"
           >
-            <ExternalLink className="w-6 h-6" />
-            <span>About Me</span>
+            <ExternalLink size={16} /> About
           </a>
           <a
             href="https://github.com/AurelienPautet/WiiGameBien"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:underline hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1 text-blue-d font-semibold hover:underline"
           >
-            <Github className="w-6 h-6" />
-            <span>GitHub</span>
+            <Github size={16} /> GitHub
           </a>
         </div>
-      </div>
-
-      {/* Tank Visualizer */}
-      <div className="h-56 w-72 bg-base-100 flex justify-center items-center relative rounded-md">
-        <img
-          className="w-28 h-24 absolute"
-          src={`ressources/image/tank_player/body_${tankColors.body}.png`}
-          alt="Tank body"
-        />
-        <img
-          className="w-32 h-16 absolute -mt-5 -ml-15"
-          src={`ressources/image/tank_player/turret_${tankColors.turret}.png`}
-          alt="Tank turret"
-        />
-        <button
-          className="btn btn-ghost btn-circle absolute top-3 right-3"
-          onClick={() => openModal(MODALS.TANK_SELECT)}
-        >
-          <Paintbrush className="w-6 h-6 text-primary" />
-        </button>
-      </div>
-
-      {/* Name Input - only shown when not logged in */}
-      {!user && (
-        <div className="h-20 w-1/3 flex justify-center items-center mt-4">
-          <input
-            className="input input-bordered bg-base-300 text-white placeholder:text-slate-300 focus:outline-primary w-64"
-            placeholder="Type your name.."
-            type="text"
-            name="name"
-            maxLength={20}
-            value={playerName}
-            onChange={handleNameChange}
-          />
+        <div className="mt-1.5 opacity-70">
+          OUI TANK © 2026 — a cute io tank battler
         </div>
-      )}
-
-      {/* Play Buttons */}
-      <div className="h-24 w-1/3 flex justify-center items-center rounded-md mt-3 gap-4">
-        <button
-          className="btn btn-primary h-14 px-8 text-lg font-extrabold"
-          onClick={() => openModal(MODALS.ROOM_SELECTOR)}
-        >
-          Play Online
-        </button>
-        <button
-          className="btn btn-primary h-14 px-8 text-lg font-extrabold"
-          onClick={() => openModal(MODALS.LEVEL_SELECTOR)}
-        >
-          Play Solo
-        </button>
-        <button
-          className="btn btn-secondary h-14 px-8 text-lg font-extrabold"
-          onClick={() => openModal(MODALS.CAMPAIGN_SELECTOR)}
-        >
-          Play Campaign
-        </button>
-      </div>
+      </footer>
     </div>
   );
 };
-
-// Export dimensions for use in other components
-export { CANVAS_WIDTH, CANVAS_HEIGHT };

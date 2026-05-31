@@ -23,8 +23,8 @@
     }
   },
   "scripts": {
-    "dev": "turbo run dev",
-    "dev:api": "pnpm --filter @ouigame/api dev",
+    "dev": "sh scripts/ensure-postgres.sh && turbo run dev",
+    "dev:api": "sh scripts/ensure-postgres.sh && pnpm --filter @ouigame/api dev",
     "dev:web": "pnpm --filter @ouigame/web dev",
     "build": "turbo run build",
     "start": "tsx apps/api/server.ts",
