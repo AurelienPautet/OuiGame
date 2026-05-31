@@ -4,7 +4,7 @@ name: Deploy to itch.io
 # Gated on the CI workflow: this runs only after CI completes *successfully*
 # for a push to master, so a commit that fails lint/test/typecheck/build is
 # never published. workflow_run fires for every CI completion (including PRs),
-# hence the strict `if` filter on the publish job below.
+# hence the strict `if` filter on the build job below.
 on:
   workflow_run:
     workflows: [CI]
@@ -20,22 +20,20 @@ permissions:
   contents: read
 
 jobs:
-  publish:
-    name: Build itch bundle and push via butler
+  # Build runs the commit's code (pnpm install lifecycle scripts, vite build)
+  # but holds NO secret. Keeping BUTLER_API_KEY out of this job means a
+  # compromised dependency can't exfiltrate it — and it's what clears CodeQL's
+  # "checkout of untrusted code in a privileged context" alert, which fires
+  # only when a secret-bearing job runs event-derived code. The artifact is
+  # handed to the publish job, which never checks out the repo.
+  build:
+    name: Build itch bundle
     runs-on: ubuntu-latest
-    # Only publish a commit that (a) was a push to master and (b) passed CI.
+    # Only build a commit that (a) was a push to master and (b) passed CI.
     if: >-
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'master' &&
       github.event.workflow_run.conclusion == 'success'
-    env:
-      # itch.io target: <user>/<game>:<channel>. A channel whose name contains
-      # "html5" makes itch serve dist/index.html as a playable in-browser build.
-      ITCH_TARGET: aurelienpautet/ouitank:html5
-      # butler reads its credentials from this env var. Add it under
-      # Settings → Secrets and variables → Actions (see this file's PR/notes).
-      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
-
     steps:
       # workflow_run gives us the SHA CI validated; check out exactly that so we
       # publish the reviewed commit, not whatever master's tip happens to be now.
@@ -68,17 +66,53 @@ jobs:
       - name: Build itch bundle
         run: pnpm --filter @ouigame/web build:itch
 
+      # Hand the bundle to the publish job. if-no-files-found:error so a build
+      # that silently produced nothing fails here instead of pushing an empty
+      # bundle to itch.
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: itch-dist
+          path: apps/web/dist
+          retention-days: 1
+          if-no-files-found: error
+
+  # Publish holds BUTLER_API_KEY but never checks out or runs repo code: it
+  # only downloads the prebuilt artifact and hands it to butler, so the secret
+  # is never in scope while event-derived code executes. `needs: build` means a
+  # skipped/failed build (e.g. the `if` above not matching) skips this too.
+  publish:
+    name: Push to itch.io via butler
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      # itch.io target: <user>/<game>:<channel>. A channel whose name contains
+      # "html5" makes itch serve dist/index.html as a playable in-browser build.
+      ITCH_TARGET: aurelienpautet/ouitank:html5
+      # butler reads its credentials from this env var. Add it under
+      # Settings → Secrets and variables → Actions (see this file's PR/notes).
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: itch-dist
+          path: dist
+
       # Install butler (itch.io's official upload CLI) from its canonical source.
+      # -f makes a non-2xx response fail here rather than producing a corrupt zip.
       - name: Install butler
         run: |
-          curl -sL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
           unzip -q butler.zip
           chmod +x butler
           ./butler -V
 
       # butler diffs against the existing channel and uploads only what changed.
       # --userversion stamps the build with the commit SHA for traceability.
+      # head_sha is a 40-char hex SHA, so it's safe to interpolate into the shell.
       - name: Push to itch.io
         run: |
-          ./butler push apps/web/dist "$ITCH_TARGET" \
+          ./butler push dist "$ITCH_TARGET" \
             --userversion "${{ github.event.workflow_run.head_sha }}"
