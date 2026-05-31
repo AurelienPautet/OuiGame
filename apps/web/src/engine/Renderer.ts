@@ -96,7 +96,6 @@ export class Renderer {
   debugVisual: boolean;
   drawTicks: number;
   theme: number;
-  images: Record<string, HTMLImageElement>;
   fieldImage: HTMLCanvasElement | null;
 
   constructor(
@@ -123,12 +122,8 @@ export class Renderer {
     this.drawTicks = 0;
     this.theme = 6;
 
-    // Image cache
-    this.images = {};
-    this._loadImages();
-
-    // Pre-rendered graph-paper field; seeded onto the (persistent) fading
-    // canvas so the grid is there from frame 0 and track trails fade into it.
+    // Pre-rendered graph-paper field, seeded onto the (back) fading canvas so
+    // the grid is present from frame 0.
     this.fieldImage = this._buildFieldImage();
     this._seedField();
   }
@@ -165,22 +160,6 @@ export class Renderer {
     }
   }
 
-  _loadImages() {
-    // The arcade renderer draws tanks/blocks/bullets/holes as shapes, so the
-    // only remaining raster assets are the track-trail decal and the dead
-    // marker (both still blitted onto the fading canvas).
-    this.images.body_tracks = this._loadImage(
-      "ressources/image/tank_player/body_tracks.png"
-    );
-    this.images.dead = this._loadImage("ressources/image/dead.png");
-  }
-
-  _loadImage(src: string): HTMLImageElement {
-    const img = new Image();
-    img.src = src;
-    return img;
-  }
-
   // The theme number still drives gameplay elsewhere; the renderer no longer
   // swaps art per theme (everything is palette-driven), so this is a no-op kept
   // for the GameEngine.setTheme call site.
@@ -190,13 +169,13 @@ export class Renderer {
 
   clear() {
     this.c.clearRect(0, 0, this.width, this.height);
-    // Re-paint the graph-paper field slightly each frame on the persistent
-    // fading canvas: this both maintains the grid and gradually fades the
-    // track trails drawn on top of it back into the field.
+    // Repaint the crisp graph-paper field on the back (fading) canvas at full
+    // opacity every frame. This wipes the previous frame cleanly — no trail
+    // residue — and keeps a sharp static grid behind the transparent entity
+    // canvas.
     if (this.fc && this.fieldImage) {
-      this.fc.globalAlpha = 0.08;
-      this.fc.drawImage(this.fieldImage, 0, 0, this.width, this.height);
       this.fc.globalAlpha = 1;
+      this.fc.drawImage(this.fieldImage, 0, 0, this.width, this.height);
     }
   }
 
@@ -345,36 +324,10 @@ export class Renderer {
 
   _drawPlayer(player: RenderPlayer, socketId: string) {
     if (player.alive) {
-      // Faint track trail on the persistent fading canvas.
-      const tracksImg = this.images.body_tracks;
-      if (this.fc && tracksImg && this.drawTicks % 15 === 0) {
-        this._drawImageRot(
-          this.fc,
-          tracksImg,
-          player.position.x,
-          player.position.y,
-          player.size.w,
-          player.size.h,
-          (player.rotation * Math.PI) / 180
-        );
-      }
-
       // Shape-based arcade tank: treads + barrel + circle hull + ink outline.
       this._drawTank(player, socketId.includes("bot"));
     } else {
-      // Draw dead player
-      const deadImg = this.images.dead;
-      if (this.fc && deadImg) {
-        this._drawImageRot(
-          this.fc,
-          deadImg,
-          player.position.x,
-          player.position.y,
-          player.size.w,
-          player.size.h,
-          (player.rotation * Math.PI) / 180
-        );
-      }
+      this._drawWreck(player);
     }
 
     if (this.debugVisual) {
