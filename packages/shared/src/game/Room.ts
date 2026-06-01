@@ -2,7 +2,13 @@ import { rectRect, distance, rectanglesSeTouchent } from "./check_collision.js";
 import { generateBcollision } from "./level_loader.js";
 import { Player } from "./Player.js";
 import { Bot, type BotKind } from "./Bot.js";
-import type { Vec2, RoomIo, DrawingContext } from "./types.js";
+import type {
+  Vec2,
+  RoomIo,
+  RoomBroadcastEvent,
+  DrawingContext,
+} from "./types.js";
+import type { ServerToClientEvents } from "../socket";
 import type { StatsCounters } from "./Stats.js";
 import type { Block } from "./Block.js";
 import type { Hole } from "./Hole.js";
@@ -251,10 +257,16 @@ export class Room {
     return this.check_for_winns_and_load_next_level();
   }
 
-  emit_to_room(string: string, data: unknown): void {
-    //console.log("caca", this.io);
+  // Broadcasts a single server->client event to this room. The event name is
+  // constrained to the runtime's RoomBroadcastEvent set and the payload to the
+  // exact shape `ServerToClientEvents` declares for it, so a typo or a wrong
+  // payload is now a compile error rather than silently drifting from the wire.
+  emit_to_room<E extends RoomBroadcastEvent>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ): void {
     if (this.io != null) {
-      this.io.to(this.id).emit(string, data);
+      this.io.to(this.id).emit(event, ...args);
     } else {
       //console.error("No io instance available to emit to this:", this.name);
     }
@@ -314,7 +326,8 @@ export class Room {
     this.emit_to_room("level_change", {
       blocks: this.blocks,
       Bcollision: this.Bcollision,
-      level_id: this.levels[this.levelid],
+      // Non-null: a live room always has a current level id at this index.
+      level_id: this.levels[this.levelid]!,
     });
     for (const socketid in this.players) {
       const player = this.players[socketid];
@@ -455,7 +468,8 @@ export class Room {
               this.emit_to_room("level_change", {
                 blocks: this.blocks,
                 Bcollision: this.Bcollision,
-                level_id: this.levels[this.levelid],
+                // Non-null: a live room always has a current level id at this index.
+                level_id: this.levels[this.levelid]!,
               });
 
               m -= 1;
@@ -506,7 +520,7 @@ export class Room {
       }
     }
   }
-  kill(killer: Player, killed: Player, type: string): void {
+  kill(killer: Player, killed: Player, type: "bullet" | "mine"): void {
     killed.alive = false;
     killer.round_stats.stats.kills++;
     killed.round_stats.stats.deaths++;
