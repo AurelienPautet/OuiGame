@@ -21,6 +21,7 @@ import { createRoomRegistry } from "./game/roomRegistry";
 import { createTickLoop } from "./game/tickLoop";
 import { registerSocketHandlers } from "./socket/handlers";
 import { registerOnlineCount } from "./socket/onlineCount";
+import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
 
@@ -121,6 +122,11 @@ app.use(express.static(path.join(import.meta.dirname, "../web/dist")));
 app.get("/*splat", limiter, (_req: Request, res: Response) => {
   res.sendFile(path.join(import.meta.dirname, "../web/dist/index.html"));
 });
+
+// Centralised error handler — must be registered LAST, after every route, so
+// Express routes thrown/rejected errors here instead of each handler mapping
+// its own 500. See middleware/error.middleware.ts.
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;
 const expressServer = app.listen(PORT);

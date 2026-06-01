@@ -4,61 +4,30 @@ const router = express.Router();
 import { parseId } from "../repositories/shared/format";
 import * as service from "../services/campaigns.service";
 import { authMiddleware, optionalAuth } from "../middleware/auth.middleware";
-
-// Shape of the errors the service throws / Postgres surfaces, as read here.
-type RouteError = {
-  isServiceError?: boolean;
-  status?: number;
-  message?: string;
-  code?: string;
-  cause?: { code?: string };
-};
-
-function isUniqueViolation(err: RouteError) {
-  return err && (err.code === "23505" || err.cause?.code === "23505");
-}
+import { badRequest } from "../errors";
 
 // GET /api/campaigns?name=
 router.get("/", optionalAuth, async (req: Request, res: Response) => {
   const { name = "" } = req.query as { name?: string };
   const playerId = req.user?.playerId ?? null;
-  try {
-    res.json(await service.listCampaigns(name, playerId));
-  } catch (err) {
-    console.error("Error fetching campaigns:", err);
-    res.status(500).json({ error: "Failed to fetch campaigns" });
-  }
+  res.json(await service.listCampaigns(name, playerId));
 });
 
 // GET /api/campaigns/my?name=
 router.get("/my", authMiddleware, async (req: Request, res: Response) => {
   const { name = "" } = req.query as { name?: string };
   const playerId = req.user!.playerId;
-  try {
-    res.json(await service.listMyCampaigns(name, playerId));
-  } catch (err) {
-    console.error("Error fetching my campaigns:", err);
-    res.status(500).json({ error: "Failed to fetch your campaigns" });
-  }
+  res.json(await service.listMyCampaigns(name, playerId));
 });
 
 // GET /api/campaigns/:id  (campaign meta + ordered levels + this user's progress)
 router.get("/:id", optionalAuth, async (req: Request, res: Response) => {
   const campaignId = parseId(req.params.id);
   if (campaignId === null) {
-    return res.status(400).json({ error: "Invalid campaign id" });
+    throw badRequest("Invalid campaign id");
   }
   const playerId = req.user?.playerId ?? null;
-  try {
-    res.json(await service.getCampaignDetail(campaignId, playerId));
-  } catch (err) {
-    const e = err as RouteError;
-    if (e.isServiceError) {
-      return res.status(e.status!).json({ error: e.message });
-    }
-    console.error("Error fetching campaign:", err);
-    res.status(500).json({ error: "Failed to fetch campaign" });
-  }
+  res.json(await service.getCampaignDetail(campaignId, playerId));
 });
 
 // POST /api/campaigns  { name, description, levelIds: [] }
@@ -72,43 +41,31 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
   const playerId = req.user!.playerId;
 
   if (typeof name !== "string" || name.trim().length === 0) {
-    return res.status(400).json({ error: "Campaign name is required" });
+    throw badRequest("Campaign name is required");
   }
   if (name.length > 30) {
-    return res.status(400).json({ error: "Campaign name too long (max 30)" });
+    throw badRequest("Campaign name too long (max 30)");
   }
   if (description.length > 300) {
-    return res
-      .status(400)
-      .json({ error: "Campaign description too long (max 300)" });
+    throw badRequest("Campaign description too long (max 300)");
   }
 
-  try {
-    const result = await service.createCampaign({
-      name,
-      description,
-      creatorId: playerId,
-      levelIds,
-    });
-    res.json(result);
-  } catch (err) {
-    const e = err as RouteError;
-    if (e.isServiceError) {
-      return res.status(e.status!).json({ error: e.message });
-    }
-    if (isUniqueViolation(e)) {
-      return res.status(409).json({ error: "Campaign name already taken" });
-    }
-    console.error("Error creating campaign:", err);
-    res.status(500).json({ error: "Failed to create campaign" });
-  }
+  // A duplicate name surfaces as a 409 from the service (it translates the
+  // Postgres unique violation), reaching the central error handler.
+  const result = await service.createCampaign({
+    name,
+    description,
+    creatorId: playerId,
+    levelIds,
+  });
+  res.json(result);
 });
 
 // PUT /api/campaigns/:id  { name, description, levelIds: [] }
 router.put("/:id", authMiddleware, async (req: Request, res: Response) => {
   const campaignId = parseId(req.params.id);
   if (campaignId === null) {
-    return res.status(400).json({ error: "Invalid campaign id" });
+    throw badRequest("Invalid campaign id");
   }
   const { name, levelIds } = req.body;
   const description =
@@ -116,58 +73,33 @@ router.put("/:id", authMiddleware, async (req: Request, res: Response) => {
   const playerId = req.user!.playerId;
 
   if (typeof name !== "string" || name.trim().length === 0) {
-    return res.status(400).json({ error: "Campaign name is required" });
+    throw badRequest("Campaign name is required");
   }
   if (name.length > 30) {
-    return res.status(400).json({ error: "Campaign name too long (max 30)" });
+    throw badRequest("Campaign name too long (max 30)");
   }
   if (description.length > 300) {
-    return res
-      .status(400)
-      .json({ error: "Campaign description too long (max 300)" });
+    throw badRequest("Campaign description too long (max 300)");
   }
 
-  try {
-    const result = await service.updateCampaign({
-      campaignId,
-      name,
-      description,
-      playerId,
-      levelIds,
-    });
-    res.json(result);
-  } catch (err) {
-    const e = err as RouteError;
-    if (e.isServiceError) {
-      return res.status(e.status!).json({ error: e.message });
-    }
-    if (isUniqueViolation(e)) {
-      return res.status(409).json({ error: "Campaign name already taken" });
-    }
-    console.error("Error updating campaign:", err);
-    res.status(500).json({ error: "Failed to update campaign" });
-  }
+  const result = await service.updateCampaign({
+    campaignId,
+    name,
+    description,
+    playerId,
+    levelIds,
+  });
+  res.json(result);
 });
 
 // DELETE /api/campaigns/:id
 router.delete("/:id", authMiddleware, async (req: Request, res: Response) => {
   const campaignId = parseId(req.params.id);
   if (campaignId === null) {
-    return res.status(400).json({ error: "Invalid campaign id" });
+    throw badRequest("Invalid campaign id");
   }
   const playerId = req.user!.playerId;
-
-  try {
-    const result = await service.deleteCampaign(campaignId, playerId);
-    res.json(result);
-  } catch (err) {
-    const e = err as RouteError;
-    if (e.isServiceError) {
-      return res.status(e.status!).json({ error: e.message });
-    }
-    console.error("Error deleting campaign:", err);
-    res.status(500).json({ error: "Failed to delete campaign" });
-  }
+  res.json(await service.deleteCampaign(campaignId, playerId));
 });
 
 // POST /api/campaigns/:id/runs  { levelsCleared, livesLeft, completed, timeMs }
@@ -176,7 +108,7 @@ router.delete("/:id", authMiddleware, async (req: Request, res: Response) => {
 router.post("/:id/runs", optionalAuth, async (req: Request, res: Response) => {
   const campaignId = parseId(req.params.id);
   if (campaignId === null) {
-    return res.status(400).json({ error: "Invalid campaign id" });
+    throw badRequest("Invalid campaign id");
   }
   const { levelsCleared, livesLeft, completed, timeMs } = req.body;
   // Validate types/ranges explicitly rather than coercing, so bad input (e.g.
@@ -188,28 +120,19 @@ router.post("/:id/runs", optionalAuth, async (req: Request, res: Response) => {
     !isNonNegInt(timeMs) ||
     (livesLeft !== undefined && !isNonNegInt(livesLeft))
   ) {
-    return res.status(400).json({ error: "Invalid or missing run fields" });
+    throw badRequest("Invalid or missing run fields");
   }
 
-  try {
-    const playerId = req.user?.playerId || null;
-    const result = await service.submitRun({
-      campaignId,
-      playerId,
-      levelsCleared,
-      livesLeft,
-      completed,
-      timeMs,
-    });
-    res.json(result);
-  } catch (err) {
-    const e = err as RouteError;
-    if (e.isServiceError) {
-      return res.status(e.status!).json({ error: e.message });
-    }
-    console.error("Error submitting campaign run:", err);
-    res.status(500).json({ error: "Failed to submit campaign run" });
-  }
+  const playerId = req.user?.playerId || null;
+  const result = await service.submitRun({
+    campaignId,
+    playerId,
+    levelsCleared,
+    livesLeft,
+    completed,
+    timeMs,
+  });
+  res.json(result);
 });
 
 export default router;
