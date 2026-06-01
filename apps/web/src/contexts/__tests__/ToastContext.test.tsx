@@ -24,17 +24,17 @@ afterEach(() => {
 const render = () => renderHook(() => useToast(), { wrapper: ToastProvider });
 
 describe("toast lifecycle", () => {
-  it("adds a toast, marks it exiting after the duration, then removes it", () => {
+  it("adds a toast, then drops it from state after the duration", () => {
     const { result } = render();
     act(() => {
       result.current.addToast(TOAST_TYPES.INFO, "Title", "msg");
     });
     expect(result.current.toasts).toHaveLength(1);
 
+    // After the full duration the toast is removed from state directly;
+    // AnimatePresence plays the slide-out exit as the element unmounts, so
+    // there is no separate in-state "exiting" phase anymore.
     act(() => vi.advanceTimersByTime(1500));
-    expect(result.current.toasts[0]!.exiting).toBe(true);
-
-    act(() => vi.advanceTimersByTime(500));
     expect(result.current.toasts).toHaveLength(0);
   });
 
