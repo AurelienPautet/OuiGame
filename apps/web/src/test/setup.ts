@@ -10,6 +10,11 @@ import { cleanup } from "@testing-library/react";
 
 afterEach(() => {
   cleanup();
+  // Reset persisted browser state between tests. The i18n LanguageDetector and
+  // storage.* both read/write localStorage, so without this a test that renders
+  // directly (without renderWithProviders) could inherit the previous test's
+  // language or saved tank indices — an order-dependent flake.
+  localStorage.clear();
 });
 
 if (typeof window.matchMedia !== "function") {
@@ -40,8 +45,19 @@ proto.hasPointerCapture ??= () => false;
 proto.setPointerCapture ??= () => {};
 proto.releasePointerCapture ??= () => {};
 
-// jsdom has no canvas backend; components that draw (TankAvatar) already guard
-// on a null context, so return null instead of letting jsdom log a noisy
-// "Not implemented: getContext" error on every render.
-HTMLCanvasElement.prototype.getContext = (() =>
-  null) as typeof HTMLCanvasElement.prototype.getContext;
+// jsdom has no canvas backend, so getContext throws "Not implemented" — noisy,
+// and components that draw (TankAvatar) already guard on a null context. Wrap
+// (don't clobber) the original: try it, fall back to null only when it throws.
+// This stays correct if a real canvas backend (e.g. the `canvas` package) is
+// ever added — the original implementation is then used.
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+HTMLCanvasElement.prototype.getContext = function (
+  this: HTMLCanvasElement,
+  ...args: Parameters<typeof originalGetContext>
+) {
+  try {
+    return originalGetContext.apply(this, args);
+  } catch {
+    return null;
+  }
+} as typeof HTMLCanvasElement.prototype.getContext;
