@@ -93,7 +93,10 @@ if (typeof window !== "undefined") {
       click: false,
       plant: false,
       escapePressed: false,
-      mvtSpeed: 3,
+      // Only the SIGN of `direction` is consumed (Player.update / the server's
+      // `tock` handler map it to the player's own mvtspeed in px/s), so this is
+      // just a unit step, not an actual speed.
+      mvtSpeed: 1,
       canvas: null,
       listenersAttached: false,
     };
