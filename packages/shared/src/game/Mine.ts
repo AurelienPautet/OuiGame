@@ -1,5 +1,15 @@
+import type { Vec2 } from "./types.js";
+import type { Player } from "./Player.js";
+import type { Room } from "./Room.js";
+
 export class Mine {
-  constructor(position, emitter, room) {
+  position: Vec2;
+  radius: number;
+  timealive: number;
+  color: string;
+  emitter: Player;
+
+  constructor(position: Vec2, emitter: Player, room: Room) {
     this.position = position;
     this.radius = 15;
     this.timealive = 0;
@@ -11,7 +21,7 @@ export class Mine {
     room.mines.push(this);
   }
 
-  update(fps_corector) {
+  update(fps_corector: number): void {
     this.timealive += fps_corector;
   }
 }

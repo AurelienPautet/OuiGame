@@ -1,7 +1,33 @@
-import { detectCollision } from "./check_collision.js";
+import { detectCollision, type CollisionSide } from "./check_collision.js";
+import type { Vec2, Size } from "./types.js";
+import type { CollisionBox } from "./CollisionBox.js";
+import type { Player } from "./Player.js";
+import type { Room } from "./Room.js";
 
 export class Bullet {
-  constructor(position, angle, speed, size, max_bounce, type, emitter, room) {
+  type: number;
+  velocity: Vec2;
+  angle: number;
+  size: Size;
+  position: Vec2;
+  draw_size: Size;
+  last_collision_object: CollisionBox | null;
+  mytick: number;
+  bounce: number;
+  max_bounce: number;
+  emitter: Player;
+  side?: CollisionSide;
+
+  constructor(
+    position: Vec2,
+    angle: number,
+    speed: number,
+    size: Size,
+    max_bounce: number,
+    type: number,
+    emitter: Player,
+    room: Room
+  ) {
     this.type = type;
     this.velocity = {
       x: -Math.cos(angle) * speed,
@@ -34,15 +60,15 @@ export class Bullet {
       angle: this.emitter.angle,
     });
   }
-  update(room, fps_corector) {
+  update(room: Room, fps_corector: number): void {
     this.mytick++;
     for (let i = 0; i < room.Bcollision.length; i++) {
-      this.collision_walls(room.Bcollision[i], room);
+      this.collision_walls(room.Bcollision[i]!, room);
     }
     this.position.x += this.velocity.x * fps_corector;
     this.position.y += this.velocity.y * fps_corector;
   }
-  collision_walls(obj, room) {
+  collision_walls(obj: CollisionBox, room: Room): void {
     /*this.side = colliderect(
       this.position.y + 2 * this.velocity.y,
       this.position.x + 2 * this.velocity.x,

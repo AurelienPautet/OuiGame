@@ -1,7 +1,19 @@
 import { rectRect2 } from "./possible_shots_balls.js";
+import type { Vec2, Size, DrawingContext } from "./types.js";
+import type { Bot } from "./Bot.js";
+import type { Room } from "./Room.js";
 
 class possible_moves {
-  constructor(position, size, bot, direction) {
+  position: Vec2;
+  size: Size;
+  bot: Bot;
+  direction: string;
+  should_go: boolean;
+  bullet: boolean;
+  wall: boolean;
+  mine: boolean;
+
+  constructor(position: Vec2, size: Size, bot: Bot, direction: string) {
     this.position = { x: position.x, y: position.y };
     this.size = size;
     this.bot = bot;
@@ -13,13 +25,13 @@ class possible_moves {
     this.mine = direction.includes("mine");
   }
 
-  update_state(room, ctx, debug_visual) {
+  update_state(room: Room, ctx?: DrawingContext, debug_visual?: boolean): void {
     if (this.bullet) {
       for (let i = 0; i < room.bullets.length; i++) {
         if (this.should_go) {
           continue; // If already set to go, skip further checks
         }
-        const bullet = room.bullets[i];
+        const bullet = room.bullets[i]!;
         if (bullet.emitter === this.bot && bullet.mytick < 15) {
           continue; // Skip if the bullet is emitted by the same bot
         }
@@ -55,7 +67,7 @@ class possible_moves {
     }
     if (this.wall) {
       for (let i = 0; i < room.Bcollision.length; i++) {
-        const block = room.Bcollision[i];
+        const block = room.Bcollision[i]!;
         if (
           rectRect2(
             this.position.x,
@@ -89,7 +101,7 @@ class possible_moves {
 
     if (this.mine) {
       for (let i = 0; i < room.mines.length; i++) {
-        const mine = room.mines[i];
+        const mine = room.mines[i]!;
         if (
           rectRect2(
             this.position.x,
@@ -112,7 +124,7 @@ class possible_moves {
     this.draw(ctx, debug_visual);
   }
 
-  draw(ctx, debug_visual) {
+  draw(ctx?: DrawingContext, debug_visual?: boolean): void {
     if (!ctx) return; // headless / no canvas: the bot math already ran above
     let color = "black";
     ctx.globalAlpha = 0.5;
@@ -132,7 +144,13 @@ class possible_moves {
   }
 }
 
-export function launch_possible_moves(size, bot, room, ctx, debug_visual) {
+export function launch_possible_moves(
+  size: Size,
+  bot: Bot,
+  room: Room,
+  ctx?: DrawingContext,
+  debug_visual?: boolean
+): void {
   new possible_moves(
     {
       x: bot.position.x + bot.size.w / 2 - 160,

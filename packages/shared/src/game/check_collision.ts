@@ -1,4 +1,24 @@
-export function rectRect(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
+import type { Vec2, Size } from "./types.js";
+
+// A side returned by the collision helpers: "" means no collision.
+export type CollisionSide = "" | "left" | "right" | "up" | "down";
+
+// The minimal axis-aligned box the object-based detectCollision reads.
+interface CollisionRect {
+  position: Vec2;
+  size: Size;
+}
+
+export function rectRect(
+  r1x: number,
+  r1y: number,
+  r1w: number,
+  r1h: number,
+  r2x: number,
+  r2y: number,
+  r2w: number,
+  r2h: number
+): boolean {
   // are the sides of one rectangle touching the other?
 
   if (
@@ -12,7 +32,11 @@ export function rectRect(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
   return false;
 }
 
-export function detectCollision(rect1, rect2, velocity1) {
+export function detectCollision(
+  rect1: CollisionRect,
+  rect2: CollisionRect,
+  velocity1: Vec2
+): CollisionSide {
   // Vérifier s'il position.y a une collision
   if (
     rect1.position.x + velocity1.x + velocity1.x <
@@ -22,16 +46,16 @@ export function detectCollision(rect1, rect2, velocity1) {
     rect1.position.y + velocity1.y + rect1.size.h > rect2.position.y
   ) {
     // Calculer les distances entre les bords des rectangles
-    let overlapLeft = rect2.position.x + rect2.size.w - rect1.position.x;
-    let overlapRight =
+    const overlapLeft = rect2.position.x + rect2.size.w - rect1.position.x;
+    const overlapRight =
       rect1.position.x + velocity1.x + rect1.size.w - rect2.position.x;
-    let overlapTop =
+    const overlapTop =
       rect2.position.y + rect2.size.h - rect1.position.y + velocity1.y;
-    let overlapBottom =
+    const overlapBottom =
       rect1.position.y + velocity1.y + rect1.size.h - rect2.position.y;
 
     // Déterminer le côté de collision en trouvant la plus petite distance de chevauchement
-    let minOverlap = Math.min(
+    const minOverlap = Math.min(
       overlapLeft,
       overlapRight,
       overlapTop,
@@ -54,16 +78,16 @@ export function detectCollision(rect1, rect2, velocity1) {
 }
 
 export function colliderect(
-  rect1t,
-  rect1l,
-  rect1w,
-  rect1h,
-  rect2t,
-  rect2l,
-  rect2w,
-  rect2h,
-  offset
-) {
+  rect1t: number,
+  rect1l: number,
+  rect1w: number,
+  rect1h: number,
+  rect2t: number,
+  rect2l: number,
+  rect2w: number,
+  rect2h: number,
+  offset: number
+): CollisionSide {
   /* collide up */
   if (
     (rect1t - offset < rect2t + rect2h &&
@@ -136,7 +160,12 @@ export function colliderect(
   return "";
 }
 
-export function distance(position1, size1, position2, size2) {
+export function distance(
+  position1: Vec2,
+  size1: Size,
+  position2: Vec2,
+  size2: Size
+): number {
   return (
     (position1.x + size1.w / 2 - position2.x - size2.w / 2) ** 2 +
     (position1.y + size1.h / 2 - position2.y - size2.h / 2) ** 2
@@ -144,15 +173,15 @@ export function distance(position1, size1, position2, size2) {
 }
 
 export function rectanglesSeTouchent(
-  x1,
-  y1,
-  width1,
-  height1,
-  x2,
-  y2,
-  width2,
-  height2
-) {
+  x1: number,
+  y1: number,
+  width1: number,
+  height1: number,
+  x2: number,
+  y2: number,
+  width2: number,
+  height2: number
+): boolean {
   // Vérifier les conditions d'intersection directe
   const horizontale = x1 < x2 + width2 && x1 + width1 > x2;
   const verticale = y1 < y2 + height2 && y1 + height1 > y2;

@@ -1,4 +1,4 @@
-export function makeid(length) {
+export function makeid(length: number): string {
   let result = "";
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

@@ -1,25 +1,90 @@
 import { rectRect, distance, rectanglesSeTouchent } from "./check_collision.js";
 import { generateBcollision } from "./level_loader.js";
 import { Player } from "./Player.js";
-import { Bot } from "./Bot.js";
+import { Bot, type BotKind } from "./Bot.js";
+import type { Vec2, RoomIo, DrawingContext } from "./types.js";
+import type { StatsCounters } from "./Stats.js";
+import type { Block } from "./Block.js";
+import type { Hole } from "./Hole.js";
+import type { CollisionBox } from "./CollisionBox.js";
+import type { Bullet } from "./Bullet.js";
+import type { Mine } from "./Mine.js";
+
+interface SoundFlags {
+  plant: boolean;
+  kill: boolean;
+  shoot: boolean;
+  ricochet: boolean;
+  explose: boolean;
+}
 
 export class Room {
   static next_id = 1;
-  static bot_colors = {
+  static bot_colors: Record<BotKind, [string, string]> = {
     bot1: ["blue", "blue"],
     bot2: ["green", "green"],
     bot3: ["orange", "orange"],
     bot4: ["red", "red"],
   };
 
-  static getNextId() {
+  static getNextId(): number {
     return Room.next_id++;
   }
 
-  constructor(name, rounds, levels, creator, io = null, password = "") {
+  id: number;
+  password: string;
+  io: RoomIo | null;
+  name: string;
+  waitingrespawn: boolean;
+  atleast2: boolean;
+  maxplayernb: number;
+  levels: number[];
+  rounds: number;
+  creator: string;
+  sounds: SoundFlags;
+  levelid: number;
+  human_players: string[];
+  players: Record<string, Player>;
+  ids: string[];
+  ids_to_names: Record<string, string>;
+  blocks: Block[];
+  Bcollision: CollisionBox[];
+  bullets: Bullet[];
+  mines: Mine[];
+  holes: Hole[];
+  spawns: Vec2[];
+  nbliving: number;
+  tick: number;
+  timetoeplode: number;
+  mines_explsion_radius: number;
+  waitingtime: number;
+  fps_corector: number;
+  bot1_spawns: Vec2[];
+  bot2_spawns: Vec2[];
+  bot3_spawns: Vec2[];
+  bot4_spawns: Vec2[];
+  countdownActive: boolean;
+  countdownDuration: number;
+  // Populated by loadlevel(): the flat level grid the collision pass reads.
+  blocklist: number[];
+  // Legacy field read by the web solo end-screen; never set by the runtime
+  // (always undefined), kept so that read stays type-safe.
+  grid_id?: unknown;
+
+  constructor(
+    name: string,
+    rounds: number,
+    levels: number[],
+    creator: string,
+    io: unknown = null,
+    password = ""
+  ) {
     this.id = Room.getNextId();
     this.password = password;
-    this.io = io;
+    // The runtime only ever calls io.to(id).emit(event, data); both the real
+    // Socket.io Server (server) and the web's solo LocalIO satisfy that shape,
+    // so the param is accepted loosely and narrowed to RoomIo here.
+    this.io = io as RoomIo | null;
     this.name = name;
     this.waitingrespawn = false;
     this.atleast2 = false;
@@ -55,13 +120,19 @@ export class Room {
     this.bot2_spawns = [];
     this.bot3_spawns = [];
     this.bot4_spawns = [];
+    this.blocklist = [];
 
     // Countdown state - when true, render but skip player input/actions
     this.countdownActive = false;
     this.countdownDuration = 3000; // 3 seconds
   }
 
-  spawn_new_player(playerName, turretc, bodyc, socketid) {
+  spawn_new_player(
+    playerName: string,
+    turretc: string,
+    bodyc: string,
+    socketid: string
+  ): void {
     console.log(
       "Spawning new player:",
       playerName,
@@ -69,7 +140,7 @@ export class Room {
       socketid
     );
 
-    let new_player = new Player(
+    const new_player = new Player(
       { x: 0, y: 0 },
       socketid,
       playerName,
@@ -80,24 +151,24 @@ export class Room {
     this.human_players.push(socketid);
   }
 
-  spawn_new(player, socket_id, spawns) {
+  spawn_new(player: Player, socket_id: string, spawns: Vec2[]): void {
     this.players[socket_id] = player;
     this.ids.push(socket_id);
     this.ids_to_names[socket_id] = player.name;
     this.spawn_player(player, spawns);
   }
 
-  spawn_player(player, spawns) {
-    let spawnid = Math.floor(Math.random() * spawns.length);
+  spawn_player(player: Player, spawns: Vec2[]): void {
+    const spawnid = Math.floor(Math.random() * spawns.length);
     //console.log("caca:", this.spawns, "at spawn id:", this.spawns[spawnid]);
 
     this.nbliving += 1;
-    player.spawn(spawns[spawnid]);
+    player.spawn(spawns[spawnid]!);
 
     spawns.splice(spawnid, 1);
   }
 
-  spawn_all_bots() {
+  spawn_all_bots(): void {
     console.log(
       "Spawning bots in room:",
       this.bot1_spawns,
@@ -108,9 +179,14 @@ export class Room {
     // Room.bot_colors. Preserves the exact socketid numbering: a single
     // bot_index across all kinds, spawn key === the bot's socketid (bot1's old
     // `bot${i}` key already equalled `bot${bot_index}` since bot1 is first).
-    const kinds = ["bot1", "bot2", "bot3", "bot4"];
-    const labels = { bot1: "Bot1", bot2: "Bot2", bot3: "Bot3", bot4: "Bot4" };
-    const spawnLists = {
+    const kinds: BotKind[] = ["bot1", "bot2", "bot3", "bot4"];
+    const labels: Record<BotKind, string> = {
+      bot1: "Bot1",
+      bot2: "Bot2",
+      bot3: "Bot3",
+      bot4: "Bot4",
+    };
+    const spawnLists: Record<BotKind, Vec2[]> = {
       bot1: this.bot1_spawns,
       bot2: this.bot2_spawns,
       bot3: this.bot3_spawns,
@@ -139,7 +215,11 @@ export class Room {
     }
   }
 
-  update(fps_corector, ctx, debug_visual) {
+  update(
+    fps_corector: number,
+    ctx?: DrawingContext,
+    debug_visual?: boolean
+  ): boolean {
     this.sounds = {
       plant: false,
       kill: false,
@@ -171,7 +251,7 @@ export class Room {
     return this.check_for_winns_and_load_next_level();
   }
 
-  emit_to_room(string, data) {
+  emit_to_room(string: string, data: unknown): void {
     //console.log("caca", this.io);
     if (this.io != null) {
       this.io.to(this.id).emit(string, data);
@@ -180,13 +260,13 @@ export class Room {
     }
   }
 
-  check_for_winns_and_load_next_level() {
+  check_for_winns_and_load_next_level(): boolean {
     if (this.waitingrespawn == false && this.nbliving <= 1) {
       if (Object.keys(this.players).length >= 2) {
         if (this.nbliving == 1) {
-          for (let socketid in this.players) {
-            let player = this.players[socketid];
-            if (player.alive) {
+          for (const socketid in this.players) {
+            const player = this.players[socketid];
+            if (player && player.alive) {
               player.round_stats.stats.wins++;
               this.emit_to_room("winner", {
                 socketid: socketid,
@@ -211,9 +291,9 @@ export class Room {
     return false;
   }
 
-  delete_player(socketid) {
-    if (this.players[socketid]) {
-      let player = this.players[socketid];
+  delete_player(socketid: string): void {
+    const player = this.players[socketid];
+    if (player) {
       this.emit_to_room("player-disconnection", player.name);
       delete this.players[socketid];
       this.ids.splice(this.ids.indexOf(socketid), 1);
@@ -228,7 +308,7 @@ export class Room {
     }
   }
 
-  respawn_the_room() {
+  respawn_the_room(): void {
     this.bullets = [];
     this.mines = [];
     this.emit_to_room("level_change", {
@@ -236,8 +316,9 @@ export class Room {
       Bcollision: this.Bcollision,
       level_id: this.levels[this.levelid],
     });
-    for (let socketid in this.players) {
-      let player = this.players[socketid];
+    for (const socketid in this.players) {
+      const player = this.players[socketid];
+      if (!player) continue;
       this.spawn_player(player, this.spawns);
     }
     this.nbliving = Object.keys(this.players).length;
@@ -250,24 +331,26 @@ export class Room {
     }
   }
 
-  update_players(ctx, debug_visual) {
+  update_players(ctx?: DrawingContext, debug_visual?: boolean): void {
     //console.log("Updating players in room:", this.players);
-    for (let sckid in this.players) {
-      this.players[sckid].update(this, this.fps_corector, ctx, debug_visual);
+    for (const sckid in this.players) {
+      const player = this.players[sckid];
+      if (!player) continue;
+      player.update(this, this.fps_corector, ctx, debug_visual);
     }
   }
 
-  update_bullets() {
+  update_bullets(): void {
     bulleting: for (let i = 0; i < this.bullets.length; i++) {
-      this.bullets[i].update(this, this.fps_corector);
-      if (this.bullets[i].bounce >= this.bullets[i].max_bounce) {
+      this.bullets[i]!.update(this, this.fps_corector);
+      if (this.bullets[i]!.bounce >= this.bullets[i]!.max_bounce) {
         this.emit_to_room("bullet_explosion", {
           position: {
-            x: this.bullets[i].position.x,
-            y: this.bullets[i].position.y,
+            x: this.bullets[i]!.position.x,
+            y: this.bullets[i]!.position.y,
           },
         });
-        this.bullets[i].emitter.bulletcount--;
+        this.bullets[i]!.emitter.bulletcount--;
         this.bullets.splice(i, 1);
         i -= 1;
         continue bulleting;
@@ -275,19 +358,19 @@ export class Room {
       for (let e = 0; e < this.mines.length; e++) {
         if (
           rectanglesSeTouchent(
-            this.mines[e].position.x - this.mines[e].radius,
-            this.mines[e].position.y - this.mines[e].radius,
-            this.mines[e].radius * 2,
-            this.mines[e].radius * 2,
-            this.bullets[i].position.x,
-            this.bullets[i].position.y,
-            this.bullets[i].size.w,
-            this.bullets[i].size.h
+            this.mines[e]!.position.x - this.mines[e]!.radius,
+            this.mines[e]!.position.y - this.mines[e]!.radius,
+            this.mines[e]!.radius * 2,
+            this.mines[e]!.radius * 2,
+            this.bullets[i]!.position.x,
+            this.bullets[i]!.position.y,
+            this.bullets[i]!.size.w,
+            this.bullets[i]!.size.h
           )
         ) {
-          this.mines[e].timealive = this.timetoeplode;
-          this.bullets[i].emitter.bulletcount--;
-          this.bullets[i].emitter.round_stats.stats.hits++;
+          this.mines[e]!.timealive = this.timetoeplode;
+          this.bullets[i]!.emitter.bulletcount--;
+          this.bullets[i]!.emitter.round_stats.stats.hits++;
           this.bullets.splice(i, 1);
           i -= 1;
           continue bulleting;
@@ -296,25 +379,25 @@ export class Room {
       for (let e = 0; e < this.bullets.length; e++) {
         if (
           rectRect(
-            this.bullets[i].position.x,
-            this.bullets[i].position.y,
-            this.bullets[i].size.w,
-            this.bullets[i].size.h,
-            this.bullets[e].position.x,
-            this.bullets[e].position.y,
-            this.bullets[e].size.w,
-            this.bullets[e].size.h
+            this.bullets[i]!.position.x,
+            this.bullets[i]!.position.y,
+            this.bullets[i]!.size.w,
+            this.bullets[i]!.size.h,
+            this.bullets[e]!.position.x,
+            this.bullets[e]!.position.y,
+            this.bullets[e]!.size.w,
+            this.bullets[e]!.size.h
           ) &&
           i != e
         ) {
-          this.bullets[i].emitter.bulletcount--;
-          this.bullets[i].emitter.round_stats.stats.hits++;
-          this.bullets[e].emitter.bulletcount--;
-          this.bullets[e].emitter.round_stats.stats.hits++;
+          this.bullets[i]!.emitter.bulletcount--;
+          this.bullets[i]!.emitter.round_stats.stats.hits++;
+          this.bullets[e]!.emitter.bulletcount--;
+          this.bullets[e]!.emitter.round_stats.stats.hits++;
           this.emit_to_room("bullet_explosion", {
             position: {
-              x: this.bullets[i].position.x,
-              y: this.bullets[i].position.y,
+              x: this.bullets[i]!.position.x,
+              y: this.bullets[i]!.position.y,
             },
           });
           if (e < i) {
@@ -330,15 +413,14 @@ export class Room {
           continue bulleting;
         }
       }
-      for (let socketid in this.players) {
-        if (
-          this.players[socketid].BulletCollision(this.bullets[i]) &&
-          this.players[socketid].alive
-        ) {
-          this.bullets[i].emitter.bulletcount--;
-          this.bullets[i].emitter.round_stats.stats.hits++;
+      for (const socketid in this.players) {
+        const target = this.players[socketid];
+        if (!target) continue;
+        if (target.BulletCollision(this.bullets[i]!) && target.alive) {
+          this.bullets[i]!.emitter.bulletcount--;
+          this.bullets[i]!.emitter.round_stats.stats.hits++;
 
-          this.kill(this.bullets[i].emitter, this.players[socketid], "bullet");
+          this.kill(this.bullets[i]!.emitter, target, "bullet");
           this.bullets.splice(i, 1);
           i -= 1;
 
@@ -347,26 +429,26 @@ export class Room {
       }
     }
   }
-  update_mines() {
+  update_mines(): void {
     //update the mines
     mining: for (let i = 0; i < this.mines.length; i++) {
-      this.mines[i].update(this.fps_corector);
-      if (this.mines[i].timealive > this.timetoeplode) {
+      this.mines[i]!.update(this.fps_corector);
+      if (this.mines[i]!.timealive > this.timetoeplode) {
         for (let m = 0; m < this.blocks.length; m++) {
-          if (this.blocks[m].type == 2) {
+          if (this.blocks[m]!.type == 2) {
             if (
               distance(
-                this.mines[i].position,
-                { w: this.mines[i].radius * 2, h: this.mines[i].radius * 2 },
-                this.blocks[m].position,
-                this.blocks[m].size
+                this.mines[i]!.position,
+                { w: this.mines[i]!.radius * 2, h: this.mines[i]!.radius * 2 },
+                this.blocks[m]!.position,
+                this.blocks[m]!.size
               ) <=
               this.mines_explsion_radius ** 2
             ) {
-              this.mines[i].emitter.round_stats.stats.blocks_destroyed++;
+              this.mines[i]!.emitter.round_stats.stats.blocks_destroyed++;
               this.blocklist[
-                (this.blocks[m].position.y / 50) * 23 +
-                  this.blocks[m].position.x / 50
+                (this.blocks[m]!.position.y / 50) * 23 +
+                  this.blocks[m]!.position.x / 50
               ] = 10;
               generateBcollision(this);
               this.blocks.splice(m, 1);
@@ -383,46 +465,48 @@ export class Room {
         for (let e = 0; e < this.mines.length; e++) {
           if (
             distance(
-              this.mines[i].position,
-              { w: this.mines[i].radius * 2, h: this.mines[i].radius * 2 },
-              this.mines[e].position,
-              { w: this.mines[e].radius * 2, h: this.mines[e].radius * 2 }
+              this.mines[i]!.position,
+              { w: this.mines[i]!.radius * 2, h: this.mines[i]!.radius * 2 },
+              this.mines[e]!.position,
+              { w: this.mines[e]!.radius * 2, h: this.mines[e]!.radius * 2 }
             ) <=
             this.mines_explsion_radius ** 2
           ) {
-            this.mines[e].timealive = this.timetoeplode;
+            this.mines[e]!.timealive = this.timetoeplode;
           }
         }
-        for (let socketid in this.players) {
+        for (const socketid in this.players) {
+          const target = this.players[socketid];
+          if (!target) continue;
           if (
             distance(
-              this.mines[i].position,
-              { w: this.mines[i].radius * 2, h: this.mines[i].radius * 2 },
-              this.players[socketid].position,
-              this.players[socketid].size
+              this.mines[i]!.position,
+              { w: this.mines[i]!.radius * 2, h: this.mines[i]!.radius * 2 },
+              target.position,
+              target.size
             ) <=
               this.mines_explsion_radius ** 2 &&
-            this.players[socketid].alive
+            target.alive
           ) {
-            this.kill(this.mines[i].emitter, this.players[socketid], "mine");
+            this.kill(this.mines[i]!.emitter, target, "mine");
           }
         }
 
         this.emit_to_room("mine_explosion", {
           position: {
-            x: this.mines[i].position.x + this.mines[i].radius / 2,
-            y: this.mines[i].position.y + this.mines[i].radius / 2,
+            x: this.mines[i]!.position.x + this.mines[i]!.radius / 2,
+            y: this.mines[i]!.position.y + this.mines[i]!.radius / 2,
           },
         });
         this.sounds.explose = true;
-        this.mines[i].emitter.minecount--;
+        this.mines[i]!.emitter.minecount--;
         this.mines.splice(i, 1);
         i -= 1;
         continue mining;
       }
     }
   }
-  kill(killer, killed, type) {
+  kill(killer: Player, killed: Player, type: string): void {
     killed.alive = false;
     killer.round_stats.stats.kills++;
     killed.round_stats.stats.deaths++;
@@ -440,10 +524,11 @@ export class Room {
     });
   }
 
-  get_all_player_stats() {
-    let stats = {};
-    for (let socketid in this.players) {
-      let player = this.players[socketid];
+  get_all_player_stats(): Record<string, StatsCounters> {
+    const stats: Record<string, StatsCounters> = {};
+    for (const socketid in this.players) {
+      const player = this.players[socketid];
+      if (!player) continue;
       stats[socketid] = player.round_stats.stats;
     }
     return stats;

@@ -32,50 +32,11 @@ export default defineConfig([
     },
   },
 
-  // The isomorphic game runtime (@ouigame/shared/game): ES modules that run in
-  // BOTH the Node server and the browser client, so they get Node + browser
-  // globals. (Replaces the old root shared/**/*.js block.)
-  {
-    files: ["packages/shared/src/game/**/*.js"],
-    ignores: ["packages/shared/src/game/**/__tests__/**"],
-    extends: [js.configs.recommended],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      globals: { ...globals.node, ...globals.browser },
-    },
-    rules: {
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-    },
-  },
-
-  // The game's Vitest golden tests: same module + isomorphic globals, plus the
-  // Vitest test API (describe/it/expect/vi/...) which is ambient via the shared
-  // project's `globals: true`.
-  {
-    files: ["packages/shared/src/game/**/__tests__/**/*.js"],
-    extends: [js.configs.recommended],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      globals: {
-        ...globals.node,
-        ...globals.browser,
-        describe: "readonly",
-        it: "readonly",
-        test: "readonly",
-        expect: "readonly",
-        vi: "readonly",
-        beforeEach: "readonly",
-        afterEach: "readonly",
-        beforeAll: "readonly",
-        afterAll: "readonly",
-      },
-    },
-    rules: {
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-    },
-  },
+  // The isomorphic game runtime (@ouigame/shared/game) is now TypeScript, so it
+  // is linted by the **/*.{ts,tsx} block below (tseslint's no-undef-off lets the
+  // Node + browser globals it uses — console, structuredClone, Math, … — through).
+  // Its Vitest tests get a dedicated override at the very end (after the TS
+  // block) so their relaxed rules win.
 
   // Root tooling configs (eslint.config.mjs, drizzle.config.js) are ES modules.
   {
@@ -128,6 +89,36 @@ export default defineConfig([
     files: ["apps/api/__tests__/**/*.ts"],
     languageOptions: {
       globals: { ...globals.node, ...globals.jest },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
+    },
+  },
+
+  // The game runtime's Vitest tests (.ts): layer Node + browser + Vitest globals
+  // on top of the TS block, and allow `any` — fixtures/mocks legitimately use it,
+  // and these files run via esbuild (no type-check), so their types aren't the
+  // gate. Placed last so the relaxed rules win over the strict TS block.
+  {
+    files: ["packages/shared/src/game/**/__tests__/**/*.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        vi: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+      },
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",

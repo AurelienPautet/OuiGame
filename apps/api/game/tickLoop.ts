@@ -47,21 +47,25 @@ function createTickLoop({
       if (levelId === undefined) return;
 
       const level_json = await levelsService.getLevelJson(levelId);
-      await loadlevel(level_json!.data, room);
+      // `data` is the JSON level grid (a flat number[] of cell codes), typed
+      // `unknown` off the DB row.
+      await loadlevel(level_json!.data as number[], room);
 
       // Re-check after the awaits — the room could have emptied meanwhile.
       if (rooms[room.id] === undefined) return;
 
       levelsService.getLevel(levelId).then((level) => {
-        room.io.to(room.id).emit("level_change_info", level ? [level] : []);
+        // Server rooms are always constructed with a real io (only solo/web
+        // rooms pass null), so the broadcast handle is present here.
+        room.io!.to(room.id).emit("level_change_info", level ? [level] : []);
       });
 
       room.respawn_the_room();
 
       // Activate countdown - players can see but not act
       room.countdownActive = true;
-      room.io
-        .to(room.id)
+      room
+        .io!.to(room.id)
         .emit("countdown_start", { duration: room.countdownDuration });
 
       // End countdown after duration

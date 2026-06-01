@@ -10,11 +10,7 @@
  * as window globals.
  */
 import { Room, loadlevel } from "@ouigame/shared/game";
-import type {
-  RoomPlayer,
-  RenderBullet,
-  RenderMine,
-} from "@ouigame/shared/game";
+import type { RoomPlayer, RenderBullet, RenderMine } from "./runtimeTypes.js";
 import type { Socket } from "socket.io-client";
 import type {
   ClientToServerEvents,
@@ -372,8 +368,9 @@ export class GameEngine {
           );
           this.localRoom.maxplayernb = 100;
 
-          // Load level into the room
-          await loadlevel(levelData, this.localRoom);
+          // Load level into the room. levelData is the flat number[] grid
+          // (pulled from the fetched level JSON, loosely typed here).
+          await loadlevel(levelData as number[], this.localRoom);
 
           // Spawn player
           this.localRoom.spawn_new_player(
@@ -610,11 +607,11 @@ export class GameEngine {
     this.tick++;
   }
 
-  // Copy the Room's loosely-typed (unknown[]) entity arrays into the engine's
-  // render-shaped fields. The ambient Room contract is deliberately loose; the
-  // bullets/mines arrays are narrowed to the render shapes the engine reads.
+  // Copy the Room's strictly-typed entity arrays into the engine's
+  // render-shaped fields. The runtime's Player/Bullet/Mine are richer than the
+  // loose render views the engine reads, so they are widened at the boundary.
   private _syncStateFromRoom(room: Room) {
-    this.players = room.players;
+    this.players = room.players as unknown as Record<string, RoomPlayer>;
     this.blocks = room.blocks;
     this.Bcollision = room.Bcollision;
     this.bullets = room.bullets as RenderBullet[];
@@ -853,7 +850,8 @@ export class GameEngine {
       // Get player stats
       const myPlayer = this.localRoom?.players[this.mysocketid!];
       const playerStats: Record<string, number> =
-        myPlayer?.round_stats?.stats || {};
+        (myPlayer?.round_stats?.stats as Record<string, number> | undefined) ||
+        {};
 
       this.onGameOver({
         result: isWin ? "win" : "lose",

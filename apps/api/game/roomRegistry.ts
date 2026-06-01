@@ -80,7 +80,9 @@ function createRoomRegistry({
       levelId !== undefined ? await levelsService.getLevelJson(levelId) : null;
     rooms[room.id] = room;
     if (room) {
-      loadlevel(level_json!.data, room);
+      // `data` is the JSON level grid (a flat number[] of cell codes); it
+      // reaches us as `unknown` off the DB row.
+      loadlevel(level_json!.data as number[], room);
     }
     room_list(0);
     console.log("Room created:", room.id, room.name);

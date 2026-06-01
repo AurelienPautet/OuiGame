@@ -1,13 +1,59 @@
 import { Player } from "./Player.js";
 import { launch_possible_moves } from "./possible_moves.js";
 import { launch_possible_shots } from "./possible_shots_balls.js";
+import type { Vec2, Size, DrawingContext } from "./types.js";
+import type { Room } from "./Room.js";
+
+export type BotKind = "bot1" | "bot2" | "bot3" | "bot4";
+
+// A scored aim candidate produced by the raycast pass (possible_shots_balls).
+export interface KillingAim {
+  angle: number;
+  distance: number;
+}
+
+interface Directions {
+  right: boolean;
+  left: boolean;
+  up: boolean;
+  down: boolean;
+}
+
+interface Capabilities {
+  move: boolean;
+  shoot: boolean;
+  plant: boolean;
+  spam: boolean;
+}
+
+interface MoveProba {
+  right: number;
+  left: number;
+  up: number;
+  down: number;
+}
+
+interface BotConfig {
+  min_interval_shoot: number;
+  max_rotation_speed: number;
+  max_bulletcount: number;
+  shoot_speed: number;
+  precision: number;
+  number_of_rays: number;
+  size_of_rays: number;
+  steps_of_rays: number;
+  shoot_max_bounce: number;
+  bullet_type: number;
+  bullet_size: Size;
+  can: Capabilities;
+}
 
 // Per-kind bot tuning. Collapses the former Bot1-4 subclasses: every variant
 // differed ONLY in these constructor fields (no method overrides), so one
 // config-driven Bot reproduces all four field-for-field. Applied AFTER the base
 // fields + mytick seeding (see the constructor), so mytick stays seeded from the
 // base min_interval_shoot (140) for every kind — the legacy super()-first order.
-export const BOT_CONFIGS = {
+export const BOT_CONFIGS: Record<BotKind, BotConfig> = {
   bot1: {
     min_interval_shoot: 170,
     max_rotation_speed: Math.PI / 200,
@@ -67,7 +113,38 @@ export const BOT_CONFIGS = {
 };
 
 export class Bot extends Player {
-  constructor(position, socketid, name, turretc, bodyc, kind) {
+  killing_aims: KillingAim[];
+  last_shoot: { mytick: number; angle: number };
+  last_random_move: number;
+  desired_angle: number;
+  idle_desired_angle: number;
+  should_go_to: Directions;
+  wall_go_to: Directions;
+  idle_should_go_to: Directions;
+  mine_go_to: boolean;
+  possible_shot_step: number;
+  min_interval_shoot: number;
+  max_rotation_speed: number;
+  precision: number;
+  number_of_rays: number;
+  size_of_rays: number;
+  steps_of_rays: number;
+  can: Capabilities;
+  move_proba: MoveProba;
+  player_is: Directions;
+  wall_coef: number;
+  player_coef: number;
+  old_dir_coef: number;
+  opposit_dir_coef: number;
+
+  constructor(
+    position: Vec2,
+    socketid: string,
+    name: string,
+    turretc: string,
+    bodyc: string,
+    kind?: BotKind
+  ) {
     super(position, socketid, name, turretc, bodyc);
 
     this.killing_aims = [];
@@ -166,7 +243,12 @@ export class Bot extends Player {
     }
   }
 
-  update(room, fps_corector, ctx, debug_visual) {
+  override update(
+    room: Room,
+    fps_corector: number,
+    ctx?: DrawingContext,
+    debug_visual?: boolean
+  ): void {
     super.update(room, fps_corector);
     if (this.alive) {
       if (this.can.move) {
@@ -178,14 +260,14 @@ export class Bot extends Player {
     }
   }
 
-  get_closest_human_player(room) {
-    let closest = null;
+  get_closest_human_player(room: Room): Player | null {
+    let closest: Player | null = null;
     let minDistance = Infinity;
 
-    for (let socketid of room.human_players) {
-      let player = room.players[socketid];
+    for (const socketid of room.human_players) {
+      const player = room.players[socketid];
       if (player && player.alive) {
-        let distance = this.get_distance(player.position, this.position);
+        const distance = this.get_distance(player.position, this.position);
         if (distance < minDistance) {
           minDistance = distance;
           closest = player;
@@ -195,11 +277,11 @@ export class Bot extends Player {
     return closest;
   }
 
-  get_distance(pos1, pos2) {
+  get_distance(pos1: Vec2, pos2: Vec2): number {
     return Math.sqrt((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2);
   }
 
-  random_should_go_to(room) {
+  random_should_go_to(room: Room): void {
     this.move_proba = {
       right: 0,
       left: 0,
@@ -207,7 +289,7 @@ export class Bot extends Player {
       down: 0,
     };
 
-    let closest = this.get_closest_human_player(room);
+    const closest = this.get_closest_human_player(room);
     this.player_is = {
       right: false,
       left: false,
@@ -232,27 +314,29 @@ export class Bot extends Player {
         down: false,
       };
     } else {
+      // boolean flags are coerced to 0/1 for the weighted sum (the runtime
+      // relied on JS's implicit boolean→number; made explicit here for TS).
       this.move_proba = {
         right:
-          this.wall_go_to.right * this.wall_coef +
-          this.player_is.right * this.player_coef +
-          this.idle_should_go_to.right * this.old_dir_coef -
-          this.opposit_dir_coef * this.should_go_to.left,
+          Number(this.wall_go_to.right) * this.wall_coef +
+          Number(this.player_is.right) * this.player_coef +
+          Number(this.idle_should_go_to.right) * this.old_dir_coef -
+          this.opposit_dir_coef * Number(this.should_go_to.left),
         left:
-          this.wall_go_to.left * this.wall_coef +
-          this.player_is.left * this.player_coef +
-          this.idle_should_go_to.left * this.old_dir_coef -
-          this.opposit_dir_coef * this.should_go_to.right,
+          Number(this.wall_go_to.left) * this.wall_coef +
+          Number(this.player_is.left) * this.player_coef +
+          Number(this.idle_should_go_to.left) * this.old_dir_coef -
+          this.opposit_dir_coef * Number(this.should_go_to.right),
         up:
-          this.wall_go_to.up * this.wall_coef +
-          this.player_is.up * this.player_coef +
-          this.idle_should_go_to.up * this.old_dir_coef -
-          this.opposit_dir_coef * this.should_go_to.down,
+          Number(this.wall_go_to.up) * this.wall_coef +
+          Number(this.player_is.up) * this.player_coef +
+          Number(this.idle_should_go_to.up) * this.old_dir_coef -
+          this.opposit_dir_coef * Number(this.should_go_to.down),
         down:
-          this.wall_go_to.down * this.wall_coef +
-          this.player_is.down * this.player_coef +
-          this.idle_should_go_to.down * this.old_dir_coef -
-          this.opposit_dir_coef * this.should_go_to.up,
+          Number(this.wall_go_to.down) * this.wall_coef +
+          Number(this.player_is.down) * this.player_coef +
+          Number(this.idle_should_go_to.down) * this.old_dir_coef -
+          this.opposit_dir_coef * Number(this.should_go_to.up),
       };
       this.idle_should_go_to = {
         right: Math.random() < this.move_proba.right,
@@ -270,7 +354,7 @@ export class Bot extends Player {
     this.mine_go_to = false;
   }
 
-  is_all_false_should_go_to() {
+  is_all_false_should_go_to(): boolean {
     return (
       !this.should_go_to.right &&
       !this.should_go_to.left &&
@@ -279,7 +363,7 @@ export class Bot extends Player {
     );
   }
 
-  move(room, ctx, debug_visual) {
+  move(room: Room, ctx?: DrawingContext, debug_visual?: boolean): void {
     if (this.mytick % 5 === 0) {
       this.should_go_to = {
         right: false,
@@ -314,7 +398,7 @@ export class Bot extends Player {
     }
   }
 
-  aim_and_shoot(room, ctx) {
+  aim_and_shoot(room: Room, ctx?: DrawingContext): void {
     if (this.mytick % 5 === 0) {
       this.killing_aims = [];
 
@@ -342,7 +426,7 @@ export class Bot extends Player {
         let difference = Math.abs(
           this.angleDifference(
             this.last_shoot.angle,
-            this.killing_aims[i].angle
+            this.killing_aims[i]!.angle
           )
         );
 
@@ -355,19 +439,19 @@ export class Bot extends Player {
           difference = Math.abs(
             this.angleDifference(
               this.last_shoot.angle,
-              this.killing_aims[i].angle
+              this.killing_aims[i]!.angle
             )
           );
         }
       }
       if (i < this.killing_aims.length) {
-        const closestTarget = this.killing_aims[i];
+        const closestTarget = this.killing_aims[i]!;
 
         this.desired_angle = closestTarget.angle;
         this.aim_to_angle(this.desired_angle);
 
         if (this.mytick - this.last_shoot.mytick > this.min_interval_shoot) {
-          let difference = Math.abs(
+          const difference = Math.abs(
             this.angleDifference(this.angle, this.desired_angle)
           );
 
@@ -387,7 +471,7 @@ export class Bot extends Player {
     }
   }
 
-  angleDifference(current, target) {
+  angleDifference(current: number, target: number): number {
     current = current % (Math.PI * 2);
     target = target % (Math.PI * 2);
     let diff = (target - current + Math.PI) % (2 * Math.PI);
@@ -395,7 +479,7 @@ export class Bot extends Player {
     return diff - Math.PI;
   }
 
-  aim_to_angle(angle) {
+  aim_to_angle(angle: number): void {
     if (this.angleDifference(this.angle, angle) < -this.max_rotation_speed)
       this.angle = this.angle + this.max_rotation_speed;
     else if (this.angleDifference(this.angle, angle) > this.max_rotation_speed)
@@ -403,11 +487,11 @@ export class Bot extends Player {
     else this.angle = angle % (Math.PI * 2);
   }
 
-  CalculateAngle() {
+  override CalculateAngle(): number {
     return this.angle;
   }
 
-  shoot(room) {
+  override shoot(room: Room): void {
     super.shoot(room);
     this.last_shoot.mytick = this.mytick;
     this.last_shoot.angle = this.angle;
