@@ -25,7 +25,11 @@ let perfSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.useFakeTimers();
-  perfSpy = jest.spyOn(performance, "now").mockReturnValue(1000);
+  // Make performance.now() track the fake timer clock so the loop's
+  // fixed-timestep accumulator sees real elapsed time advance as timers fire.
+  perfSpy = jest
+    .spyOn(performance, "now")
+    .mockImplementation(() => 1000 + jest.now());
   (levelsService.getLevelJson as jest.Mock).mockResolvedValue({
     data: new Array(368).fill(0),
   });
@@ -73,7 +77,7 @@ function mkPlayer() {
   };
 }
 
-test("scales movement by fps_corector = elapsed / 16.67", async () => {
+test("advances the sim in fixed dt steps, independent of timer jitter", async () => {
   const room = makeRoom(1, false);
   const rooms = { 1: room };
   const roomTimers: RoomTimers = new Map();
@@ -83,11 +87,13 @@ test("scales movement by fps_corector = elapsed / 16.67", async () => {
     roomTimers,
   });
 
-  perfSpy.mockReturnValue(1033.34); // next performance.now() read by tick()
   loop.start();
-  await jest.advanceTimersByTimeAsync(17); // one tick fires
+  await jest.advanceTimersByTimeAsync(40); // ~2.4 fixed steps of real time
 
-  expect(room.update).toHaveBeenCalledWith(expect.closeTo(2, 2));
+  // Every step advances the room by exactly one fixed dt (1/60 s); the real
+  // elapsed time only decides how many steps run, never their size.
+  expect(room.update).toHaveBeenLastCalledWith(expect.closeTo(1 / 60, 4));
+  expect(room.update.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
 
 test("on round end, records each player's round then schedules a respawn", async () => {
