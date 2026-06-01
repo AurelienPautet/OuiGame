@@ -58,7 +58,7 @@ export const BOT_CONFIGS: Record<BotKind, BotConfig> = {
     min_interval_shoot: 170,
     max_rotation_speed: Math.PI / 200,
     max_bulletcount: 3,
-    shoot_speed: 5,
+    shoot_speed: 300,
     precision: 0.4,
     number_of_rays: 50,
     size_of_rays: 10,
@@ -72,7 +72,7 @@ export const BOT_CONFIGS: Record<BotKind, BotConfig> = {
     min_interval_shoot: 60,
     max_rotation_speed: Math.PI / 100,
     max_bulletcount: 3,
-    shoot_speed: 5,
+    shoot_speed: 300,
     precision: 0.1,
     number_of_rays: 50,
     size_of_rays: 10,
@@ -86,7 +86,7 @@ export const BOT_CONFIGS: Record<BotKind, BotConfig> = {
     min_interval_shoot: 90,
     max_rotation_speed: Math.PI / 100,
     max_bulletcount: 3,
-    shoot_speed: 10,
+    shoot_speed: 600,
     precision: 0.01,
     number_of_rays: 50,
     size_of_rays: 10,
@@ -100,7 +100,7 @@ export const BOT_CONFIGS: Record<BotKind, BotConfig> = {
     min_interval_shoot: 90,
     max_rotation_speed: Math.PI / 80,
     max_bulletcount: 3,
-    shoot_speed: 10,
+    shoot_speed: 600,
     precision: 0.01,
     number_of_rays: 50,
     size_of_rays: 5,
@@ -184,7 +184,7 @@ export class Bot extends Player {
     this.min_interval_shoot = 140;
     this.max_rotation_speed = Math.PI / 180;
     this.max_bulletcount = 3;
-    this.shoot_speed = 5;
+    this.shoot_speed = 300; // px/s (was 5 px/step)
     this.precision = 0.7; //default 0.2
     this.number_of_rays = 50;
     this.size_of_rays = 10;
@@ -202,7 +202,7 @@ export class Bot extends Player {
       up: 0,
       down: 0,
     };
-    this.mvtspeed = 3;
+    this.mvtspeed = 180; // px/s (was 3 px/step); only its sign is read in Player.update
 
     this.player_is = {
       right: false,
@@ -245,11 +245,11 @@ export class Bot extends Player {
 
   override update(
     room: Room,
-    fps_corector: number,
+    dt: number,
     ctx?: DrawingContext,
     debug_visual?: boolean
   ): void {
-    super.update(room, fps_corector);
+    super.update(room, dt);
     if (this.alive) {
       if (this.can.move) {
         this.move(room, ctx, debug_visual);

@@ -29,12 +29,12 @@ describe("Mine", () => {
     expect(room.mines).toEqual([mine]);
   });
 
-  it("accumulates timealive by the fps corrector each update", () => {
+  it("counts timealive in fixed simulation ticks (one per update)", () => {
     const mine = new Mine({ x: 0, y: 0 }, makeEmitter(), makeFakeRoom());
-    mine.update(2);
+    mine.update();
+    expect(mine.timealive).toBe(1);
+    mine.update();
     expect(mine.timealive).toBe(2);
-    mine.update(0.5);
-    expect(mine.timealive).toBe(2.5);
   });
 });
 

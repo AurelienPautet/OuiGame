@@ -5,6 +5,7 @@
 // shared/ tree and the browser <script> tags. All exports are named.
 export * from "./check_collision.js";
 export * from "./check_intersect.js";
+export * from "./loop.js";
 export * from "./commons.js";
 export * from "./Stats.js";
 export * from "./Block.js";
