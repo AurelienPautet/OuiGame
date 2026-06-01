@@ -8,13 +8,8 @@ import { authMiddleware } from "../middleware/auth.middleware";
 router.get("/me", authMiddleware, async (req: Request, res: Response) => {
   const playerId = req.user!.playerId;
 
-  try {
-    const stats = await statsService.getMyStats(playerId);
-    res.json(stats);
-  } catch (err) {
-    console.error("Error fetching stats:", err);
-    res.status(500).json({ error: "Failed to fetch stats" });
-  }
+  const stats = await statsService.getMyStats(playerId);
+  res.json(stats);
 });
 
 export default router;
