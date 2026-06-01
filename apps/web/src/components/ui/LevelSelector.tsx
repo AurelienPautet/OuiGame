@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   Gamepad2,
   Plus,
   Pencil,
   Trash2,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
@@ -14,6 +14,7 @@ import { hexToDataUrl } from "../../utils/levelUtils";
 import { useLevels, useMyLevels } from "../../hooks/api";
 import { storage } from "../../lib/storage";
 import type { LevelDTO } from "@ouigame/shared/api";
+import { Input, Select, Button, IconButton } from "./primitives";
 
 // Persisted (localStorage) solo-browser UI state.
 interface SoloSelectorState {
@@ -47,6 +48,7 @@ export function LevelSelector({
   onPick,
   pickedIds = [],
 }: LevelSelectorProps) {
+  const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const savedState = useMemo(() => {
@@ -178,7 +180,7 @@ export function LevelSelector({
     e: React.MouseEvent<HTMLButtonElement>
   ) => {
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this level?")) {
+    if (confirm(t("levelSelector.confirmDelete"))) {
       onDelete?.(levelId);
     }
   };
@@ -198,78 +200,91 @@ export function LevelSelector({
   return (
     <div className="flex flex-col h-full">
       {/* Header with filters */}
-      <div className="flex gap-4 mb-4 flex-wrap">
-        <label className="input input-bordered flex items-center gap-2 flex-1 min-w-48 bg-base-200">
-          <Search className="w-4 h-4 opacity-70" />
-          <input
-            type="text"
-            className="grow bg-transparent"
-            placeholder="Search level name..."
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-48">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none"
+          />
+          <Input
+            className="pl-10"
+            placeholder={t("levelSelector.searchPlaceholder")}
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
           />
-        </label>
+        </div>
 
         {showPlayerFilter && (
-          <select
-            className="select select-bordered bg-base-200"
-            value={maxPlayers}
-            onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
-          >
-            <option value={0}>Any players</option>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-              <option key={n} value={n}>
-                {n} player{n > 1 ? "s" : ""}
-              </option>
-            ))}
-          </select>
+          <Select
+            aria-label="Filter by player count"
+            value={String(maxPlayers)}
+            onValueChange={(v) => setMaxPlayers(parseInt(v))}
+            options={[
+              { value: "0", label: t("rooms.anyPlayers") },
+              ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
+                value: String(n),
+                label: t("rooms.players", { count: n }),
+              })),
+            ]}
+          />
         )}
 
         {/* Solo mode sorting controls */}
         {showSoloFilters && (
           <>
-            <select
-              className="select select-bordered bg-base-200"
+            <Select
+              aria-label="Sort levels by"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="rating">Sort by Rating</option>
-              <option value="success_rate">Sort by Success Rate</option>
-              <option value="times_played">Sort by Popularity</option>
-              <option value="best_time">Sort by Best Time</option>
-            </select>
-            <button
-              className="btn btn-square btn-ghost"
+              onValueChange={setSortBy}
+              options={[
+                { value: "rating", label: t("levelSelector.sortByRating") },
+                {
+                  value: "success_rate",
+                  label: t("levelSelector.sortBySuccessRate"),
+                },
+                {
+                  value: "times_played",
+                  label: t("levelSelector.sortByPopularity"),
+                },
+                {
+                  value: "best_time",
+                  label: t("levelSelector.sortByBestTime"),
+                },
+              ]}
+            />
+            <IconButton
               onClick={toggleSortOrder}
-              title={sortOrder === "desc" ? "Descending" : "Ascending"}
+              title={
+                sortOrder === "desc"
+                  ? t("levelSelector.descending")
+                  : t("levelSelector.ascending")
+              }
             >
               {sortOrder === "desc" ? (
-                <ArrowDown className="w-5 h-5" />
+                <ArrowDown size={20} />
               ) : (
-                <ArrowUp className="w-5 h-5" />
+                <ArrowUp size={20} />
               )}
-            </button>
+            </IconButton>
           </>
         )}
 
         {mode === "myLevels" && onCreate && (
-          <button className="btn btn-primary gap-2" onClick={onCreate}>
-            <Plus className="w-5 h-5" />
-            New Level
-          </button>
+          <Button variant="green" onClick={onCreate}>
+            <Plus size={20} /> {t("levelSelector.newLevel")}
+          </Button>
         )}
       </div>
 
       {/* Selection info for room mode */}
       {isMultiSelect && selectedIds.length > 0 && (
-        <div className="alert alert-info mb-4 py-2">
-          <span>{selectedIds.length} level(s) selected</span>
-          <button
-            className="btn btn-sm btn-ghost"
-            onClick={() => setSelectedIds([])}
-          >
-            Clear
-          </button>
+        <div className="flex items-center justify-between gap-2 mb-4 bg-blue/15 border-[3px] border-ink rounded-xl px-4 py-2 text-ink font-semibold">
+          <span>
+            {t("levelSelector.levelsSelected", { count: selectedIds.length })}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
+            {t("common.clear")}
+          </Button>
         </div>
       )}
 
@@ -290,16 +305,16 @@ export function LevelSelector({
         }}
       >
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <span className="loading loading-spinner loading-lg"></span>
+          <div className="text-center py-8 text-ink-soft">
+            {t("levelSelector.loadingLevels")}
           </div>
         ) : levels.length === 0 ? (
-          <div className="text-center text-base-content/50 py-8">
+          <div className="text-center text-ink-soft py-8">
             <Gamepad2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>
+            <p className="font-semibold">
               {mode === "myLevels"
-                ? "No levels yet. Create your first level!"
-                : "No levels found"}
+                ? t("levelSelector.noLevelsMine")
+                : t("levelSelector.noLevels")}
             </p>
           </div>
         ) : (
@@ -328,29 +343,29 @@ export function LevelSelector({
 
               {/* "Added" badge for pick mode */}
               {isPick && pickedIds.includes(level.level_id) && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 badge badge-primary gap-1">
-                  <Plus className="w-3 h-3" />
-                  Added
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 bg-blue text-white text-xs font-bold border-2 border-ink rounded-full px-2.5 py-1">
+                  <Plus size={12} strokeWidth={3} />
+                  {t("levelSelector.added")}
                 </div>
               )}
 
               {/* Action buttons for myLevels mode */}
               {showActions && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    className="btn btn-sm btn-primary gap-1"
+                  <Button
+                    variant="blue"
+                    size="sm"
                     onClick={(e) => handleEdit(level.level_id, e)}
                   >
-                    <Pencil className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-error btn-outline gap-1"
+                    <Pencil size={16} /> Edit
+                  </Button>
+                  <Button
+                    variant="red"
+                    size="sm"
                     onClick={(e) => handleDelete(level.level_id, e)}
                   >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
+                    <Trash2 size={16} /> Delete
+                  </Button>
                 </div>
               )}
             </div>

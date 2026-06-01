@@ -59,6 +59,7 @@ declare module "@ouigame/shared/game" {
     angle: number;
     type?: number;
     bounce?: number;
+    max_bounce?: number;
   }
 
   /** The loose mine shape the web engine reads (fuse timing + render fields). */

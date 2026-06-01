@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Heart,
   HeartCrack,
@@ -10,6 +10,8 @@ import {
   Hammer,
   CheckCircle2,
 } from "lucide-react";
+import { formatTimeMs } from "../../lib/formatTime";
+import { OverlayScrim, OverlayPanel, Stat, StatGrid } from "./overlay";
 
 /**
  * Per-level stats accrued during a round, as built by the GameEngine's
@@ -40,14 +42,6 @@ export interface InterstitialData {
   timeMs: number;
 }
 
-function formatTime(ms: number): string {
-  if (!ms) return "0:00";
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 /**
  * CampaignInterstitial - shown between campaign levels (after a clear or a death
  * that isn't terminal). Displays the level's stats and animates the life change.
@@ -67,6 +61,7 @@ export const CampaignInterstitial = ({
   data,
   onContinue,
 }: CampaignInterstitialProps) => {
+  const { t } = useTranslation();
   // Keep the latest onContinue without restarting the timer.
   const onContinueRef = useRef(onContinue);
   useEffect(() => {
@@ -103,131 +98,103 @@ export const CampaignInterstitial = ({
   const showDelta = isWin ? gainedLife : true; // a life is always lost on death
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70">
-      <style>{`
-        @keyframes campaign-life-gain {
-          0% { transform: scale(0) rotate(-30deg); opacity: 0; }
-          60% { transform: scale(1.4) rotate(8deg); opacity: 1; }
-          100% { transform: scale(1) rotate(0); opacity: 1; }
+    <OverlayScrim>
+      <OverlayPanel
+        tone={isWin ? "win" : "lose"}
+        icon={
+          isWin ? (
+            <CheckCircle2 className="w-14 h-14 text-green-d" />
+          ) : (
+            <Skull className="w-14 h-14 text-red" />
+          )
         }
-        @keyframes campaign-life-loss {
-          0% { transform: scale(1) rotate(0); opacity: 1; }
-          30% { transform: scale(1.3) rotate(-12deg); opacity: 1; }
-          100% { transform: scale(0.4) rotate(18deg); opacity: 0; }
+        title={
+          isWin ? t("interstitial.levelCleared") : t("interstitial.youDied")
         }
-        @keyframes campaign-timer { from { width: 100%; } to { width: 0%; } }
-        .campaign-life-gain { animation: campaign-life-gain 0.7s ease-out both; }
-        .campaign-life-loss { animation: campaign-life-loss 0.9s ease-in both 0.2s; }
-      `}</style>
-
-      <div className="bg-base-100 rounded-2xl p-8 w-96 max-w-[90%] flex flex-col items-center gap-4 border-4 border-base-300">
-        {isWin ? (
-          <CheckCircle2 className="w-14 h-14 text-success" />
-        ) : (
-          <Skull className="w-14 h-14 text-error" />
-        )}
-
-        <div className="text-center -mt-1">
-          <h2 className="text-2xl font-extrabold">
-            {isWin ? "Level Cleared!" : "You Died"}
-          </h2>
-          <p className="text-base-content/50 text-sm">
-            Level {levelNumber} of {totalLevels}
-          </p>
-        </div>
-
+        subtitle={t("interstitial.levelXofY", {
+          current: levelNumber,
+          total: totalLevels,
+        })}
+        footer={
+          <div className="w-full">
+            <div className="h-1.5 w-full bg-ink/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue"
+                style={{
+                  animation: `barCountdown ${delayMs}ms linear forwards`,
+                }}
+              />
+            </div>
+            <p className="text-center text-xs text-ink-soft mt-1.5">
+              {isWin ? t("interstitial.nextLevel") : t("interstitial.retrying")}
+            </p>
+          </div>
+        }
+      >
         {/* Lives row with the changing heart animated */}
         <div className="flex items-center gap-1 h-10">
           {Array.from({ length: steady }).map((_, i) => (
-            <Heart key={i} className="w-7 h-7 fill-error text-error" />
+            <Heart key={i} className="w-7 h-7 fill-red text-red" />
           ))}
           {showDelta &&
             (isWin ? (
-              <Heart className="w-7 h-7 fill-success text-success campaign-life-gain" />
+              <Heart className="w-7 h-7 fill-green text-green animate-[lifeGain_0.7s_ease-out_both]" />
             ) : (
-              <HeartCrack className="w-7 h-7 fill-error text-error campaign-life-loss" />
+              <HeartCrack className="w-7 h-7 fill-red text-red animate-[lifeLoss_0.9s_ease-in_0.2s_both]" />
             ))}
         </div>
         <p
           className={`-mt-2 text-sm font-bold ${
             isWin && gainedLife
-              ? "text-success"
+              ? "text-green-d"
               : isWin
-                ? "text-base-content/50"
-                : "text-error"
+                ? "text-ink/50"
+                : "text-red"
           }`}
         >
           {isWin && gainedLife
-            ? "+1 life!"
+            ? t("interstitial.plusLife")
             : isWin
-              ? `${livesAfter} lives left`
-              : `-1 life · ${livesAfter} left`}
+              ? t("interstitial.livesLeft", { count: livesAfter })
+              : t("interstitial.minusLife", { count: livesAfter })}
         </p>
 
         {/* Level stats */}
-        <div className="w-full grid grid-cols-2 gap-2">
+        <StatGrid>
           <Stat
-            icon={<Clock className="w-4 h-4 text-info" />}
-            label="Time"
-            value={formatTime(timeMs)}
+            layout="cell"
+            icon={<Clock className="w-4 h-4 text-blue" />}
+            label={t("stats.time")}
+            value={formatTimeMs(timeMs)}
           />
           <Stat
-            icon={<Skull className="w-4 h-4 text-primary" />}
-            label="Kills"
+            layout="cell"
+            icon={<Skull className="w-4 h-4 text-blue" />}
+            label={t("stats.kills")}
             value={stats.kills || 0}
           />
           <Stat
-            icon={<Target className="w-4 h-4 text-success" />}
-            label="Accuracy"
+            layout="cell"
+            icon={<Target className="w-4 h-4 text-green" />}
+            label={t("stats.accuracy")}
             value={`${accuracy}%`}
           />
           <Stat
-            icon={<Crosshair className="w-4 h-4 text-warning" />}
-            label="Shots"
+            layout="cell"
+            icon={<Crosshair className="w-4 h-4 text-yellow-d" />}
+            label={t("stats.shots")}
             value={stats.shots || 0}
           />
           {(stats.blocksDestroyed || 0) > 0 && (
             <Stat
-              icon={<Hammer className="w-4 h-4 text-base-content/70" />}
-              label="Blocks"
-              value={stats.blocksDestroyed}
+              layout="cell"
+              icon={<Hammer className="w-4 h-4 text-ink-soft" />}
+              label={t("stats.blocks")}
+              value={stats.blocksDestroyed ?? 0}
             />
           )}
-        </div>
-
-        {/* Auto-advance timer cue */}
-        <div className="w-full mt-2">
-          <div className="h-1.5 w-full bg-base-300 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary"
-              style={{
-                animation: `campaign-timer ${delayMs}ms linear forwards`,
-              }}
-            />
-          </div>
-          <p className="text-center text-xs text-base-content/40 mt-1.5">
-            {isWin ? "Next level…" : "Retrying…"}
-          </p>
-        </div>
-      </div>
-    </div>
+        </StatGrid>
+      </OverlayPanel>
+    </OverlayScrim>
   );
 };
-
-interface StatProps {
-  icon: ReactNode;
-  label: string;
-  value: ReactNode;
-}
-
-function Stat({ icon, label, value }: StatProps) {
-  return (
-    <div className="flex items-center justify-between bg-base-200 rounded-lg px-3 py-2">
-      <span className="flex items-center gap-1.5 text-xs text-base-content/70">
-        {icon}
-        {label}
-      </span>
-      <span className="font-bold text-sm">{value}</span>
-    </div>
-  );
-}

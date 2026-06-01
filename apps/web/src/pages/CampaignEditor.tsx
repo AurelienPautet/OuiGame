@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save,
@@ -12,9 +13,16 @@ import {
 } from "lucide-react";
 import { useModal, useAuth, useToast, MODALS } from "../contexts";
 import { LevelSelector } from "../components/ui";
+import {
+  IoTitle,
+  Input,
+  Button,
+  IconButton,
+} from "../components/ui/primitives";
 import { useCampaign, useSaveCampaign } from "../hooks/api";
 import type { LevelDTO } from "@ouigame/shared/api";
 import type { ApiRequestError } from "../api/client";
+import { cn } from "../lib/cn";
 
 // One entry in the ordered campaign list the editor builds.
 interface PickedLevel {
@@ -23,6 +31,7 @@ interface PickedLevel {
 }
 
 export const CampaignEditor = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const campaignId = searchParams.get("id");
@@ -116,11 +125,19 @@ export const CampaignEditor = () => {
 
   const handleSave = () => {
     if (!name.trim()) {
-      addToast(TOAST_TYPES.ERROR, "Campaign", "Campaign name cannot be empty.");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("campaignEditor.toast.title"),
+        t("campaignEditor.toast.nameEmpty")
+      );
       return;
     }
     if (picked.length < 1) {
-      addToast(TOAST_TYPES.ERROR, "Campaign", "Add at least one level.");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("campaignEditor.toast.title"),
+        t("campaignEditor.toast.addOne")
+      );
       return;
     }
 
@@ -135,7 +152,11 @@ export const CampaignEditor = () => {
       {
         onSuccess: () => {
           setSaving(false);
-          addToast(TOAST_TYPES.SUCCESS, "Campaign", "Campaign saved!");
+          addToast(
+            TOAST_TYPES.SUCCESS,
+            t("campaignEditor.toast.title"),
+            t("campaignEditor.toast.saved")
+          );
           navigate("/");
           openModal(MODALS.MY_CAMPAIGNS);
         },
@@ -145,9 +166,9 @@ export const CampaignEditor = () => {
           const data = apiErr.data as { error?: string } | undefined;
           const msg =
             apiErr.status === 409
-              ? "That campaign name is already taken."
-              : data?.error || "Failed to save campaign.";
-          addToast(TOAST_TYPES.ERROR, "Campaign", msg);
+              ? t("campaignEditor.toast.nameTaken")
+              : data?.error || t("campaignEditor.toast.failedSave");
+          addToast(TOAST_TYPES.ERROR, t("campaignEditor.toast.title"), msg);
         },
       }
     );
@@ -155,14 +176,14 @@ export const CampaignEditor = () => {
 
   if (!user) {
     return (
-      <div className="w-full h-full bg-base-300 text-white flex flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">Campaign Editor</h1>
-        <p className="text-base-content/70">
-          Please log in to create campaigns.
+      <div className="w-full h-full bg-ink text-white flex flex-col items-center justify-center gap-4 graph-paper">
+        <IoTitle className="text-3xl">{t("campaignEditor.fullTitle")}</IoTitle>
+        <p className="text-ink bg-white/80 px-3 py-1 rounded-lg font-semibold">
+          {t("campaignEditor.loginToCreate")}
         </p>
-        <button className="btn" onClick={() => navigate("/")}>
-          Back
-        </button>
+        <Button variant="ghost" onClick={() => navigate("/")}>
+          {t("common.back")}
+        </Button>
       </div>
     );
   }
@@ -170,29 +191,29 @@ export const CampaignEditor = () => {
   const canSave = !saving && !!name.trim() && picked.length >= 1;
 
   return (
-    <div className="w-full h-full bg-base-300 text-base-content flex flex-col">
+    <div className="w-full h-full graph-paper text-ink flex flex-col">
       {/* Header */}
-      <div className="h-24 bg-base-200 flex items-center justify-between px-8 gap-4 border-b border-base-100 shrink-0">
+      <div className="h-24 bg-white flex items-center justify-between px-8 gap-4 border-b-4 border-ink shrink-0">
         <div className="flex items-center gap-3 whitespace-nowrap">
-          <span className="bg-primary/15 text-primary rounded-lg p-2">
+          <span className="bg-blue/20 text-blue border-[3px] border-ink rounded-lg p-2">
             <Swords className="w-6 h-6" />
           </span>
-          <h1 className="text-xl font-bold">Campaign Editor</h1>
+          <IoTitle className="text-xl">
+            {t("campaignEditor.headerTitle")}
+          </IoTitle>
         </div>
 
         <div className="flex items-center gap-3 flex-1 justify-center max-w-2xl">
-          <input
-            type="text"
-            className="input input-bordered bg-base-100 w-56 focus:outline-primary"
-            placeholder="Campaign name"
+          <Input
+            className="w-56"
+            placeholder={t("campaignEditor.namePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={30}
           />
-          <input
-            type="text"
-            className="input input-bordered bg-base-100 flex-1 focus:outline-primary"
-            placeholder="Short description"
+          <Input
+            className="flex-1"
+            placeholder={t("campaignEditor.descriptionPlaceholder")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={300}
@@ -200,33 +221,29 @@ export const CampaignEditor = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            className={`btn btn-primary gap-2 ${saving ? "loading" : ""}`}
+          <Button
+            variant="green"
             onClick={handleSave}
             disabled={!canSave}
-            title="Save Campaign"
+            title={t("campaignEditor.saveCampaign")}
           >
-            {!saving && <Save size={18} />}
-            Save
-          </button>
-          <button
-            className="btn btn-ghost btn-square"
-            onClick={handleClose}
-            title="Close"
-          >
-            <X size={22} className="text-error" />
-          </button>
+            <Save size={18} />
+            {saving ? t("common.saving") : t("common.save")}
+          </Button>
+          <IconButton onClick={handleClose} title={t("common.close")}>
+            <X size={20} className="text-red" />
+          </IconButton>
         </div>
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex min-h-0 gap-4 p-4">
+      <div className="flex-1 flex min-h-0 gap-4 p-4 graph-paper">
         {/* Level picker */}
-        <div className="flex-1 min-w-0 flex flex-col bg-base-200/40 rounded-xl p-4">
-          <h2 className="text-lg font-bold mb-3">
-            Add solo levels{" "}
-            <span className="text-sm font-normal text-base-content/50">
-              — click a level to add or remove
+        <div className="flex-1 min-w-0 flex flex-col bg-white border-4 border-ink rounded-arcade shadow-arcade p-4">
+          <h2 className="text-lg font-bold text-ink mb-3">
+            {t("campaignEditor.addSoloLevels")}{" "}
+            <span className="text-sm font-normal text-ink-soft">
+              {t("campaignEditor.clickToAddRemove")}
             </span>
           </h2>
           <div className="flex-1 min-h-0">
@@ -239,26 +256,28 @@ export const CampaignEditor = () => {
         </div>
 
         {/* Ordered campaign list */}
-        <div className="w-96 flex flex-col bg-base-200/40 rounded-xl p-4 min-h-0">
+        <div className="w-96 flex flex-col bg-white border-4 border-ink rounded-arcade shadow-arcade p-4 min-h-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">Campaign levels</h2>
-            <span className="badge badge-primary badge-lg font-bold">
+            <h2 className="text-lg font-bold text-ink">
+              {t("campaignEditor.campaignLevels")}
+            </h2>
+            <span className="inline-flex items-center justify-center min-w-8 h-8 px-2 bg-blue text-white border-[3px] border-ink rounded-full font-bold">
               {picked.length}
             </span>
           </div>
-          <p className="text-xs text-base-content/50 mt-1 mb-3 flex items-center gap-1">
+          <p className="text-xs text-ink-soft mt-1 mb-3 flex items-center gap-1">
             <GripVertical className="w-3 h-3" />
-            Drag to reorder — played top to bottom
+            {t("campaignEditor.dragToReorder")}
           </p>
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {picked.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center text-base-content/50 gap-3 border-2 border-dashed border-base-content/15 rounded-xl p-6">
+              <div className="h-full flex flex-col items-center justify-center text-center text-ink-soft gap-3 border-2 border-dashed border-ink/20 rounded-xl p-6">
                 <Layers className="w-10 h-10 opacity-50" />
                 <p className="text-sm">
-                  No levels yet.
+                  {t("campaignEditor.noLevels")}
                   <br />
-                  Click levels on the left to build your campaign.
+                  {t("campaignEditor.noLevelsHint")}
                 </p>
               </div>
             ) : (
@@ -280,45 +299,47 @@ export const CampaignEditor = () => {
                     reorderTo(index);
                   }}
                   onDragEnd={endDrag}
-                  className={`group flex items-center gap-2 rounded-lg p-2 bg-base-100 border transition-all cursor-grab active:cursor-grabbing ${
+                  className={cn(
+                    "group flex items-center gap-2 rounded-lg p-2 bg-field border-2 transition-all cursor-grab active:cursor-grabbing",
                     dragIndex === index
-                      ? "opacity-40 border-base-300"
-                      : "border-base-300 hover:border-base-content/20"
-                  } ${
-                    overIndex === index && dragIndex !== index
-                      ? "ring-2 ring-primary border-primary"
-                      : ""
-                  }`}
+                      ? "opacity-40 border-ink"
+                      : "border-ink/30 hover:border-ink/60",
+                    overIndex === index &&
+                      dragIndex !== index &&
+                      "ring-2 ring-blue border-blue"
+                  )}
                 >
-                  <GripVertical className="w-4 h-4 text-base-content/30 shrink-0" />
-                  <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-primary/15 text-primary text-xs font-bold">
+                  <GripVertical className="w-4 h-4 text-ink/40 shrink-0" />
+                  <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-blue text-white text-xs font-bold border-2 border-ink">
                     {index + 1}
                   </span>
-                  <span className="flex-1 truncate text-sm">{p.name}</span>
-                  <div className="flex items-center opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button
-                      className="btn btn-xs btn-ghost btn-square"
+                  <span className="flex-1 truncate text-sm text-ink font-medium">
+                    {p.name}
+                  </span>
+                  <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <IconButton
+                      size="sm"
                       onClick={() => move(index, -1)}
                       disabled={index === 0}
-                      title="Move up"
+                      title={t("campaignEditor.moveUp")}
                     >
                       <ArrowUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-ghost btn-square"
+                    </IconButton>
+                    <IconButton
+                      size="sm"
                       onClick={() => move(index, 1)}
                       disabled={index === picked.length - 1}
-                      title="Move down"
+                      title={t("campaignEditor.moveDown")}
                     >
                       <ArrowDown className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="btn btn-xs btn-ghost btn-square text-error"
+                    </IconButton>
+                    <IconButton
+                      size="sm"
                       onClick={() => remove(p.id)}
-                      title="Remove"
+                      title={t("campaignEditor.remove")}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 className="w-4 h-4 text-red" />
+                    </IconButton>
                   </div>
                 </div>
               ))

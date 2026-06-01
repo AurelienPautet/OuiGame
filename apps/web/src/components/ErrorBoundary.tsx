@@ -1,5 +1,6 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import i18n from "../i18n";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -35,13 +36,18 @@ export class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="w-screen h-screen flex flex-col items-center justify-center gap-4 bg-base-300 text-base-content">
-          <h1 className="text-3xl font-bold">Something went wrong</h1>
-          <p className="opacity-70">
-            The game hit an unexpected error. Reloading usually fixes it.
+        <div className="graph-paper w-screen h-screen flex flex-col items-center justify-center gap-4 text-ink">
+          <h1 className="io-title font-display text-4xl">
+            {i18n.t("errorBoundary.title")}
+          </h1>
+          <p className="font-semibold text-ink-soft">
+            {i18n.t("errorBoundary.message")}
           </p>
-          <button className="btn btn-primary" onClick={this.handleReload}>
-            Reload
+          <button
+            className="font-display font-bold text-white bg-blue border-4 border-ink rounded-[14px] px-5 py-3 shadow-[0_5px_0_rgba(0,0,0,0.25)] active:translate-y-1 active:shadow-none cursor-pointer"
+            onClick={this.handleReload}
+          >
+            {i18n.t("errorBoundary.reload")}
           </button>
         </div>
       );

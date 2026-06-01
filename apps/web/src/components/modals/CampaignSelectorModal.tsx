@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useModal, useGame, useToast } from "../../contexts";
 import { CampaignSelector } from "../ui";
 import { campaignsApi } from "../../api";
+import { Dialog, DialogContent, DialogTitle } from "../ui/primitives";
 
 export const CampaignSelectorModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const { startCampaign } = useGame();
   const { addToast, TOAST_TYPES } = useToast();
@@ -18,8 +21,8 @@ export const CampaignSelectorModal = () => {
       if (levelIds.length === 0) {
         addToast(
           TOAST_TYPES.ERROR,
-          "Campaign",
-          "This campaign has no playable levels."
+          t("campaignEditor.toast.title"),
+          t("campaignSelectorModal.noPlayableLevels")
         );
         setLoadingId(null);
         return;
@@ -28,29 +31,33 @@ export const CampaignSelectorModal = () => {
       closeModal();
     } catch (err) {
       console.error("Failed to start campaign:", err);
-      addToast(TOAST_TYPES.ERROR, "Campaign", "Failed to start campaign.");
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("campaignEditor.toast.title"),
+        t("campaignSelectorModal.failedStart")
+      );
       setLoadingId(null);
     }
   };
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box bg-base-100 w-11/12 max-w-4xl h-3/4 flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Select Campaign</h2>
-
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) closeModal();
+      }}
+    >
+      <DialogContent
+        widthClassName="w-[min(94vw,920px)]"
+        className="h-[82vh] flex flex-col overflow-hidden"
+      >
+        <DialogTitle className="text-2xl font-bold mb-4">
+          {t("campaignSelectorModal.title")}
+        </DialogTitle>
         <div className="flex-1 min-h-0">
           <CampaignSelector mode="play" onSelect={handleSelect} />
         </div>
-
-        <div className="modal-action">
-          <button className="btn" onClick={closeModal}>
-            Cancel
-          </button>
-        </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={closeModal}>close</button>
-      </form>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 };

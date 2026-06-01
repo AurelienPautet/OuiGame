@@ -1,0 +1,355 @@
+{
+  "common": {
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "done": "Fatto",
+    "save": "Salva",
+    "saving": "Salvataggio…",
+    "back": "Indietro",
+    "reload": "Ricarica",
+    "clear": "Cancella",
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "refresh": "Aggiorna",
+    "loading": "Caricamento…",
+    "you": "Tu",
+    "youParens": "(tu)",
+    "by": "di {{name}}",
+    "unknown": "Sconosciuto",
+    "unknownError": "Errore sconosciuto",
+    "guest": "Ospite"
+  },
+  "nav": {
+    "home": "Home",
+    "playSolo": "Gioca Solo",
+    "rankings": "Classifiche",
+    "editor": "Editor",
+    "campaigns": "Campagne"
+  },
+  "topbar": {
+    "online": "online",
+    "connected": "Connesso",
+    "disconnected": "Disconnesso",
+    "settings": "Impostazioni",
+    "login": "Accedi",
+    "profile": "Il tuo profilo"
+  },
+  "landing": {
+    "welcomeBack": "Bentornato, {{name}}",
+    "welcome": "Benvenuto, comandante",
+    "tagline": "Scendi in campo, sconfiggi i bot e gli amici. Crea i tuoi livelli, sali in classifica, domina il campo.",
+    "namePlaceholder": "Digita il tuo nome…",
+    "playOnline": "Gioca Online",
+    "playOnlineSub": "Entra in una stanza dal vivo",
+    "playSolo": "Gioca Solo",
+    "playSoloSub": "Batti i bot su qualsiasi mappa",
+    "playCampaign": "Gioca Campagna",
+    "playCampaignSub": "Livelli completati, una sola riserva di vite",
+    "yourTank": "IL TUO CARRO",
+    "customizeTank": "Personalizza carro",
+    "customize": "Personalizza",
+    "leaderboard": "Classifica",
+    "noRankings": "Ancora nessuna classifica — sii il primo.",
+    "contact": "Contatti",
+    "about": "Chi siamo",
+    "github": "GitHub",
+    "copyright": "OUI TANK © 2026 — un carino gioco di battaglia tra carri"
+  },
+  "auth": {
+    "chooseUsername": "Scegli un Nome Utente",
+    "welcomeChoose": "Benvenuto! Per favore scegli un nome utente per il tuo nuovo account.",
+    "username": "Nome utente",
+    "enterUsername": "Inserisci nome utente",
+    "createAccount": "Crea Account",
+    "loginTab": "Accedi",
+    "registerTab": "Registrati",
+    "loginTitle": "Accedi",
+    "registerTitle": "Registrati",
+    "email": "Email",
+    "password": "Password",
+    "enterEmail": "Inserisci email",
+    "enterPassword": "Inserisci password",
+    "loginButton": "Accedi",
+    "registerButton": "Registrati",
+    "or": "OPPURE"
+  },
+  "profile": {
+    "noEmail": "Nessuna email",
+    "logout": "Esci",
+    "solo": "Solo",
+    "multiplayer": "Multigiocatore",
+    "noSolo": "Nessuna partita in solitaria ancora. Prova alcuni livelli in solitaria!",
+    "noMultiplayer": "Nessuna partita in multigiocatore ancora. Entra in una stanza!",
+    "levelsCompleted": "Livelli Completati",
+    "soloRounds": "Round in Solitaria",
+    "victories": "Vittorie",
+    "winRate": "Tasso di Vittoria",
+    "soloKills": "Eliminazioni in Solitaria",
+    "soloKd": "K/D in Solitaria",
+    "soloAccuracy": "Precisione in Solitaria",
+    "roundsPlayed": "Round Giocati",
+    "wins": "Vittorie",
+    "kills": "Eliminazioni",
+    "deaths": "Morti",
+    "kdRatio": "Rapporto K/D",
+    "shotsFired": "Colpi Sparati",
+    "hits": "Colpi a Segno",
+    "accuracy": "Precisione",
+    "minesPlanted": "Mine Piazzate",
+    "blocksBroken": "Blocchi Distrutti"
+  },
+  "rooms": {
+    "playOnline": "Gioca Online",
+    "searchPlaceholder": "Cerca il nome della stanza…",
+    "anyPlayers": "Qualsiasi giocatore",
+    "players_one": "{{count}} giocatore",
+    "players_other": "{{count}} giocatori",
+    "createNewRoom": "Crea una Nuova Stanza",
+    "publicOrPrivate": "Pubblica o privata",
+    "loadingRooms": "Caricamento stanze…",
+    "noRooms": "Nessuna stanza disponibile",
+    "createToStart": "Creane una per iniziare!",
+    "full": "PIENA",
+    "passwordProtected": "Protetta da password"
+  },
+  "createRoom": {
+    "title": "Crea Stanza",
+    "roomNamePlaceholder": "Nome stanza",
+    "rounds": "Round",
+    "creating": "Creazione…",
+    "createWithCount": "Crea Stanza ({{count}} livelli)",
+    "mustLogin": "Devi essere connesso per creare una stanza."
+  },
+  "levelSelector": {
+    "searchPlaceholder": "Cerca il nome del livello…",
+    "sortByRating": "Ordina per Valutazione",
+    "sortBySuccessRate": "Ordina per Tasso di Successo",
+    "sortByPopularity": "Ordina per Popolarità",
+    "sortByBestTime": "Ordina per Miglior Tempo",
+    "descending": "Decrescente",
+    "ascending": "Crescente",
+    "newLevel": "Nuovo Livello",
+    "levelsSelected": "{{count}} livello/i selezionato/i",
+    "loadingLevels": "Caricamento livelli…",
+    "noLevelsMine": "Ancora nessun livello. Crea il tuo primo livello!",
+    "noLevels": "Nessun livello trovato",
+    "added": "Aggiunto",
+    "confirmDelete": "Sei sicuro di voler eliminare questo livello?"
+  },
+  "levelCard": {
+    "locked": "Livello {{id}} Bloccato",
+    "completePrevious": "Completa i livelli precedenti",
+    "lvlPrefix": "liv {{id}}:",
+    "plays": "{{count}} volte giocato",
+    "winShare": "{{rate}}% vittorie",
+    "best": "miglior {{time}}"
+  },
+  "campaignSelector": {
+    "searchPlaceholder": "Cerca il nome della campagna…",
+    "newCampaign": "Nuova Campagna",
+    "loadingCampaigns": "Caricamento campagne…",
+    "noCampaignsMine": "Ancora nessuna campagna. Crea la tua prima campagna!",
+    "noCampaigns": "Nessuna campagna trovata"
+  },
+  "campaignCard": {
+    "levels_one": "{{count}} livello",
+    "levels_other": "{{count}} livelli",
+    "done": "Fatto",
+    "progress": "Progressione"
+  },
+  "levelSelectorModal": {
+    "title": "Seleziona Livello"
+  },
+  "campaignSelectorModal": {
+    "title": "Seleziona Campagna",
+    "noPlayableLevels": "Questa campagna non ha livelli giocabili.",
+    "failedStart": "Impossibile avviare la campagna."
+  },
+  "myLevels": {
+    "title": "I Tuoi Livelli",
+    "loginToView": "Accedi per visualizzare i tuoi livelli.",
+    "confirmDelete": "Sei sicuro di voler eliminare questo livello? Non si può annullare."
+  },
+  "myCampaigns": {
+    "title": "Le Tue Campagne",
+    "loginToManage": "Accedi per creare e gestire campagne.",
+    "confirmDelete": "Sei sicuro di voler eliminare questa campagna? Non si può annullare."
+  },
+  "tankSelect": {
+    "title": "Il Tuo Carro",
+    "body": "Carrozzeria",
+    "turret": "Torretta"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "controls": "Controlli",
+    "effects": "Effetti",
+    "language": "Lingua",
+    "pressKey": "Premi un tasto…",
+    "aimNote": "Mira e fuoco restano sul mouse. I tasti freccia funzionano sempre per il movimento.",
+    "reset": "Ripristina",
+    "actions": {
+      "up": "Muoviti su",
+      "down": "Muoviti giù",
+      "left": "Muoviti sinistra",
+      "right": "Muoviti destra",
+      "plant": "Piazza mina"
+    },
+    "effectLabels": {
+      "bloom": "Bagliore",
+      "screenShake": "Vibrazione schermo",
+      "aberration": "Aberrazione cromatica",
+      "vignette": "Vignetta",
+      "shockwaves": "Onde d'urto",
+      "particles": "Particelle",
+      "flashes": "Lampi di danno/eliminazione",
+      "scenery": "Scenografia animata",
+      "sound": "Effetti sonori"
+    }
+  },
+  "stats": {
+    "time": "Tempo",
+    "shots": "Colpi",
+    "accuracy": "Precisione",
+    "kills": "Eliminazioni",
+    "bombs": "Bombe",
+    "blocks": "Blocchi"
+  },
+  "endGame": {
+    "youWon": "Hai Vinto!",
+    "youLost": "Hai Perso :(",
+    "someoneWon": "{{name}} Ha Vinto :(",
+    "draw": "Pareggio",
+    "bestTimes": "Migliori Tempi",
+    "results": "Risultati",
+    "levelThumbnailAlt": "Anteprima del livello",
+    "ratedToast": "Hai valutato il livello con {{count}} stelle",
+    "success": "Successo",
+    "error": "Errore",
+    "cantRate": "Impossibile valutare: {{error}}",
+    "needLoginRate": "Devi essere connesso per valutare un livello",
+    "noLevelRate": "Nessun livello da valutare",
+    "playAgain": "Gioca di Nuovo",
+    "quit": "Esci"
+  },
+  "campaignEnd": {
+    "complete": "Campagna Completata!",
+    "runOver": "Run Terminato",
+    "completeSub": "Hai superato ogni livello. Bel lavoro!",
+    "runOverSub": "Hai esaurito le vite.",
+    "levelsCleared": "Livelli superati",
+    "livesLeft": "Vite rimanenti",
+    "totalTime": "Tempo totale"
+  },
+  "interstitial": {
+    "levelCleared": "Livello Superato!",
+    "youDied": "Sei Morto",
+    "levelXofY": "Livello {{current}} di {{total}}",
+    "nextLevel": "Prossimo livello…",
+    "retrying": "Nuovo tentativo…",
+    "plusLife": "+1 vita!",
+    "livesLeft": "{{count}} vite rimanenti",
+    "minusLife": "-1 vita · {{count}} rimasta"
+  },
+  "countdown": {
+    "go": "GO!"
+  },
+  "pause": {
+    "title": "In Pausa",
+    "resume": "Riprendi",
+    "retry": "Riprova",
+    "settings": "Impostazioni",
+    "quit": "Esci"
+  },
+  "livesHud": {
+    "level": "Livello {{current}}/{{total}}"
+  },
+  "rankings": {
+    "title": "CLASSIFICHE",
+    "topPlayers": "migliori giocatori",
+    "online": "Online",
+    "solo": "Solo",
+    "kills": "Eliminazioni",
+    "wins": "Vittorie",
+    "rounds": "Round",
+    "completed": "Completati",
+    "played": "Giocati",
+    "loadingRankings": "Caricamento classifiche…",
+    "noRankings": "Nessuna classifica disponibile",
+    "playSoloToRank": "Gioca in solitaria per essere classificato",
+    "playOnlineToRank": "Gioca online per essere classificato",
+    "loginToRank": "Accedi per essere classificato"
+  },
+  "levelsScreen": {
+    "title": "GIOCA SOLO",
+    "vsBots": "contro bot"
+  },
+  "levelEditor": {
+    "title": "EDITOR",
+    "online": "Online",
+    "solo": "Solo",
+    "levelNamePlaceholder": "Inserisci il nome del livello",
+    "clearLevel": "Cancella Livello",
+    "saveLevel": "Salva Livello",
+    "selectBlock": "Seleziona un blocco",
+    "confirmClear": "Sei sicuro di voler cancellare l'intero livello?",
+    "blocks": {
+      "wall": "Muro",
+      "platform": "Piattaforma",
+      "hole": "Buco",
+      "spawn": "Spawnpoint",
+      "botBlue": "Bot Blu",
+      "botGreen": "Bot Verde",
+      "botOrange": "Bot Arancione",
+      "botRed": "Bot Rosso"
+    },
+    "toast": {
+      "title": "Livello",
+      "failedSave": "Impossibile salvare il livello: {{error}}",
+      "loginToSave": "Accedi per salvare i livelli.",
+      "needSpawn": "Hai bisogno di almeno uno spawnpoint (bandiera) per i giocatori!",
+      "tooManySpawns": "Non puoi avere più di 8 spawnpoint!",
+      "nameEmpty": "Il nome del livello non può essere vuoto!",
+      "nameTooLong": "Il nome del livello non può essere più lungo di 30 caratteri!"
+    }
+  },
+  "campaignEditor": {
+    "headerTitle": "CAMPAGNA",
+    "loginToCreate": "Accedi per creare campagne.",
+    "fullTitle": "EDITOR CAMPAGNA",
+    "namePlaceholder": "Nome campagna",
+    "descriptionPlaceholder": "Breve descrizione",
+    "saveCampaign": "Salva Campagna",
+    "addSoloLevels": "Aggiungi livelli in solitaria",
+    "clickToAddRemove": "— clicca un livello per aggiungere o rimuovere",
+    "campaignLevels": "Livelli campagna",
+    "dragToReorder": "Trascina per riordinare — giocati da cima a fondo",
+    "noLevels": "Ancora nessun livello.",
+    "noLevelsHint": "Clicca i livelli a sinistra per costruire la tua campagna.",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "remove": "Rimuovi",
+    "toast": {
+      "title": "Campagna",
+      "nameEmpty": "Il nome della campagna non può essere vuoto.",
+      "addOne": "Aggiungi almeno un livello.",
+      "saved": "Campagna salvata!",
+      "nameTaken": "Quel nome di campagna è già stato preso.",
+      "failedSave": "Impossibile salvare la campagna."
+    }
+  },
+  "toasts": {
+    "connection": "Connessione",
+    "disconnection": "Disconnessione",
+    "kill": "Eliminazione",
+    "connected": "{{name}} connesso",
+    "disconnected": "{{name}} disconnesso",
+    "killedBullet": "{{killer}} ha eliminato {{victim}}",
+    "killedMine": "{{killer}} ha fatto esplodere {{victim}}"
+  },
+  "errorBoundary": {
+    "title": "Qualcosa è andato storto",
+    "message": "Il gioco ha riscontrato un errore imprevisto. Di solito ricaricarlo lo risolve.",
+    "reload": "Ricarica"
+  }
+}

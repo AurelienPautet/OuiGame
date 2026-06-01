@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { useToast } from "../../contexts/ToastContext";
 import { Toast } from "./Toast";
 
@@ -14,15 +15,16 @@ export const ToastContainer = () => {
           "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,1) 30%)",
       }}
     >
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          type={toast.type}
-          title={toast.title}
-          text={toast.text}
-          exiting={toast.exiting}
-        />
-      ))}
+      <AnimatePresence initial={false}>
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            type={toast.type}
+            title={toast.title}
+            text={toast.text}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   );
 };

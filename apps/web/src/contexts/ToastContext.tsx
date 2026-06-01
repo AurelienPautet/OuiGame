@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { PlayerKillPayload } from "@ouigame/shared/types";
 import { useSocket } from "./SocketContext";
+import i18n from "../i18n";
 
 // Toast types with their colors and icons
 export const TOAST_TYPES = {
@@ -29,7 +30,6 @@ export interface Toast {
   title: string;
   text: string;
   createdAt: number;
-  exiting: boolean;
 }
 
 interface ToastContextValue {
@@ -74,21 +74,14 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
           title,
           text,
           createdAt: Date.now(),
-          exiting: false,
         },
       ]);
 
-      // Start exit animation before removal
+      // Drop it from state after `duration`; AnimatePresence plays the
+      // slide-out exit as the element unmounts (no manual exit phase needed).
       timeoutsRef.current[id] = setTimeout(() => {
-        setToasts((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, exiting: true } : t))
-        );
-
-        // Remove after animation
-        setTimeout(() => {
-          setToasts((prev) => prev.filter((t) => t.id !== id));
-          delete timeoutsRef.current[id];
-        }, 500);
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+        delete timeoutsRef.current[id];
       }, duration);
 
       return id;
@@ -110,14 +103,18 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     if (!socket) return;
 
     const handlePlayerConnection = (name: string) => {
-      addToast(TOAST_TYPES.CONNECTION, "Connection", `${name} connected`);
+      addToast(
+        TOAST_TYPES.CONNECTION,
+        i18n.t("toasts.connection"),
+        i18n.t("toasts.connected", { name })
+      );
     };
 
     const handlePlayerDisconnection = (name: string) => {
       addToast(
         TOAST_TYPES.DISCONNECTION,
-        "Disconnection",
-        `${name} disconnected`
+        i18n.t("toasts.disconnection"),
+        i18n.t("toasts.disconnected", { name })
       );
     };
 
@@ -126,14 +123,20 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       if (type === "bullet") {
         addToast(
           TOAST_TYPES.BULLET,
-          "Kill",
-          `${players[0]} killed ${players[1]}`
+          i18n.t("toasts.kill"),
+          i18n.t("toasts.killedBullet", {
+            killer: players[0],
+            victim: players[1],
+          })
         );
       } else if (type === "mine") {
         addToast(
           TOAST_TYPES.MINE,
-          "Kill",
-          `${players[0]} blew up ${players[1]}`
+          i18n.t("toasts.kill"),
+          i18n.t("toasts.killedMine", {
+            killer: players[0],
+            victim: players[1],
+          })
         );
       }
     };

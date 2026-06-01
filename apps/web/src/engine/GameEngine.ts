@@ -30,7 +30,11 @@ import type { ReceiveJsonFromId } from "@ouigame/shared/api";
 import { Renderer } from "./Renderer.js";
 import { InputHandler } from "./InputHandler.js";
 import { ParticleSystem } from "./ParticleSystem.js";
+import { DebrisSystem } from "./Debris.js";
 import { SoundManager, type SoundEvents } from "./SoundManager.js";
+import { PostProcessor, tryCreatePostProcessor } from "./PostProcessor.js";
+import type { EnvBlock, EnvHole } from "./PostProcessor.js";
+import type { EffectSettings } from "../lib/settings";
 
 // The engine consumes the SAME strictly-typed socket the app creates, so every
 // on/once/off/emit is checked against the shared event maps.
@@ -62,14 +66,20 @@ interface SoloGameOverResult {
 
 type GameMode = "solo" | "online";
 
-// LocalIO class for solo mode - forwards events to particle/sound systems
+// LocalIO class for solo mode - forwards events to particle/sound/post systems
 class LocalIO {
   particles: ParticleSystem;
   sounds: SoundManager;
+  post: PostProcessor | null;
 
-  constructor(particles: ParticleSystem, sounds: SoundManager) {
+  constructor(
+    particles: ParticleSystem,
+    sounds: SoundManager,
+    post: PostProcessor | null
+  ) {
     this.particles = particles;
     this.sounds = sounds;
+    this.post = post;
   }
 
   // The Room runtime forwards the union of these payloads (PositionEvent /
@@ -86,21 +96,29 @@ class LocalIO {
       case "bullet_explosion": {
         const { position } = data as PositionEvent;
         this.particles.bulletExplosion(position, 100);
+        this.post?.shockwave(position, 0.016, 420);
         break;
       }
       case "shoot_explosion": {
         const { position, angle } = data as PositionAngleEvent;
         this.particles.shootExplosion(position, angle, 30);
+        // Small, short muzzle pop at the barrel tip — subtle since firing is
+        // frequent, so it punches without churning the screen.
+        this.post?.shockwave(position, 0.012, 280);
         break;
       }
       case "player_explosion": {
         const { position } = data as PositionEvent;
         this.particles.explosion(position, 100);
+        this.post?.shockwave(position, 0.04, 650);
+        this.post?.shake(0.6);
         break;
       }
       case "mine_explosion": {
         const { position } = data as PositionEvent;
         this.particles.explosion(position, 100);
+        this.post?.shockwave(position, 0.04, 650);
+        this.post?.shake(0.6);
         break;
       }
       case "tick_sounds":
@@ -126,7 +144,12 @@ export class GameEngine {
   renderer: Renderer;
   input: InputHandler;
   particles: ParticleSystem;
+  // Physics-driven wreck pieces (the cannon that flies off a destroyed tank).
+  debris: DebrisSystem;
   sounds: SoundManager;
+  // WebGL post-processing (bloom / shockwave). null when WebGL is unavailable,
+  // in which case the plain 2D canvases are shown instead.
+  post: PostProcessor | null;
 
   // Game state
   running: boolean;
@@ -153,6 +176,14 @@ export class GameEngine {
   roomId: number | string | null;
   serverId: string | null;
   playerId: number | null;
+  // Tracks whether our player was alive last tick, to fire the death flash on
+  // the alive→dead transition (online). Undefined `alive` is treated as alive.
+  prevMyAlive: boolean;
+  // Our kill count last frame, to fire the kill-confirmed pop when it rises.
+  prevMyKills: number;
+  // Per-player alive flag last frame, so we can fire the flying-cannon debris on
+  // any tank's alive→dead transition (solo + online). Keyed by socket id.
+  prevAlive: Record<string, boolean>;
 
   // Game entities (received from server in online mode)
   players: Record<string, RoomPlayer>;
@@ -180,6 +211,7 @@ export class GameEngine {
   constructor(
     canvas: HTMLCanvasElement,
     fadingCanvas: HTMLCanvasElement | null,
+    glCanvas: HTMLCanvasElement | null,
     socket: GameSocket | null
   ) {
     this.canvas = canvas;
@@ -190,7 +222,22 @@ export class GameEngine {
     this.renderer = new Renderer(canvas, fadingCanvas);
     this.input = new InputHandler(canvas);
     this.particles = new ParticleSystem();
+    this.debris = new DebrisSystem();
     this.sounds = new SoundManager();
+
+    // Optional WebGL post-processing — same factory the level editor uses. On
+    // any failure (no WebGL, shader/link error) `post` stays null and the React
+    // layer shows the 2D canvases directly.
+    this.post = glCanvas
+      ? tryCreatePostProcessor(
+          glCanvas,
+          this.renderer.width,
+          this.renderer.height
+        )
+      : null;
+    // When post is active it draws the field/holes/walls in GL, so the 2D
+    // renderer must skip them to avoid double-drawing.
+    this.renderer.skipEnvironment = this.post !== null;
 
     // Game state
     this.running = false;
@@ -216,6 +263,9 @@ export class GameEngine {
     this.roomId = null;
     this.serverId = null;
     this.playerId = null;
+    this.prevMyAlive = true;
+    this.prevMyKills = 0;
+    this.prevAlive = {};
 
     // Game entities (received from server in online mode)
     this.players = {};
@@ -241,15 +291,21 @@ export class GameEngine {
     };
     this._onBulletExplosion = (data) => {
       this.particles.bulletExplosion(data.position, 100);
+      this.post?.shockwave(data.position, 0.016, 420);
     };
     this._onShootExplosion = (data) => {
       this.particles.shootExplosion(data.position, data.angle, 30);
+      this.post?.shockwave(data.position, 0.012, 280);
     };
     this._onPlayerExplosion = (data) => {
       this.particles.explosion(data.position, 100);
+      this.post?.shockwave(data.position, 0.04, 650);
+      this.post?.shake(0.6);
     };
     this._onMineExplosion = (data) => {
       this.particles.explosion(data.position, 100);
+      this.post?.shockwave(data.position, 0.04, 650);
+      this.post?.shake(0.6);
     };
     this._onTickSounds = (sounds) => {
       this.sounds.playSounds(sounds);
@@ -312,7 +368,7 @@ export class GameEngine {
             999,
             [levelId],
             playerName,
-            new LocalIO(this.particles, this.sounds)
+            new LocalIO(this.particles, this.sounds, this.post)
           );
           this.localRoom.maxplayernb = 100;
 
@@ -461,6 +517,7 @@ export class GameEngine {
       // 1. Check for Loss (Player died)
       if (!myPlayer.alive && this.running && !this.gameOverTriggered) {
         this.gameOverTriggered = true;
+        this.post?.flash(1);
         this._triggerSoloGameOver(false);
         return;
       }
@@ -532,6 +589,12 @@ export class GameEngine {
       this.renderer.debugVisual
     );
 
+    // Kill-confirmed pop when our own kill count ticks up this frame.
+    const myKills =
+      this.localRoom.players[this.mysocketid!]?.round_stats?.stats?.kills ?? 0;
+    if (myKills > this.prevMyKills) this.post?.killFlash(1);
+    this.prevMyKills = myKills;
+
     // Play sounds - LocalIO handles this via tick_sounds event from Room?
     // If we play it here AND in LocalIO, it might be double.
     // However, if Room.js clears sounds after emission, checking here is safe effectively if empty.
@@ -592,6 +655,20 @@ export class GameEngine {
     // map the renderer/state fields expect.
     this.players = data.players as unknown as Record<string, RoomPlayer>;
     this.holes = data.holes;
+
+    // Death flash on our player's alive→dead transition; kill pop when our
+    // kill count rises. Both read off our entry in the tick snapshot.
+    const me = this.mysocketid ? this.players[this.mysocketid] : undefined;
+    if (me) {
+      if (this.prevMyAlive && me.alive === false) {
+        this.post?.flash(1);
+      }
+      this.prevMyAlive = me.alive !== false; // undefined → treat as alive
+
+      const myKills = me.round_stats?.stats?.kills ?? 0;
+      if (myKills > this.prevMyKills) this.post?.killFlash(1);
+      this.prevMyKills = myKills;
+    }
   }
 
   _onLevelChange(data: LevelChange) {
@@ -599,11 +676,58 @@ export class GameEngine {
     this.Bcollision = data.Bcollision;
   }
 
+  // Fire the flying-cannon debris on any tank's alive→dead transition, then
+  // refresh the per-player alive snapshot. Works for both solo (room.players)
+  // and online (tick snapshot) since both keep dead players in the map with
+  // alive=false until they respawn. Position freezes at the death spot because
+  // the dead Player skips its movement step.
+  _spawnDeathDebris() {
+    const next: Record<string, boolean> = {};
+    for (const id in this.players) {
+      const p = this.players[id] as unknown as {
+        alive?: boolean;
+        position?: { x: number; y: number };
+        size?: { w: number; h: number };
+        angle?: number;
+        turretc?: string;
+      };
+      const alive = p.alive !== false; // undefined → treat as alive
+      next[id] = alive;
+
+      // Fire only on a real alive→dead transition we actually witnessed: require
+      // the player to have been seen ALIVE last frame. A player first observed
+      // already-dead (e.g. joining mid-round) has no prior entry and is skipped,
+      // so we don't spew cannons for tanks that died before we were watching.
+      const wasAlive = this.prevAlive[id] === true;
+      if (wasAlive && !alive && p.position && p.size) {
+        const w = p.size.w;
+        const h = p.size.h;
+        this.debris.spawnCannon({
+          cx: p.position.x + w / 2,
+          cy: p.position.y + h / 2,
+          // Same hull radius the Renderer scales the live tank from.
+          r: Math.min(w, h) * 0.46,
+          // Renderer draws the barrel at player.angle + PI, so launch to match.
+          barrelAngle: (p.angle ?? 0) + Math.PI,
+          turretColor: p.turretc ?? "none",
+        });
+      }
+    }
+    this.prevAlive = next;
+  }
+
   _renderLoop() {
     if (!this.running) return;
 
     // Update particles
     this.particles.update();
+
+    // Spawn a flying cannon for any tank that died since last frame, then step
+    // the debris physics against the level walls.
+    this._spawnDeathDebris();
+    this.debris.update(
+      this.Bcollision as Parameters<DebrisSystem["update"]>[0]
+    );
 
     // Trigger fast bullet particles (Rocket trails)
     if (this.bullets) {
@@ -638,8 +762,24 @@ export class GameEngine {
       players: this.players,
     } as unknown as Parameters<typeof this.renderer.draw>[0]);
 
+    // Flying cannon debris sits above the wrecks/tanks but below the spark
+    // particles. Drawn on the renderer's 2D context so post-processing (bloom)
+    // picks it up alongside everything else.
+    this.debris.draw(this.renderer.c);
+
     // Render particles
     this.particles.draw(this.renderer.c);
+
+    // Post-process: upload the 2D layers as textures and run the WebGL effect
+    // chain (shockwave + bloom), presenting on the GL canvas. When post is
+    // null this is skipped and the 2D canvases are what the user sees.
+    if (this.post) {
+      this.post.render(
+        this.renderer.canvas,
+        this.blocks as EnvBlock[],
+        this.holes as EnvHole[]
+      );
+    }
 
     // Continue loop
     this.animationId = requestAnimationFrame(this._renderLoop);
@@ -689,7 +829,15 @@ export class GameEngine {
 
     // Clear particles and sounds
     this.particles.clear();
+    this.debris.clear();
+    this.prevAlive = {};
     this.sounds.clear();
+
+    // Release WebGL resources / drop the context.
+    if (this.post) {
+      this.post.dispose();
+      this.post = null;
+    }
 
     // Leave room if online
     if (this.socket && this.mode === "online") {
@@ -729,6 +877,12 @@ export class GameEngine {
     }
   }
 
+  // True when the WebGL post-processing layer initialised, so the React layer
+  // can show the GL canvas and hide the raw 2D canvases.
+  hasPostProcessing(): boolean {
+    return this.post !== null;
+  }
+
   setTheme(theme: number) {
     this.renderer.setTheme(theme || 1);
   }
@@ -739,5 +893,16 @@ export class GameEngine {
 
   setScale(scale: number) {
     this.input.setScale(scale);
+  }
+
+  // Apply the user's effect toggles to the live systems. Keybindings are
+  // applied globally by the SettingsContext (InputHandler.applyKeyBindings),
+  // so they're not threaded through here. Safe to call repeatedly (on engine
+  // creation and whenever settings change mid-game).
+  applyEffects(effects: EffectSettings) {
+    this.particles.setEnabled(effects.particles);
+    this.debris.setEnabled(effects.particles);
+    this.sounds.setEnabled(effects.sound);
+    this.post?.setEffects(effects);
   }
 }

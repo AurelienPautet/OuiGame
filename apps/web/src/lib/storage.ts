@@ -10,6 +10,7 @@ const KEYS = {
   tankBodyColor: "tank_body_color", // resolved colour NAME
   tankTurretColor: "tank_turret_color", // resolved colour NAME
   soloSelectorState: "soloLevelSelectorState", // JSON blob
+  settings: "settings", // keybindings + effect toggles (JSON blob)
 } as const;
 
 function readInt(key: string): number | null {
@@ -61,4 +62,10 @@ export const storage = {
   getSoloSelectorState: <T>(): T | null => readJson<T>(KEYS.soloSelectorState),
   setSoloSelectorState: (value: unknown) =>
     window.localStorage.setItem(KEYS.soloSelectorState, JSON.stringify(value)),
+
+  // User settings blob (keybindings + effect toggles); see lib/settings.ts,
+  // which merges this over the defaults so partial/older blobs stay valid.
+  getSettings: <T>(): T | null => readJson<T>(KEYS.settings),
+  setSettings: (value: unknown) =>
+    window.localStorage.setItem(KEYS.settings, JSON.stringify(value)),
 } as const;

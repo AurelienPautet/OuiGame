@@ -1,7 +1,23 @@
 /**
  * Renderer - Handles all canvas drawing for the game
  * Draws tanks, bullets, mines, blocks, and effects
+ *
+ * Visuals are the "diep.io arcade" style: a light graph-paper field, flat
+ * cartoon shapes with thick dark outlines, team colours — all drawn
+ * programmatically (no per-colour sprite sheets). Colours come from the shared
+ * theme/palette so the canvas matches the DOM (TankAvatar etc.).
  */
+import { palette, tankColors, mixHex, WRECK_CHAR } from "../theme/palette";
+import { drawTank, paintField, drawBlocks, drawHole } from "./shapes";
+
+const INK = palette.ink;
+
+// Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
+// map = 1150×800), so grid lines fall exactly on block edges.
+const GRID_CELL = 50;
+// Bullet colour by remaining bounces: 0 → red, 1 → orange, 2+ → yellow.
+const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
+
 interface Vec2 {
   x: number;
   y: number;
@@ -41,6 +57,7 @@ interface Bullet {
   angle: number;
   type?: number;
   bounce?: number;
+  max_bounce?: number;
 }
 
 interface RenderPlayer {
@@ -79,7 +96,11 @@ export class Renderer {
   debugVisual: boolean;
   drawTicks: number;
   theme: number;
-  images: Record<string, HTMLImageElement>;
+  fieldImage: HTMLCanvasElement | null;
+  // When the WebGL post-processor is active it draws the field, holes and walls
+  // procedurally, so the 2D pass skips them (it would otherwise double-draw,
+  // hidden under the GL canvas). Stays false for the non-WebGL fallback.
+  skipEnvironment: boolean;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -104,79 +125,49 @@ export class Renderer {
     this.debugVisual = false;
     this.drawTicks = 0;
     this.theme = 6;
+    this.skipEnvironment = false;
 
-    // Image cache
-    this.images = {};
-    this._loadImages();
+    // Pre-rendered graph-paper field, seeded onto the (back) fading canvas so
+    // the grid is present from frame 0.
+    this.fieldImage = this._buildFieldImage();
+    this._seedField();
   }
 
-  _loadImages() {
-    const colors = [
-      "blue",
-      "orange",
-      "red",
-      "green",
-      "violet",
-      "yellow",
-      "blueF",
-      "turquoise",
-      "violetF",
-    ];
-
-    // Load tank images
-    colors.forEach((color) => {
-      this.images[`body_${color}`] = this._loadImage(
-        `ressources/image/tank_player/body_${color}.png`
-      );
-      this.images[`turret_${color}`] = this._loadImage(
-        `ressources/image/tank_player/turret_${color}.png`
-      );
-    });
-
-    // Load other images
-    this.images.body_tracks = this._loadImage(
-      "ressources/image/tank_player/body_tracks.png"
-    );
-    this.images.turret_decalc_bot = this._loadImage(
-      "ressources/image/tank_player/turret_decalc_bot.png"
-    );
-    this.images.dead = this._loadImage("ressources/image/dead.png");
-    this.images.hole = this._loadImage("ressources/image/block/hole.png");
-    this.images.flag = this._loadImage("ressources/image/block/flag.png");
-
-    // Theme-based images
-    this._loadThemeImages(this.theme);
+  _buildFieldImage(): HTMLCanvasElement | null {
+    if (typeof document === "undefined") return null;
+    const off = document.createElement("canvas");
+    off.width = this.width;
+    off.height = this.height;
+    const g = off.getContext("2d");
+    if (!g) return null;
+    paintField(g, this.width, this.height, GRID_CELL);
+    return off;
   }
 
-  _loadImage(src: string): HTMLImageElement {
-    const img = new Image();
-    img.src = src;
-    return img;
+  // Paint the field at full opacity once so there is no grey "fade-in".
+  _seedField() {
+    if (this.fc && this.fieldImage) {
+      this.fc.globalAlpha = 1;
+      this.fc.drawImage(this.fieldImage, 0, 0, this.width, this.height);
+    }
   }
 
-  _loadThemeImages(theme: number) {
-    this.images.block1 = this._loadImage(
-      `ressources/image/block/Cube${theme}-1.png`
-    );
-    this.images.block2 = this._loadImage(
-      `ressources/image/block/Cube${theme}-2.png`
-    );
-    this.images.bullet = this._loadImage(
-      `ressources/image/bullet/bullet-${theme}.png`
-    );
-    this.images.bg = this._loadImage(`ressources/image/bg${theme}.png`);
-  }
-
+  // The theme number still drives gameplay elsewhere; the renderer no longer
+  // swaps art per theme (everything is palette-driven), so this is a no-op kept
+  // for the GameEngine.setTheme call site.
   setTheme(theme: number) {
     this.theme = theme;
-    this._loadThemeImages(theme);
   }
 
   clear() {
     this.c.clearRect(0, 0, this.width, this.height);
-    if (this.fc && this.images.bg) {
-      this.fc.globalAlpha = 0.05;
-      this.fc.drawImage(this.images.bg, 0, 0, this.width, this.height);
+    // Repaint the crisp graph-paper field on the back (fading) canvas at full
+    // opacity every frame. This wipes the previous frame cleanly — no trail
+    // residue — and keeps a sharp static grid behind the transparent entity
+    // canvas.
+    if (this.fc && this.fieldImage) {
+      this.fc.globalAlpha = 1;
+      this.fc.drawImage(this.fieldImage, 0, 0, this.width, this.height);
     }
   }
 
@@ -190,12 +181,14 @@ export class Renderer {
       mines.forEach((mine) => this._drawMine(mine));
     }
 
-    if (holes) {
+    // Holes + walls are drawn by the WebGL post-processor when it's active
+    // (skipEnvironment); otherwise the 2D renderer draws them here.
+    if (holes && !this.skipEnvironment) {
       holes.forEach((h) => this._drawHole(h));
     }
 
-    if (blocks) {
-      blocks.forEach((block) => this._drawBlock(block));
+    if (blocks && !this.skipEnvironment) {
+      this._drawBlocks(blocks);
     }
 
     // Draw collision debug
@@ -232,15 +225,14 @@ export class Renderer {
     this.c.arc(mine.position.x, mine.position.y, mine.radius, 0, Math.PI * 2);
     this.c.fillStyle = color;
     this.c.fill();
+    this.c.lineWidth = 3;
+    this.c.strokeStyle = INK;
+    this.c.stroke();
     this.c.closePath();
   }
 
   _drawHole(h: Hole) {
-    const holeImg = this.images.hole;
-    if (holeImg) {
-      this.c.drawImage(holeImg, h.position.x, h.position.y, h.size.w, h.size.h);
-    }
-
+    drawHole(this.c, h);
     if (this.debugVisual) {
       this.c.beginPath();
       this.c.fillStyle = "rgba(255,0,0,0.4)";
@@ -251,17 +243,8 @@ export class Renderer {
     }
   }
 
-  _drawBlock(block: Block) {
-    const img = block.type === 1 ? this.images.block1 : this.images.block2;
-    if (img) {
-      this.c.drawImage(
-        img,
-        block.position.x,
-        block.position.y,
-        block.size.w,
-        block.size.h
-      );
-    }
+  _drawBlocks(blocks: Block[]) {
+    drawBlocks(this.c, blocks);
   }
 
   _drawCollisionDebug(Bcollision: CollisionBox[]) {
@@ -276,28 +259,21 @@ export class Renderer {
   }
 
   _drawBullet(bullet: Bullet) {
-    const bounceCount = bullet.bounce || 0;
-    const hueRotation = bounceCount * -30;
+    const remaining = (bullet.max_bounce ?? 3) - (bullet.bounce ?? 0);
+    const cx = bullet.position.x + bullet.size.w / 2;
+    const cy = bullet.position.y + bullet.size.h / 2;
+    const r = Math.min(bullet.size.w, bullet.size.h) / 2;
+    const colorIdx = Math.min(remaining, BULLET_COLOR_BY_REMAINING.length - 1);
+    const fill =
+      BULLET_COLOR_BY_REMAINING[Math.max(0, colorIdx)] ?? palette.yellow;
 
-    this.c.save();
-    if (bounceCount > 0) {
-      this.c.filter = `hue-rotate(${hueRotation}deg)`;
-    }
-
-    const bulletImg = this.images.bullet;
-    if (bulletImg) {
-      this._drawImageRot(
-        this.c,
-        bulletImg,
-        bullet.position.x,
-        bullet.position.y,
-        bullet.size.w,
-        bullet.size.h,
-        bullet.angle
-      );
-    }
-
-    this.c.restore();
+    this.c.beginPath();
+    this.c.arc(cx, cy, r, 0, Math.PI * 2);
+    this.c.fillStyle = fill;
+    this.c.fill();
+    this.c.lineWidth = Math.max(2, r * 0.35);
+    this.c.strokeStyle = INK;
+    this.c.stroke();
 
     if (this.debugVisual) {
       this.c.beginPath();
@@ -316,73 +292,10 @@ export class Renderer {
 
   _drawPlayer(player: RenderPlayer, socketId: string) {
     if (player.alive) {
-      // Draw body
-      const bodyImg = this.images[`body_${player.bodyc}`];
-      if (bodyImg) {
-        this._drawImageRot(
-          this.c,
-          bodyImg,
-          player.position.x,
-          player.position.y,
-          player.size.w,
-          player.size.h,
-          (player.rotation * Math.PI) / 180
-        );
-      }
-
-      // Draw tracks on fading canvas
-      const tracksImg = this.images.body_tracks;
-      if (this.fc && tracksImg && this.drawTicks % 15 === 0) {
-        this._drawImageRot(
-          this.fc,
-          tracksImg,
-          player.position.x,
-          player.position.y,
-          player.size.w,
-          player.size.h,
-          (player.rotation * Math.PI) / 180
-        );
-      }
-
-      // Draw turret
-      const turretImg = this.images[`turret_${player.turretc}`];
-      if (turretImg) {
-        this._drawTurretRot(
-          turretImg,
-          player.position.x,
-          player.position.y,
-          player.turretsize.w,
-          player.turretsize.h,
-          player.angle
-        );
-      }
-
-      // Draw bot marker
-      const botMarkerImg = this.images.turret_decalc_bot;
-      if (socketId.includes("bot") && botMarkerImg) {
-        this._drawTurretRot(
-          botMarkerImg,
-          player.position.x,
-          player.position.y,
-          player.turretsize.w,
-          player.turretsize.h,
-          player.angle
-        );
-      }
+      // Shape-based arcade tank: treads + barrel + circle hull + ink outline.
+      this._drawTank(player, socketId.includes("bot"));
     } else {
-      // Draw dead player
-      const deadImg = this.images.dead;
-      if (this.fc && deadImg) {
-        this._drawImageRot(
-          this.fc,
-          deadImg,
-          player.position.x,
-          player.position.y,
-          player.size.w,
-          player.size.h,
-          (player.rotation * Math.PI) / 180
-        );
-      }
+      this._drawWreck(player);
     }
 
     if (this.debugVisual) {
@@ -400,35 +313,78 @@ export class Renderer {
     }
   }
 
-  _drawImageRot(
-    ctx: CanvasRenderingContext2D,
-    img: CanvasImageSource,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    rad: number
-  ) {
-    ctx.save();
-    ctx.translate(x + width / 2, y + height / 2);
-    ctx.rotate(rad);
-    ctx.drawImage(img, -width / 2, -height / 2, width, height);
-    ctx.restore();
+  // Draw a tank via the shared shape fn so it matches the menu TankAvatar
+  // exactly. The old turret sprite's art faced left at angle 0, so player.angle
+  // is calibrated for a left-facing barrel; drawTank draws right-facing at
+  // angle 0, hence the +PI flip.
+  _drawTank(player: RenderPlayer, isBot: boolean) {
+    drawTank(this.c, {
+      cx: player.position.x + player.size.w / 2,
+      cy: player.position.y + player.size.h / 2,
+      r: Math.min(player.size.w, player.size.h) * 0.46,
+      bodyColor: player.bodyc,
+      turretColor: player.turretc,
+      angle: player.angle + Math.PI,
+      isBot,
+    });
   }
 
-  _drawTurretRot(
-    img: CanvasImageSource,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    rad: number
-  ) {
-    this.c.save();
-    this.c.translate(x + 0.4 * width, y + height * 0.6);
-    this.c.rotate(rad);
-    this.c.drawImage(img, -0.75 * width, -height / 2, width, height);
-    this.c.restore();
+  // A destroyed tank: a burnt-out husk that keeps the player's body hue (so you
+  // can still tell who fell) but darkened, with a scorch blotch and cracks
+  // radiating from the impact point.
+  _drawWreck(player: RenderPlayer) {
+    const c = this.c;
+    const cx = player.position.x + player.size.w / 2;
+    const cy = player.position.y + player.size.h / 2;
+    const R = Math.min(player.size.w, player.size.h) * 0.4;
+    const body = tankColors(player.bodyc);
+    if (body.fill === "transparent") return;
+
+    // Darkened, charred versions of the body colour — still the team hue, but
+    // clearly burnt out. The hull uses WRECK_CHAR, the shared "burnt" darkness
+    // the flying cannon (Debris) is charred to as well, so body + barrel match.
+    const husk = mixHex(body.fill, INK, WRECK_CHAR);
+    const scorch = mixHex(body.fill, INK, 0.82);
+
+    c.save();
+    c.lineJoin = "round";
+    c.lineCap = "round";
+
+    // Hull — same weight outline as the live tank so it sits right.
+    c.beginPath();
+    c.arc(cx, cy, R, 0, Math.PI * 2);
+    c.fillStyle = husk;
+    c.fill();
+    c.lineWidth = R * 0.22;
+    c.strokeStyle = INK;
+    c.stroke();
+
+    // Everything below stays inside the hull.
+    c.clip();
+
+    // Off-centre scorch blotch for some depth.
+    c.beginPath();
+    c.arc(cx + R * 0.16, cy - R * 0.08, R * 0.55, 0, Math.PI * 2);
+    c.fillStyle = scorch;
+    c.fill();
+
+    // Cracks: three kinked spokes from the impact point out to the rim.
+    c.strokeStyle = INK;
+    c.lineWidth = R * 0.13;
+    const spokes = [-1.9, 0.5, 2.5];
+    for (const a of spokes) {
+      const mx = cx + Math.cos(a) * R * 0.5;
+      const my = cy + Math.sin(a) * R * 0.5;
+      const ex = cx + Math.cos(a + 0.3) * R;
+      const ey = cy + Math.sin(a + 0.3) * R;
+      c.beginPath();
+      c.moveTo(cx, cy);
+      c.lineTo(mx, my);
+      c.lineTo(ex, ey);
+      c.stroke();
+    }
+
+    c.restore();
   }
 
   // Draw particles and shockwaves

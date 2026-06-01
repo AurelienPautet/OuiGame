@@ -1,1 +1,1 @@
-export { LandingPage, CANVAS_WIDTH, CANVAS_HEIGHT } from "./LandingPage";
+export { LandingPage } from "./LandingPage";

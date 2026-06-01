@@ -1,6 +1,5 @@
 export { AuthModal } from "./AuthModal";
 export { ProfileModal } from "./ProfileModal";
-export { RankingsModal } from "./RankingsModal";
 export { RoomSelectorModal } from "./RoomSelectorModal";
 export { CreateRoomModal } from "./CreateRoomModal";
 export { LevelSelectorModal } from "./LevelSelectorModal";
@@ -8,3 +7,4 @@ export { MyLevelsModal } from "./MyLevelsModal";
 export { TankSelectModal } from "./TankSelectModal";
 export { CampaignSelectorModal } from "./CampaignSelectorModal";
 export { MyCampaignsModal } from "./MyCampaignsModal";
+export { SettingsModal } from "./SettingsModal";

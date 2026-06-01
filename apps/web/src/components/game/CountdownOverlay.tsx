@@ -1,80 +1,74 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
- * CountdownOverlay - Displays a 3-2-1-GO countdown before game starts
- * Smaller and more subtle design
+ * CountdownOverlay - Displays a 3-2-1-GO countdown before game starts.
+ * Arcade badge: ink-outlined dark disc with an outlined (io-title) number, so
+ * it matches the rest of the overlay design system.
+ *
+ * The countdown is pausable: while `isPaused` is true the timer halts (and the
+ * badge hides so the pause menu shows alone), then resumes the current step on
+ * unpause. Each step is a fresh 1s timeout, so resuming restarts the current
+ * number rather than tracking sub-second progress — fine for a 3-2-1 count.
  */
 interface CountdownOverlayProps {
   isActive: boolean;
+  isPaused?: boolean;
   onComplete?: () => void;
 }
 
 export const CountdownOverlay = ({
   isActive,
+  isPaused = false,
   onComplete,
 }: CountdownOverlayProps) => {
+  const { t } = useTranslation();
   const [count, setCount] = useState(3);
   const [visible, setVisible] = useState(false);
 
+  // (Re)start the countdown whenever it becomes active.
   useEffect(() => {
     if (isActive) {
       setVisible(true);
       setCount(3);
-
-      const timer = setInterval(() => {
-        setCount((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            // Short delay before hiding and triggering complete
-            setTimeout(() => {
-              setVisible(false);
-              onComplete?.();
-            }, 500);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
     }
-  }, [isActive, onComplete]);
+  }, [isActive]);
 
-  if (!visible) return null;
+  // Drive the countdown one step at a time so it can pause/resume. While paused
+  // (or inactive/hidden) no timer is scheduled, freezing the current number.
+  useEffect(() => {
+    if (!isActive || isPaused || !visible) return undefined;
 
-  const displayText = count === 0 ? "GO!" : count.toString();
+    // At 0 we're showing "GO!" — hold briefly, then hide and complete.
+    if (count <= 0) {
+      const done = setTimeout(() => {
+        setVisible(false);
+        onComplete?.();
+      }, 500);
+      return () => clearTimeout(done);
+    }
+
+    const tick = setTimeout(() => {
+      setCount((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(tick);
+  }, [isActive, isPaused, visible, count, onComplete]);
+
+  // Hide the badge while paused so the pause menu shows on its own.
+  if (!visible || isPaused) return null;
+
+  const displayText = count === 0 ? t("countdown.go") : count.toString();
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-      <div
-        className="flex items-center justify-center w-24 h-24 rounded-full border-4 border-white/60 bg-black/40"
-        style={{
-          animation: "countdownPop 0.3s ease-out",
-        }}
-      >
+      <div className="flex items-center justify-center size-28 rounded-full border-4 border-ink bg-panel-dark/[0.92] shadow-arcade backdrop-blur-sm animate-[countdownPop_0.3s_ease-out]">
         <span
-          className="text-5xl font-bold text-white"
           key={count}
-          style={{
-            animation: "countdownScale 0.3s ease-out",
-          }}
+          className="io-title font-display text-5xl animate-[countdownScale_0.3s_ease-out]"
         >
           {displayText}
         </span>
       </div>
-
-      {/* Inline keyframes */}
-      <style>{`
-        @keyframes countdownPop {
-          0% { transform: scale(0.5); opacity: 0; }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes countdownScale {
-          0% { transform: scale(1.5); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };

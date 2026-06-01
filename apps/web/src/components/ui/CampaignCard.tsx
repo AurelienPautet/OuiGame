@@ -1,4 +1,9 @@
 import { Layers, CheckCircle2, Pencil, Trash2, Trophy } from "lucide-react";
+import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
+import { Button } from "./primitives";
+import { liftable, springs } from "../../lib/motion";
+import { cn } from "../../lib/cn";
 
 /**
  * CampaignCard - Displays a campaign preview with completion progress.
@@ -28,90 +33,95 @@ export function CampaignCard({
   onEdit,
   onDelete,
 }: CampaignCardProps) {
+  const { t } = useTranslation();
   const showActions = !!(onEdit || onDelete);
   const pct = Math.max(0, Math.min(100, completionPercent || 0));
 
   return (
-    <div
-      className="relative flex gap-4 p-4 rounded-lg cursor-pointer transition-all duration-200 bg-base-300 border-4 border-base-300 hover:bg-base-200 group"
+    <motion.div
+      className="relative flex gap-4 p-3 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)] group"
       onClick={onClick}
+      {...liftable}
     >
-      {/* Icon block */}
-      <div className="flex-shrink-0 w-32 h-24 rounded border-2 border-base-content/20 bg-base-100 flex items-center justify-center">
+      <div className="shrink-0 w-28 h-24 rounded-lg border-[3px] border-ink bg-field flex items-center justify-center">
         {completed ? (
-          <Trophy className="w-12 h-12 text-warning" />
+          <Trophy className="w-12 h-12 text-yellow-d" />
         ) : (
-          <Layers className="w-12 h-12 text-primary" />
+          <Layers className="w-12 h-12 text-blue-d" />
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 flex flex-col justify-between min-w-0">
         <div className="flex justify-between items-start gap-2">
           <div className="flex flex-col min-w-0">
-            <h3 className="text-lg font-bold truncate">{name}</h3>
-            <span className="text-xs text-base-content/50">
-              by {author || "Unknown"} · {levelCount} level
-              {levelCount === 1 ? "" : "s"}
+            <h3 className="text-lg font-bold text-ink truncate">{name}</h3>
+            <span className="text-xs font-semibold text-blue-d truncate">
+              {t("common.by", { name: author || t("common.unknown") })} ·{" "}
+              {t("campaignCard.levels", { count: levelCount })}
             </span>
           </div>
           {completed && (
-            <span className="badge badge-success gap-1 shrink-0">
-              <CheckCircle2 className="w-3 h-3" />
-              Completed
+            <span className="inline-flex items-center gap-1 bg-green text-white text-xs font-bold border-2 border-ink rounded-full px-2 py-0.5 shrink-0">
+              <CheckCircle2 size={12} strokeWidth={3} />{" "}
+              {t("campaignCard.done")}
             </span>
           )}
         </div>
 
         {description && (
-          <p className="text-sm text-base-content/70 line-clamp-2 mt-1">
+          <p className="text-sm text-ink-soft line-clamp-2 mt-1">
             {description}
           </p>
         )}
 
-        {/* Completion progress */}
         <div className="mt-2">
-          <div className="flex justify-between text-xs text-base-content/60 mb-1">
-            <span>Progress</span>
+          <div className="flex justify-between text-xs font-semibold text-ink-soft mb-1">
+            <span>{t("campaignCard.progress")}</span>
             <span>{pct}%</span>
           </div>
-          <progress
-            className={`progress w-full ${completed ? "progress-success" : "progress-primary"}`}
-            value={pct}
-            max="100"
-          />
+          <div className="h-3 rounded-full border-2 border-ink bg-field overflow-hidden">
+            <motion.div
+              className={cn(
+                "h-full origin-left",
+                completed ? "bg-green" : "bg-blue"
+              )}
+              style={{ width: `${pct}%` }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ ...springs.soft, delay: 0.1 }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Action buttons (my campaigns mode) */}
       {showActions && (
-        <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {onEdit && (
-            <button
-              className="btn btn-sm btn-primary gap-1"
+            <Button
+              variant="blue"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(campaignId);
               }}
             >
-              <Pencil className="w-4 h-4" />
-              Edit
-            </button>
+              <Pencil size={16} /> Edit
+            </Button>
           )}
           {onDelete && (
-            <button
-              className="btn btn-sm btn-error btn-outline gap-1"
+            <Button
+              variant="red"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(campaignId);
               }}
             >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
+              <Trash2 size={16} /> Delete
+            </Button>
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

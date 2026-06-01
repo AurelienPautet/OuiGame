@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, Layers, Plus } from "lucide-react";
 import { CampaignCard } from "./CampaignCard";
 import { useCampaigns, useMyCampaigns } from "../../hooks/api";
+import { Input, Button } from "./primitives";
 
 /**
  * CampaignSelector - Reusable campaign browser.
@@ -21,6 +23,7 @@ export function CampaignSelector({
   onDelete,
   onCreate,
 }: CampaignSelectorProps) {
+  const { t } = useTranslation();
   const [searchName, setSearchName] = useState("");
   const isMy = mode === "my";
 
@@ -34,39 +37,40 @@ export function CampaignSelector({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex gap-4 mb-4 flex-wrap">
-        <label className="input input-bordered flex items-center gap-2 flex-1 min-w-48 bg-base-200">
-          <Search className="w-4 h-4 opacity-70" />
-          <input
-            type="text"
-            className="grow bg-transparent"
-            placeholder="Search campaign name..."
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-48">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none"
+          />
+          <Input
+            className="pl-10"
+            placeholder={t("campaignSelector.searchPlaceholder")}
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
           />
-        </label>
+        </div>
 
         {isMy && onCreate && (
-          <button className="btn btn-primary gap-2" onClick={onCreate}>
-            <Plus className="w-5 h-5" />
-            New Campaign
-          </button>
+          <Button variant="green" onClick={onCreate}>
+            <Plus size={20} /> {t("campaignSelector.newCampaign")}
+          </Button>
         )}
       </div>
 
       {/* List */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-2">
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <span className="loading loading-spinner loading-lg"></span>
+          <div className="text-center py-8 text-ink-soft">
+            {t("campaignSelector.loadingCampaigns")}
           </div>
         ) : campaigns.length === 0 ? (
-          <div className="text-center text-base-content/50 py-8">
+          <div className="text-center text-ink-soft py-8">
             <Layers className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>
+            <p className="font-semibold">
               {isMy
-                ? "No campaigns yet. Create your first campaign!"
-                : "No campaigns found"}
+                ? t("campaignSelector.noCampaignsMine")
+                : t("campaignSelector.noCampaigns")}
             </p>
           </div>
         ) : (

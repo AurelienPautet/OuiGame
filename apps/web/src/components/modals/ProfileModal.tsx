@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import {
-  User,
   LogOut,
   Trophy,
   Activity,
@@ -18,8 +18,23 @@ import {
 import { useModal, useAuth } from "../../contexts";
 import { usePlayerStats, useMySoloStats } from "../../hooks/api";
 import type { MyStats, MySoloStats } from "@ouigame/shared/api";
+import { storage } from "../../lib/storage";
+import { colorFromIndex } from "../../constants/tankColors";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Button,
+  TankAvatar,
+} from "../ui/primitives";
+import { cn } from "../../lib/cn";
 
 export const ProfileModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
   const { user, logout } = useAuth();
   const { data: stats, isLoading } = usePlayerStats();
@@ -30,7 +45,6 @@ export const ProfileModal = () => {
     closeModal();
   };
 
-  // Multiplayer stats
   const s = stats ?? ({} as Partial<NonNullable<MyStats>>);
   const rounds = Number(s.rounds_played) || 0;
   const wins = Number(s.wins) || 0;
@@ -44,7 +58,6 @@ export const ProfileModal = () => {
   const kdRatio = deaths > 0 ? (kills / deaths).toFixed(2) : kills.toFixed(0);
   const accuracy = shots > 0 ? ((hits / shots) * 100).toFixed(1) + "%" : "0%";
 
-  // Solo stats
   const solo = soloStats ?? ({} as Partial<MySoloStats>);
   const soloLevelsCompleted = Number(solo.levelsCompleted) || 0;
   const soloTotalRounds = Number(solo.totalRounds) || 0;
@@ -56,204 +69,207 @@ export const ProfileModal = () => {
   const soloKdRatio =
     soloDeaths > 0 ? (soloKills / soloDeaths).toFixed(2) : soloKills.toFixed(0);
 
-  return (
-    <dialog className="modal modal-open">
-      <div className="modal-box w-11/12 max-w-4xl h-3/4 bg-base-100 p-0 overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="shrink-0 p-6 pb-4 flex flex-col items-center justify-center text-center gap-3">
-          <div className="avatar placeholder">
-            <div className="bg-primary text-primary-content rounded-full w-20 shadow-lg ring-4 ring-base-100 flex items-center justify-center">
-              <User size={40} />
-            </div>
-          </div>
+  const bodyColor = colorFromIndex(storage.getBodyIndex());
+  const turretColor = colorFromIndex(storage.getTurretIndex());
 
-          <div className="flex flex-col items-center">
-            <h2 className="text-3xl font-extrabold text-base-content mb-1">
-              {user?.username || "Guest"}
-            </h2>
-            <p className="flex items-center gap-2">
-              <span className="badge badge-md badge-ghost gap-2 truncate max-w-xs">
-                {user?.email || "No email"}
-              </span>
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) closeModal();
+      }}
+    >
+      <DialogContent
+        widthClassName="w-[min(94vw,860px)]"
+        className="h-[80vh] flex flex-col overflow-hidden"
+      >
+        <div className="flex items-center gap-4 mb-4 pr-10">
+          <div className="bg-field border-[3px] border-ink rounded-2xl p-1.5 shrink-0">
+            <TankAvatar
+              bodyColor={bodyColor}
+              turretColor={turretColor}
+              size={56}
+            />
+          </div>
+          <div className="min-w-0">
+            <DialogTitle className="text-2xl font-extrabold truncate">
+              {user?.username || t("common.guest")}
+            </DialogTitle>
+            <p className="text-ink-soft text-sm truncate">
+              {user?.email || t("profile.noEmail")}
             </p>
           </div>
-
-          <button
-            className="btn btn-error btn-sm btn-ghost gap-2 position-absolute top-4 right-4 absolute"
-            onClick={handleLogout}
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
+          <div className="flex-1" />
+          <Button variant="red" size="sm" onClick={handleLogout}>
+            <LogOut size={16} /> {t("profile.logout")}
+          </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-6 min-h-0">
-          {/* Solo Stats Section */}
-          <div>
-            <h3 className="font-bold mb-4 opacity-80 uppercase tracking-widest text-sm flex items-center gap-2">
-              <Gamepad2 size={18} className="text-success" />
-              Solo Performance
-            </h3>
+        <Tabs defaultValue="solo" className="flex-1 min-h-0 flex flex-col">
+          <TabsList className="mb-4 border-b-[3px] border-ink shrink-0">
+            <TabsTrigger value="solo">
+              <Gamepad2 size={16} className="mr-1.5 inline" />{" "}
+              {t("profile.solo")}
+            </TabsTrigger>
+            <TabsTrigger value="online">
+              <Swords size={16} className="mr-1.5 inline" />{" "}
+              {t("profile.multiplayer")}
+            </TabsTrigger>
+          </TabsList>
 
-            {soloLoading ? (
-              <div className="flex justify-center py-4">
-                <span className="loading loading-spinner loading-md"></span>
-              </div>
-            ) : soloTotalRounds > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Levels Completed"
-                  value={soloLevelsCompleted}
-                  icon={CheckCircle}
-                  color="text-success"
-                />
-                <StatCard
-                  title="Solo Rounds"
-                  value={soloTotalRounds}
-                  icon={Gamepad2}
-                  color="text-info"
-                />
-                <StatCard
-                  title="Victories"
-                  value={soloTotalWins}
-                  icon={Trophy}
-                  color="text-warning"
-                />
-                <StatCard
-                  title="Win Rate"
-                  value={soloWinRate}
-                  icon={TrendingUp}
-                  color="text-success"
-                />
-                <StatCard
-                  title="Solo Kills"
-                  value={soloKills}
-                  icon={Swords}
-                  color="text-error"
-                />
-                <StatCard
-                  title="Solo K/D"
-                  value={soloKdRatio}
-                  icon={Scale}
-                  color="text-secondary"
-                />
-                <StatCard
-                  title="Solo Accuracy"
-                  value={soloAccuracy}
-                  icon={Target}
-                  color="text-primary"
-                />
-              </div>
-            ) : (
-              <div className="text-center py-4 text-base-content/50">
-                <p>No solo games played yet. Try some solo levels!</p>
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+            <TabsContent value="solo">
+              {soloLoading ? (
+                <Loading />
+              ) : soloTotalRounds > 0 ? (
+                <Grid>
+                  <StatCard
+                    title={t("profile.levelsCompleted")}
+                    value={soloLevelsCompleted}
+                    icon={CheckCircle}
+                    color="text-green"
+                  />
+                  <StatCard
+                    title={t("profile.soloRounds")}
+                    value={soloTotalRounds}
+                    icon={Gamepad2}
+                    color="text-blue-d"
+                  />
+                  <StatCard
+                    title={t("profile.victories")}
+                    value={soloTotalWins}
+                    icon={Trophy}
+                    color="text-yellow-d"
+                  />
+                  <StatCard
+                    title={t("profile.winRate")}
+                    value={soloWinRate}
+                    icon={TrendingUp}
+                    color="text-green"
+                  />
+                  <StatCard
+                    title={t("profile.soloKills")}
+                    value={soloKills}
+                    icon={Swords}
+                    color="text-red"
+                  />
+                  <StatCard
+                    title={t("profile.soloKd")}
+                    value={soloKdRatio}
+                    icon={Scale}
+                    color="text-purple"
+                  />
+                  <StatCard
+                    title={t("profile.soloAccuracy")}
+                    value={soloAccuracy}
+                    icon={Target}
+                    color="text-blue-d"
+                  />
+                </Grid>
+              ) : (
+                <Empty text={t("profile.noSolo")} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="online">
+              {isLoading ? (
+                <Loading />
+              ) : rounds > 0 ? (
+                <Grid>
+                  <StatCard
+                    title={t("profile.roundsPlayed")}
+                    value={rounds}
+                    icon={Activity}
+                    color="text-blue-d"
+                  />
+                  <StatCard
+                    title={t("profile.wins")}
+                    value={wins}
+                    icon={Trophy}
+                    color="text-yellow-d"
+                  />
+                  <StatCard
+                    title={t("profile.winRate")}
+                    value={winRate}
+                    icon={TrendingUp}
+                    color="text-green"
+                  />
+                  <StatCard
+                    title={t("profile.kills")}
+                    value={kills}
+                    icon={Swords}
+                    color="text-red"
+                  />
+                  <StatCard
+                    title={t("profile.deaths")}
+                    value={deaths}
+                    icon={Skull}
+                    color="text-ink"
+                  />
+                  <StatCard
+                    title={t("profile.kdRatio")}
+                    value={kdRatio}
+                    icon={Scale}
+                    color="text-purple"
+                  />
+                  <StatCard
+                    title={t("profile.shotsFired")}
+                    value={shots}
+                    icon={Crosshair}
+                    color="text-orange-d"
+                  />
+                  <StatCard
+                    title={t("profile.hits")}
+                    value={hits}
+                    icon={Target}
+                    color="text-blue-d"
+                  />
+                  <StatCard
+                    title={t("profile.accuracy")}
+                    value={accuracy}
+                    icon={Target}
+                    color="text-blue-d"
+                  />
+                  <StatCard
+                    title={t("profile.minesPlanted")}
+                    value={plants}
+                    icon={Bomb}
+                    color="text-red"
+                  />
+                  <StatCard
+                    title={t("profile.blocksBroken")}
+                    value={blocks}
+                    icon={Hammer}
+                    color="text-yellow-d"
+                  />
+                </Grid>
+              ) : (
+                <Empty text={t("profile.noMultiplayer")} />
+              )}
+            </TabsContent>
           </div>
-
-          {/* Multiplayer Stats Section */}
-          <div>
-            <h3 className="font-bold mb-4 opacity-80 uppercase tracking-widest text-sm flex items-center gap-2">
-              <Swords size={18} className="text-error" />
-              Multiplayer Statistics
-            </h3>
-
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <span className="loading loading-spinner loading-lg"></span>
-              </div>
-            ) : rounds > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Rounds Played"
-                  value={rounds}
-                  icon={Activity}
-                  color="text-info"
-                />
-                <StatCard
-                  title="Wins"
-                  value={wins}
-                  icon={Trophy}
-                  color="text-warning"
-                />
-                <StatCard
-                  title="Win Rate"
-                  value={winRate}
-                  icon={TrendingUp}
-                  color="text-success"
-                />
-
-                <StatCard
-                  title="Kills"
-                  value={kills}
-                  icon={Swords}
-                  color="text-error"
-                />
-                <StatCard
-                  title="Deaths"
-                  value={deaths}
-                  icon={Skull}
-                  color="text-base-content"
-                />
-                <StatCard
-                  title="K/D Ratio"
-                  value={kdRatio}
-                  icon={Scale}
-                  color="text-secondary"
-                />
-
-                <StatCard
-                  title="Shots Fired"
-                  value={shots}
-                  icon={Crosshair}
-                  color="text-accent"
-                />
-                <StatCard
-                  title="Hits"
-                  value={hits}
-                  icon={Target}
-                  color="text-primary"
-                />
-                <StatCard
-                  title="Accuracy"
-                  value={accuracy}
-                  icon={Target}
-                  color="text-primary"
-                />
-
-                <StatCard
-                  title="Mines Planted"
-                  value={plants}
-                  icon={Bomb}
-                  color="text-error"
-                />
-                <StatCard
-                  title="Blocks Broken"
-                  value={blocks}
-                  icon={Hammer}
-                  color="text-warning"
-                />
-              </div>
-            ) : (
-              <div className="text-center py-4 text-base-content/50">
-                <p>No multiplayer games played yet. Join a room!</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="shrink-0 modal-action p-4 pt-0 mt-0">
-          <button className="btn" onClick={closeModal}>
-            Close
-          </button>
-        </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={closeModal}>close</button>
-      </form>
-    </dialog>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 };
+
+const Grid = ({ children }: { children: React.ReactNode }) => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    {children}
+  </div>
+);
+
+const Loading = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="text-center py-8 text-ink-soft">{t("common.loading")}</div>
+  );
+};
+
+const Empty = ({ text }: { text: string }) => (
+  <div className="text-center py-6 text-ink-soft">{text}</div>
+);
 
 interface StatCardProps {
   title: string;
@@ -263,13 +279,15 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon: Icon, color }: StatCardProps) => (
-  <div className="bg-base-200 p-4 rounded-xl flex items-center gap-4 transition-all hover:bg-base-300">
-    <div className={`p-3 rounded-lg bg-base-100 ${color} bg-opacity-10`}>
-      <Icon size={24} className={color} />
+  <div className="bg-field border-[3px] border-ink rounded-xl p-3 flex items-center gap-3">
+    <div className="p-2 rounded-lg bg-white border-2 border-ink shrink-0">
+      <Icon size={22} className={color} />
     </div>
-    <div>
-      <div className="stat-value text-xl">{value}</div>
-      <div className="stat-title text-xs font-bold opacity-60 uppercase">
+    <div className="min-w-0">
+      <div className="text-xl font-bold text-ink">{value}</div>
+      <div
+        className={cn("text-[11px] font-bold uppercase text-ink-soft truncate")}
+      >
         {title}
       </div>
     </div>

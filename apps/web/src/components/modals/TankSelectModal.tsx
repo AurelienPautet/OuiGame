@@ -1,51 +1,62 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useModal } from "../../contexts";
 import { TANK_COLORS as COLORS } from "../../constants/tankColors";
 import { storage } from "../../lib/storage";
+import { tankColors } from "../../theme/palette";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Button,
+  TankAvatar,
+} from "../ui/primitives";
+import { cn } from "../../lib/cn";
+
+const clampIndex = (saved: number | null) =>
+  Math.max(0, Math.min(saved ?? 1, COLORS.length - 1));
+
+const SwatchRow = ({
+  label,
+  selected,
+  onPick,
+}: {
+  label: string;
+  selected: number;
+  onPick: (i: number) => void;
+}) => (
+  <div className="flex items-center gap-2 flex-wrap">
+    <span className="text-sm font-semibold text-ink w-16">{label}</span>
+    {COLORS.map((name, i) => (
+      <button
+        key={name}
+        type="button"
+        aria-label={`${label} ${name}`}
+        aria-pressed={i === selected}
+        onClick={() => onPick(i)}
+        className={cn(
+          "size-8 rounded-lg border-[3px] border-ink cursor-pointer transition-transform shadow-[0_3px_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5",
+          i === selected &&
+            "outline-3 outline-white -outline-offset-[7px] -translate-y-0.5 scale-110"
+        )}
+        style={{ background: tankColors(name).fill }}
+      />
+    ))}
+  </div>
+);
 
 export const TankSelectModal = () => {
+  const { t } = useTranslation();
   const { closeModal } = useModal();
-
-  // Load saved colors from storage or default to index 1 (orange)
-  const [bodyIndex, setBodyIndex] = useState(() => {
-    const saved = storage.getBodyIndex();
-    const idx = saved ?? 1;
-    return Math.max(0, Math.min(idx, COLORS.length - 1));
-  });
-  const [turretIndex, setTurretIndex] = useState(() => {
-    const saved = storage.getTurretIndex();
-    const idx = saved ?? 1;
-    return Math.max(0, Math.min(idx, COLORS.length - 1));
-  });
-
-  // Navigate to previous/next
-  const navigateTurret = (direction: number) => {
-    setTurretIndex((prev) =>
-      Math.max(0, Math.min(prev + direction, COLORS.length - 1))
-    );
-  };
-
-  const navigateBody = (direction: number) => {
-    setBodyIndex((prev) =>
-      Math.max(0, Math.min(prev + direction, COLORS.length - 1))
-    );
-  };
-
-  // Handle click on carousel - left half goes prev, right half goes next
-  const handleCarouselClick = (
-    e: React.MouseEvent<HTMLDivElement>,
-    navigateFn: (direction: number) => void
-  ) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const isLeftHalf = clickX < rect.width / 2;
-    navigateFn(isLeftHalf ? -1 : 1);
-  };
+  const [bodyIndex, setBodyIndex] = useState(() =>
+    clampIndex(storage.getBodyIndex())
+  );
+  const [turretIndex, setTurretIndex] = useState(() =>
+    clampIndex(storage.getTurretIndex())
+  );
 
   const handleSave = () => {
-    // bodyIndex/turretIndex are always clamped to [0, COLORS.length - 1], so
-    // these lookups are guaranteed to be defined.
+    // Indices are always clamped to [0, COLORS.length - 1].
     storage.setTankColors(
       bodyIndex,
       turretIndex,
@@ -55,117 +66,48 @@ export const TankSelectModal = () => {
     closeModal();
   };
 
-  // Render a single carousel strip
-  const renderCarousel = (
-    items: string[],
-    selectedIndex: number,
-    navigate: (direction: number) => void,
-    type: string
-  ) => (
-    <div className="relative h-full">
-      {/* Left Arrow */}
-      <button
-        className={`absolute left-4 top-1/2 -translate-y-1/2 z-20 btn btn-circle btn-ghost btn-sm
-          ${selectedIndex === 0 ? "invisible" : ""}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate(-1);
-        }}
-      >
-        <ChevronLeft className="w-8 h-8 text-primary" />
-      </button>
-
-      {/* Clickable carousel area */}
-      <div
-        className="flex items-center justify-center h-full cursor-pointer"
-        onClick={(e) => handleCarouselClick(e, navigate)}
-      >
-        {/* Show prev, current, next items */}
-        <div className="flex items-center justify-center gap-4">
-          {/* Previous item (faded) */}
-          <div className="w-32 h-20 opacity-40 transition-all duration-200">
-            {selectedIndex > 0 && (
-              <img
-                src={`ressources/image/tank_player/${type}_${
-                  items[selectedIndex - 1]
-                }.png`}
-                alt={`${type} ${items[selectedIndex - 1]}`}
-                className="w-full h-full object-contain select-none"
-                draggable={false}
-              />
-            )}
-          </div>
-
-          {/* Current item (large and centered) */}
-          <div
-            className={`${
-              type === "turret" ? "w-48 h-28" : "w-44 h-36"
-            } transition-all duration-200`}
-          >
-            <img
-              src={`ressources/image/tank_player/${type}_${items[selectedIndex]}.png`}
-              alt={`${type} ${items[selectedIndex]}`}
-              className="w-full h-full object-contain select-none"
-              draggable={false}
-            />
-          </div>
-
-          {/* Next item (faded) */}
-          <div className="w-32 h-20 opacity-40 transition-all duration-200">
-            {selectedIndex < items.length - 1 && (
-              <img
-                src={`ressources/image/tank_player/${type}_${
-                  items[selectedIndex + 1]
-                }.png`}
-                alt={`${type} ${items[selectedIndex + 1]}`}
-                className="w-full h-full object-contain select-none"
-                draggable={false}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Right Arrow */}
-      <button
-        className={`absolute right-4 top-1/2 -translate-y-1/2 z-20 btn btn-circle btn-ghost btn-sm
-          ${selectedIndex === items.length - 1 ? "invisible" : ""}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate(1);
-        }}
-      >
-        <ChevronRight className="w-8 h-8 text-primary" />
-      </button>
-    </div>
-  );
-
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box bg-base-100 w-11/12 max-w-2xl p-0 overflow-hidden">
-        {/* Turret Selector */}
-        <div className="h-44 bg-base-200">
-          {renderCarousel(COLORS, turretIndex, navigateTurret, "turret")}
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) closeModal();
+      }}
+    >
+      <DialogContent widthClassName="w-[min(94vw,520px)]">
+        <DialogTitle className="text-2xl font-bold mb-4">
+          {t("tankSelect.title")}
+        </DialogTitle>
+
+        <div className="graph-paper border-[3px] border-ink rounded-arcade flex items-center justify-center py-6 mb-5">
+          <TankAvatar
+            bodyColor={COLORS[bodyIndex] ?? "orange"}
+            turretColor={COLORS[turretIndex] ?? "orange"}
+            size={170}
+          />
         </div>
 
-        {/* Body Selector */}
-        <div className="h-48 bg-base-200 border-t border-base-300">
-          {renderCarousel(COLORS, bodyIndex, navigateBody, "body")}
+        <div className="space-y-3 mb-5">
+          <SwatchRow
+            label={t("tankSelect.body")}
+            selected={bodyIndex}
+            onPick={setBodyIndex}
+          />
+          <SwatchRow
+            label={t("tankSelect.turret")}
+            selected={turretIndex}
+            onPick={setTurretIndex}
+          />
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-center gap-4 p-4 bg-base-200 border-t border-base-300">
-          <button className="btn" onClick={closeModal}>
-            Cancel
-          </button>
-          <button className="btn btn-primary" onClick={handleSave}>
-            Save
-          </button>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={closeModal}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="green" onClick={handleSave}>
+            {t("common.save")}
+          </Button>
         </div>
-      </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={closeModal}>close</button>
-      </form>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -18,6 +18,7 @@ export const MODALS = {
   TANK_SELECT: "tankSelect",
   CAMPAIGN_SELECTOR: "campaignSelector",
   MY_CAMPAIGNS: "myCampaigns",
+  SETTINGS: "settings",
 } as const;
 
 export type ModalName = (typeof MODALS)[keyof typeof MODALS];

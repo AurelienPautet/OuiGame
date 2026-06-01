@@ -1,85 +1,179 @@
 @import "tailwindcss";
-@plugin "daisyui";
-@plugin "daisyui/theme" {
-  name: "ouitank";
-  default: true;
-  prefersdark: true;
-  color-scheme: dark;
 
-  /* Using exact Tailwind CSS hex values converted to oklch */
-  /* slate-700: #334155, slate-600: #475569, slate-500: #64748b */
-  /* teal-500: #14b8a6 */
+/* ========================================================================
+   ARCADE DESIGN SYSTEM TOKENS — mirror of apps/web/src/theme/palette.ts.
+   Keep the two in sync; the engine imports the .ts, Tailwind reads these.
+   ======================================================================== */
+@theme {
+  /* field + ink */
+  --color-ink: #2b2f36;
+  --color-ink-soft: #555b66;
+  --color-field: #c9cdd2;
+  --color-field-line: #b8bdc4;
+  --color-panel-dark: #1f232a;
 
-  --color-base-100: oklch(from #334155 l c h);
-  --color-base-200: oklch(from #475569 l c h);
-  --color-base-300: oklch(from #64748b l c h);
-  --color-base-content: oklch(100% 0 0);
-  --color-primary: oklch(from #14b8a6 l c h);
-  --color-primary-content: oklch(100% 0 0);
-  --color-secondary: oklch(from #475569 l c h);
-  --color-secondary-content: oklch(100% 0 0);
-  --color-accent: oklch(from #f59e0b l c h);
-  --color-accent-content: oklch(from #1e293b l c h);
-  --color-neutral: oklch(from #1e293b l c h);
-  --color-neutral-content: oklch(100% 0 0);
-  --color-info: oklch(from #0ea5e9 l c h);
-  --color-info-content: oklch(100% 0 0);
-  --color-success: oklch(from #22c55e l c h);
-  --color-success-content: oklch(100% 0 0);
-  --color-warning: oklch(from #f59e0b l c h);
-  --color-warning-content: oklch(from #1e293b l c h);
-  --color-error: oklch(from #ef4444 l c h);
-  --color-error-content: oklch(100% 0 0);
+  /* team / shape palette (fill + `-d` outline) */
+  --color-blue: #00b2e1;
+  --color-blue-d: #0085a8;
+  --color-red: #f14e54;
+  --color-red-d: #b8383d;
+  --color-green: #00e06a;
+  --color-green-d: #00a64e;
+  --color-yellow: #ffe869;
+  --color-yellow-d: #c9b53f;
+  --color-purple: #bf7ff5;
+  --color-purple-d: #9355c9;
+  --color-orange: #ffb142;
+  --color-orange-d: #c98821;
+  --color-teal: #2dd4bf;
+  --color-teal-d: #1c9c8d;
 
-  --radius-selector: 0.375rem;
-  --radius-field: 0.375rem;
-  --radius-box: 0.375rem;
+  /* bold rounded type everywhere */
+  --font-sans:
+    "Fredoka Variable", "Fredoka", system-ui, -apple-system, sans-serif;
+  --font-display:
+    "Fredoka Variable", "Fredoka", system-ui, -apple-system, sans-serif;
 
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-
-  --border: 1px;
-
-  --depth: 0;
-  --noise: 0;
+  /* chunky arcade radii + shadows */
+  --radius-arcade: 16px;
+  --shadow-arcade: 0 6px 0 rgba(0, 0, 0, 0.18), 0 10px 22px rgba(0, 0, 0, 0.16);
+  --shadow-btn: 0 5px 0 rgba(0, 0, 0, 0.25);
 }
 
-/* Blur background when modal is open */
-.modal-backdrop {
-  background-color: transparent !important;
-  backdrop-filter: blur(4px);
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
-/* Animation keyframes for Tailwind arbitrary animations */
-@keyframes slideInRight {
-  from {
+/* GRAPH-PAPER FIELD — the io backdrop for every menu surface. */
+@utility graph-paper {
+  background-color: var(--color-field);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      var(--color-field-line) 0 2px,
+      transparent 2px 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--color-field-line) 0 2px,
+      transparent 2px 32px
+    );
+}
+
+/* A fainter inner-card grid accent (e.g. inside hero / thumbnails). */
+@utility graph-paper-soft {
+  background-image:
+    repeating-linear-gradient(0deg, #bcc1c8 0 2px, transparent 2px 30px),
+    repeating-linear-gradient(90deg, #bcc1c8 0 2px, transparent 2px 30px);
+}
+
+/* io-style outlined heading text (white fill, dark outline stack). */
+@utility io-title {
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow:
+    -2px -2px 0 var(--color-ink),
+    2px -2px 0 var(--color-ink),
+    -2px 2px 0 var(--color-ink),
+    2px 2px 0 var(--color-ink),
+    0 3px 0 var(--color-ink),
+    4px 6px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* Dialog / overlay / toast entrances + list cascades now live in Motion
+   (src/lib/motion.tsx and the components themselves). The keyframes that
+   remain below are the self-contained in-game cues — countdown badge, life
+   hearts, auto-advance bar — which stay plain CSS. */
+
+/* ========================================================================
+   GAME-OVERLAY DESIGN SYSTEM — the rules every in-game overlay follows
+   (countdown, pause, end screens, interstitial). Primitives live in
+   src/components/game/overlay/. Keep new overlays on these rules:
+
+     1. One scrim   — OverlayScrim: inset-0 z-50, bg-ink/70 backdrop-blur-sm.
+     2. One surface — OverlayPanel: dark arcade card (border-4 border-ink,
+                      rounded-arcade, shadow-arcade) + optional result accent bar.
+     3. One heading — IoTitle (outlined); result colour rides the icon/accent,
+                      never the title fill.
+     4. One palette — arcade tokens only (green/red/yellow/blue/ink/white),
+                      mapped via RESULT_TONE. No raw Tailwind *-400/*-500/gray-*.
+     5. One stat    — Stat / StatGrid on the bg-white/10 border-2 border-ink chip,
+                      numbers use tabular-nums (never font-mono).
+     6. One actions — OverlayActions: green "Play Again" + ghost "Quit".
+     7. Animations  — scrim fade + panel/stat cascade come from Motion
+                      (OverlayScrim/OverlayPanel); the bespoke in-game cues
+                      (countdown, life hearts, auto-advance bar) stay as the
+                      keyframes below, referenced via animate-[name_...].
+     8. z-index     — HUD z-40, overlays z-50.
+   ======================================================================== */
+
+/* Countdown badge: container pop + number swap. */
+@keyframes countdownPop {
+  0% {
+    transform: scale(0.5);
     opacity: 0;
-    transform: translateX(50px);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes countdownScale {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Interstitial life-change hearts. */
+@keyframes lifeGain {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.4) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes lifeLoss {
+  0% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.3) rotate(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.4) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+/* Interstitial auto-advance progress bar (drains right-to-left). */
+@keyframes barCountdown {
+  from {
+    width: 100%;
   }
   to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideOutRight {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-}
-
-@keyframes scoreCascade {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    width: 0%;
   }
 }
