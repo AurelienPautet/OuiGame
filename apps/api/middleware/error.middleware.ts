@@ -12,7 +12,7 @@
 //                   500 so no internal detail leaks to the client.
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
-import { HttpError } from "../errors";
+import { isHttpError } from "../errors";
 
 export function errorHandler(
   err: unknown,
@@ -27,7 +27,7 @@ export function errorHandler(
     return;
   }
 
-  if (err instanceof HttpError) {
+  if (isHttpError(err)) {
     res.status(err.status).json(err.body);
     return;
   }

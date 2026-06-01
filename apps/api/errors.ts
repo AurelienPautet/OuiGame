@@ -4,24 +4,43 @@
 // the exact HTTP response, so handlers no longer carry their own
 // try/catch -> console.error -> res.status(500) boilerplate.
 
-// Carries the HTTP status and the EXACT JSON body to send. Most callers use the
-// helpers below (the conventional `{ error }` shape), but the body is kept fully
-// caller-controlled because the auth routes send a richer `{ error, message }`
-// the web client branches on (e.g. error === "username"), and that contract must
-// survive verbatim.
+// The JSON body an HttpError carries: always an `error` string, optionally a
+// `message`, plus any extra fields a caller needs (e.g. the `details` array of a
+// validation error). The body is sent VERBATIM, which is what lets the auth
+// routes carry the richer `{ error, message }` shape the web client branches on
+// (e.g. error === "username") without it being reshaped.
+export interface HttpErrorBody {
+  error: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+// Carries the HTTP status and the exact JSON body to send.
 export class HttpError extends Error {
   readonly status: number;
-  readonly body: { error: string; message?: string };
-  // Lets the middleware (and tests) recognise the error across module/realm
-  // boundaries without relying solely on `instanceof`.
+  readonly body: HttpErrorBody;
+  // Lets the middleware recognise the error across module/realm boundaries
+  // without relying solely on `instanceof` — see isHttpError() below.
   readonly isHttpError = true;
 
-  constructor(status: number, body: { error: string; message?: string }) {
+  constructor(status: number, body: HttpErrorBody) {
     super(body.message ?? body.error);
     this.status = status;
     this.body = body;
     this.name = "HttpError";
   }
+}
+
+// Recognise an HttpError without relying solely on `instanceof`, which breaks if
+// two copies of this module ever load (duplicate installs / separate realms).
+// The `isHttpError` brand makes the check copy-proof.
+export function isHttpError(err: unknown): err is HttpError {
+  return (
+    err instanceof HttpError ||
+    (typeof err === "object" &&
+      err !== null &&
+      (err as { isHttpError?: unknown }).isHttpError === true)
+  );
 }
 
 // Conventional `{ error: "<message>" }` responses, by status. These replace the
