@@ -30,7 +30,7 @@ export interface GameInputState {
   listenersAttached: boolean;
 }
 
-interface InputSnapshot {
+export interface InputSnapshot {
   direction: { x: number; y: number };
   aim: { x: number; y: number };
   click: boolean;

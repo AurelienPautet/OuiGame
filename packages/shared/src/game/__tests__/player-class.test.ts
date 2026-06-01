@@ -148,6 +148,21 @@ describe("Player.update — movement + boundary clamps", () => {
     expect(p.position.y).toBeCloseTo(200 + step, 12);
   });
 
+  it("covers the same distance for the same game-time, whatever the dt", () => {
+    // Half a second of game time, integrated at 60 Hz vs 120 Hz, must land in
+    // the exact same place — speed is a function of time, not of frame rate.
+    const coarse = mkPlayer();
+    coarse.direction = { x: 1, y: 0 };
+    for (let i = 0; i < 30; i++) coarse.update(makeFakeRoom(), 1 / 60);
+
+    const fine = mkPlayer();
+    fine.direction = { x: 1, y: 0 };
+    for (let i = 0; i < 60; i++) fine.update(makeFakeRoom(), 1 / 120);
+
+    expect(coarse.position.x).toBeCloseTo(fine.position.x, 9);
+    expect(coarse.position.x).toBeCloseTo(200 + 180 * 0.5, 9); // 90 px
+  });
+
   it("clamps to the left/top map edges (>= 50)", () => {
     const p = mkPlayer({ x: 51, y: 51 });
     p.direction = { x: -1, y: -1 };
