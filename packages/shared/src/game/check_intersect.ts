@@ -1,4 +1,10 @@
-export function getEdges(rect) {
+import type { Vec2, Size } from "./types.js";
+
+type Segment = [Vec2, Vec2];
+
+export function getEdges(
+  rect: Vec2 & Size
+): [Segment, Segment, Segment, Segment] {
   const { x, y, w, h } = rect;
   return [
     [
@@ -20,7 +26,12 @@ export function getEdges(rect) {
   ];
 }
 
-export function intersectRaySegment(rayOrigin, rayDir, p1, p2) {
+export function intersectRaySegment(
+  rayOrigin: Vec2,
+  rayDir: Vec2,
+  p1: Vec2,
+  p2: Vec2
+): { x: number; y: number; dist: number } | null {
   //console.log("intersectRaySegment", rayOrigin, rayDir, p1, p2);
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;

@@ -1,7 +1,13 @@
 {
   "extends": "@ouigame/config-ts/tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // tsup's .d.ts build injects a (now-deprecated) `baseUrl`; under TS 6 that
+    // is a hard error unless deprecations from 6.0 are explicitly tolerated.
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The game's __tests__ run via Vitest (esbuild transpile, no type-check), so
+  // they are not part of this strict gate — mirroring apps/api's tsconfig.
+  "exclude": ["node_modules", "dist", "**/__tests__/**"]
 }

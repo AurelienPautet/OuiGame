@@ -19,6 +19,7 @@
       "require": "./dist/api.cjs"
     },
     "./game": {
+      "types": "./dist/game.d.ts",
       "import": "./dist/game.js",
       "require": "./dist/game.cjs"
     }

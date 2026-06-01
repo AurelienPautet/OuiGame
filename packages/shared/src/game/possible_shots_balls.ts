@@ -1,13 +1,38 @@
+import type { Vec2, DrawingContext } from "./types.js";
+import type { Bot } from "./Bot.js";
+import type { Room } from "./Room.js";
+
+// What a bot's raycast pass is allowed to consider, and whether to draw it.
+interface ShotData {
+  bullets: boolean;
+  debug: boolean;
+}
+
 class possible_shot_points {
+  room: Room;
+  ctx: DrawingContext | undefined;
+  initial_player: Bot;
+  initial_position: Vec2;
+  radius: number;
+  initial_angle: number;
+  position: Vec2;
+  direction: Vec2;
+  angle: number;
+  bounce: number;
+  first_bounce_pos: Vec2;
+  step_size: number;
+  calls: number;
+  data: ShotData;
+
   constructor(
-    initial_position,
-    initial_angle,
-    step_size,
-    radius,
-    initial_player,
-    data,
-    room,
-    ctx
+    initial_position: Vec2,
+    initial_angle: number,
+    step_size: number,
+    radius: number,
+    initial_player: Bot,
+    data: ShotData,
+    room: Room,
+    ctx?: DrawingContext
   ) {
     this.room = room;
     this.ctx = ctx;
@@ -34,7 +59,7 @@ class possible_shot_points {
     this.data = data;
   }
 
-  update_repeat(N) {
+  update_repeat(N: number): void {
     for (let i = 0; i < N; i++) {
       if (this.bounce >= this.initial_player.shoot_max_bounce) {
         break;
@@ -46,8 +71,8 @@ class possible_shot_points {
     }
   }
 
-  update_position() {
-    let socketid;
+  update_position(): void {
+    let socketid: string;
 
     this.calls++;
 
@@ -60,10 +85,9 @@ class possible_shot_points {
       y: this.position.y + this.step_size * this.direction.y,
     };
 
-    let numMines = this.room.mines.length;
-    let mine = null;
+    const numMines = this.room.mines.length;
     for (let i = 0; i < numMines; i++) {
-      mine = this.room.mines[i];
+      const mine = this.room.mines[i]!;
       if (
         rectRect2(
           this.position.x,
@@ -84,7 +108,7 @@ class possible_shot_points {
     }
     if (this.data.bullets) {
       for (let i = 0; i < this.room.bullets.length; i++) {
-        const bullet = this.room.bullets[i];
+        const bullet = this.room.bullets[i]!;
         if (
           rectRect2(
             this.position.x,
@@ -112,8 +136,8 @@ class possible_shot_points {
       }
     }
     for (socketid in this.room.players) {
-      let player = this.room.players[socketid];
-      if (!player.alive) {
+      const player = this.room.players[socketid];
+      if (!player || !player.alive) {
         continue;
       }
       if (socketid === this.initial_player.socketid && this.calls < 7) {
@@ -169,11 +193,10 @@ class possible_shot_points {
         return;
       }
     }
-    let block = null;
     let res = "";
-    let numBlocks = this.room.Bcollision.length;
+    const numBlocks = this.room.Bcollision.length;
     for (let e = 0; e < numBlocks; e++) {
-      block = this.room.Bcollision[e];
+      const block = this.room.Bcollision[e]!;
       res = detectCollisions2(
         block.position.x,
         block.position.y,
@@ -219,7 +242,7 @@ class possible_shot_points {
       }
     }
   }
-  draw(color) {
+  draw(color: string): void {
     /*     c.save();
     c.globalAlpha = 0.3;
     c.beginPath();
@@ -249,14 +272,14 @@ class possible_shot_points {
 }
 
 export function launch_possible_shots(
-  N,
-  step_size,
-  radius,
-  bot,
-  data,
-  room,
-  ctx
-) {
+  N: number,
+  step_size: number,
+  radius: number,
+  bot: Bot,
+  data: ShotData,
+  room: Room,
+  ctx?: DrawingContext
+): void {
   for (let i = 0; i < N; i++) {
     const angle = (i * Math.PI * 2) / N;
 
@@ -277,7 +300,16 @@ export function launch_possible_shots(
   }
 }
 
-export function rectRect2(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
+export function rectRect2(
+  r1x: number,
+  r1y: number,
+  r1w: number,
+  r1h: number,
+  r2x: number,
+  r2y: number,
+  r2w: number,
+  r2h: number
+): boolean {
   if (
     r1x + r1w >= r2x &&
     r1x <= r2x + r2w &&
@@ -289,7 +321,16 @@ export function rectRect2(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
   return false;
 }
 
-function detectCollisions2(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h) {
+function detectCollisions2(
+  r1x: number,
+  r1y: number,
+  r1w: number,
+  r1h: number,
+  r2x: number,
+  r2y: number,
+  r2w: number,
+  r2h: number
+): string {
   if (
     r1x + r1w >= r2x &&
     r1x <= r2x + r2w &&

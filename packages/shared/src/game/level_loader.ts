@@ -1,10 +1,11 @@
 import { Block } from "./Block.js";
 import { Hole } from "./Hole.js";
 import { CollisionBox } from "./CollisionBox.js";
+import type { Room } from "./Room.js";
 
-export function generateBcollision(room) {
+export function generateBcollision(room: Room): void {
   //generate the collision boxes for the blocks in the level and merge them if they are touching each other to reduce the number of collision boxes to check
-  let boxed = [];
+  let boxed: number[] = [];
   let i = 0;
   room.Bcollision = [];
   //generate the collision boxes for the blocks
@@ -56,20 +57,20 @@ export function generateBcollision(room) {
     for (let e = 0; e < room.Bcollision.length; e++) {
       if (
         i != e &&
-        room.Bcollision[i].position.x === room.Bcollision[e].position.x &&
-        room.Bcollision[i].position.y + room.Bcollision[i].size.h ===
-          room.Bcollision[e].position.y &&
-        room.Bcollision[i].size.w === room.Bcollision[e].size.w
+        room.Bcollision[i]!.position.x === room.Bcollision[e]!.position.x &&
+        room.Bcollision[i]!.position.y + room.Bcollision[i]!.size.h ===
+          room.Bcollision[e]!.position.y &&
+        room.Bcollision[i]!.size.w === room.Bcollision[e]!.size.w
       ) {
         room.Bcollision.push(
           new CollisionBox(
             {
-              x: room.Bcollision[i].position.x,
-              y: room.Bcollision[i].position.y,
+              x: room.Bcollision[i]!.position.x,
+              y: room.Bcollision[i]!.position.y,
             },
             {
-              w: room.Bcollision[i].size.w,
-              h: room.Bcollision[i].size.h + room.Bcollision[e].size.h,
+              w: room.Bcollision[i]!.size.w,
+              h: room.Bcollision[i]!.size.h + room.Bcollision[e]!.size.h,
             }
           )
         );
@@ -90,20 +91,20 @@ export function generateBcollision(room) {
     for (let e = 0; e < room.Bcollision.length; e++) {
       if (
         i != e &&
-        room.Bcollision[i].position.y === room.Bcollision[e].position.y &&
-        room.Bcollision[i].position.x + room.Bcollision[i].size.w ===
-          room.Bcollision[e].position.x &&
-        room.Bcollision[i].size.h === room.Bcollision[e].size.h
+        room.Bcollision[i]!.position.y === room.Bcollision[e]!.position.y &&
+        room.Bcollision[i]!.position.x + room.Bcollision[i]!.size.w ===
+          room.Bcollision[e]!.position.x &&
+        room.Bcollision[i]!.size.h === room.Bcollision[e]!.size.h
       ) {
         room.Bcollision.push(
           new CollisionBox(
             {
-              x: room.Bcollision[i].position.x,
-              y: room.Bcollision[i].position.y,
+              x: room.Bcollision[i]!.position.x,
+              y: room.Bcollision[i]!.position.y,
             },
             {
-              w: room.Bcollision[i].size.w + room.Bcollision[e].size.w,
-              h: room.Bcollision[i].size.h,
+              w: room.Bcollision[i]!.size.w + room.Bcollision[e]!.size.w,
+              h: room.Bcollision[i]!.size.h,
             }
           )
         );
@@ -124,10 +125,10 @@ export function generateBcollision(room) {
     for (let e = 0; e < room.Bcollision.length; e++) {
       if (
         i != e &&
-        room.Bcollision[i].position.x === room.Bcollision[e].position.x &&
-        room.Bcollision[i].position.y === room.Bcollision[e].position.y &&
-        room.Bcollision[i].size.w === room.Bcollision[e].size.w &&
-        room.Bcollision[i].size.h === room.Bcollision[e].size.h
+        room.Bcollision[i]!.position.x === room.Bcollision[e]!.position.x &&
+        room.Bcollision[i]!.position.y === room.Bcollision[e]!.position.y &&
+        room.Bcollision[i]!.size.w === room.Bcollision[e]!.size.w &&
+        room.Bcollision[i]!.size.h === room.Bcollision[e]!.size.h
       ) {
         if (i > e) {
           room.Bcollision.splice(i, 1);
@@ -143,7 +144,10 @@ export function generateBcollision(room) {
   }
 }
 
-export async function loadlevel(level_json, room) {
+export async function loadlevel(
+  level_json: number[],
+  room: Room
+): Promise<void> {
   room.blocklist = level_json;
   room.blocks = [];
   room.spawns = [];

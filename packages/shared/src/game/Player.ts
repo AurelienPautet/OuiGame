@@ -2,9 +2,53 @@ import { rectRect, colliderect } from "./check_collision.js";
 import { Bullet } from "./Bullet.js";
 import { Mine } from "./Mine.js";
 import { Stats } from "./Stats.js";
+import type { Vec2, Size, DrawingContext } from "./types.js";
+import type { Room } from "./Room.js";
+
+// The minimal box shape the collision helpers read off a collidable. Blocks,
+// holes, bullets and other players all satisfy it.
+interface Collidable {
+  position: Vec2;
+  size: Size;
+}
 
 export class Player {
-  constructor(position, socketid, name, turretc, bodyc) {
+  name: string;
+  bodyc: string;
+  turretc: string;
+  position: Vec2;
+  socketid: string;
+  mytick: number;
+  round_stats: Stats;
+  spawnpos: Vec2;
+  velocity: Vec2;
+  size: Size;
+  turretsize: Size;
+  angle: number;
+  endpos: Vec2;
+  direction: Vec2;
+  bulletcount: number;
+  minecount: number;
+  aim: Vec2;
+  alive: boolean;
+  max_bulletcount: number;
+  max_minecount: number;
+  mvtspeed: number;
+  shoot_speed: number;
+  shoot_max_bounce: number;
+  bullet_size: Size;
+  bullet_type: number;
+  // Added at runtime by update()/the collision checks.
+  rotation?: number;
+  side?: string | boolean;
+
+  constructor(
+    position: Vec2,
+    socketid: string,
+    name: string,
+    turretc: string,
+    bodyc: string
+  ) {
     this.name = name;
     this.bodyc = bodyc;
     this.turretc = turretc;
@@ -55,7 +99,7 @@ export class Player {
     };
     this.bullet_type = 1;
   }
-  spawn(spawn_pos) {
+  spawn(spawn_pos: Vec2): void {
     console.log("Spawning player at", spawn_pos);
     this.alive = true;
     this.minecount = 0;
@@ -63,7 +107,7 @@ export class Player {
     this.position = structuredClone(spawn_pos);
     this.spawnpos = spawn_pos;
   }
-  shoot(room) {
+  shoot(room: Room): void {
     this.endofbarrel();
     if (this.bulletcount < this.max_bulletcount && this.alive) {
       new Bullet(
@@ -79,7 +123,7 @@ export class Player {
       );
     }
   }
-  plant(room) {
+  plant(room: Room): void {
     if (this.minecount < this.max_minecount && this.alive) {
       new Mine(
         {
@@ -92,7 +136,14 @@ export class Player {
     }
   }
 
-  update(room, fps_corector) {
+  // ctx/debug_visual are unused by a human player; they exist so the signature
+  // matches Bot.update (the same `players` map holds both) and Room.update_players.
+  update(
+    room: Room,
+    fps_corector: number,
+    _ctx?: DrawingContext,
+    _debug_visual?: boolean
+  ): void {
     if (this.position == undefined) {
       //console.error("Player position is undefined, cannot update.");
       return;
@@ -119,15 +170,16 @@ export class Player {
       }
     }
     for (let i = 0; i < room.Bcollision.length; i++) {
-      this.BodyCollision(room.Bcollision[i]);
+      this.BodyCollision(room.Bcollision[i]!);
     }
-    for (let socket_id in room.players) {
-      if (room.players[socket_id].alive && this != room.players[socket_id]) {
-        this.BodyCollision(room.players[socket_id]);
+    for (const socket_id in room.players) {
+      const other = room.players[socket_id];
+      if (other && other.alive && this != other) {
+        this.BodyCollision(other);
       }
     }
     for (let i = 0; i < room.holes.length; i++) {
-      this.BodyCollision(room.holes[i]);
+      this.BodyCollision(room.holes[i]!);
     }
 
     if (this.velocity.x > 0) {
@@ -172,7 +224,7 @@ export class Player {
       }
     }
   }
-  endofbarrel() {
+  endofbarrel(): void {
     this.endpos.x =
       this.position.x +
       this.size.w / 2 -
@@ -182,11 +234,11 @@ export class Player {
       this.size.h / 2 -
       (30 + this.bullet_size.h * 1) * Math.sin(this.angle);
   }
-  CalculateAngle() {
+  CalculateAngle(): void {
     try {
-      let adjacent = this.aim.x - (this.position.x + this.size.w / 2);
-      let opposite = this.aim.y - (this.position.y + this.size.h / 2);
-      let angle = Math.atan(opposite / adjacent);
+      const adjacent = this.aim.x - (this.position.x + this.size.w / 2);
+      const opposite = this.aim.y - (this.position.y + this.size.h / 2);
+      const angle = Math.atan(opposite / adjacent);
       if (adjacent < 0) {
         this.angle = angle;
       } else {
@@ -197,7 +249,7 @@ export class Player {
       this.angle = 0; // Fallback to a default value
     }
   }
-  BulletCollision(obj) {
+  BulletCollision(obj: Collidable): string | boolean {
     if (this.position == undefined) {
       //console.error("Player position is undefined, cannot check bullet collision.");
       return false;
@@ -213,7 +265,7 @@ export class Player {
       obj.size.h
     ));
   }
-  BodyCollision(obj) {
+  BodyCollision(obj: Collidable): void {
     this.side = colliderect(
       this.position.y,
       this.position.x,
