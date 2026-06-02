@@ -9,6 +9,7 @@
  */
 import { palette, tankColors, mixHex, WRECK_CHAR } from "../theme/palette";
 import { drawTank, paintField, drawBlocks, drawHole } from "./shapes";
+import { drawSpawnTank } from "./spawnAnim";
 
 const INK = palette.ink;
 
@@ -78,6 +79,10 @@ interface GameState {
   Bcollision?: CollisionBox[];
   bullets?: Bullet[];
   players?: Record<string, RenderPlayer>;
+  // When present, tanks are parachuting onto their spawn flags (round start).
+  // `progress` runs 0→1 over the countdown; once it reaches 1 (or is absent)
+  // tanks render normally.
+  spawnAnim?: { progress: number };
 }
 
 interface DrawableEffect {
@@ -101,6 +106,9 @@ export class Renderer {
   // procedurally, so the 2D pass skips them (it would otherwise double-draw,
   // hidden under the GL canvas). Stays false for the non-WebGL fallback.
   skipEnvironment: boolean;
+  // Spawn-animation progress (0→1) for the current frame, or null when no
+  // round-start parachute drop is in flight. Set from GameState in draw().
+  _spawnProgress: number | null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -126,6 +134,7 @@ export class Renderer {
     this.drawTicks = 0;
     this.theme = 6;
     this.skipEnvironment = false;
+    this._spawnProgress = null;
 
     // Pre-rendered graph-paper field, seeded onto the (back) fading canvas so
     // the grid is present from frame 0.
@@ -175,7 +184,13 @@ export class Renderer {
     this.drawTicks++;
     this.clear();
 
-    const { mines, holes, blocks, Bcollision, bullets, players } = gameState;
+    const { mines, holes, blocks, Bcollision, bullets, players, spawnAnim } =
+      gameState;
+
+    // Drive the round-start parachute drop for this frame. Once progress hits 1
+    // (animation finished) tanks render normally, so treat that as inactive.
+    this._spawnProgress =
+      spawnAnim && spawnAnim.progress < 1 ? spawnAnim.progress : null;
 
     if (mines) {
       mines.forEach((mine) => this._drawMine(mine));
@@ -292,8 +307,14 @@ export class Renderer {
 
   _drawPlayer(player: RenderPlayer, socketId: string) {
     if (player.alive) {
-      // Shape-based arcade tank: treads + barrel + circle hull + ink outline.
-      this._drawTank(player, socketId.includes("bot"));
+      const isBot = socketId.includes("bot");
+      if (this._spawnProgress !== null) {
+        // Round start: parachute the tank onto its spawn flag.
+        this._drawSpawnTank(player, isBot, this._spawnProgress);
+      } else {
+        // Shape-based arcade tank: treads + barrel + circle hull + ink outline.
+        this._drawTank(player, isBot);
+      }
     } else {
       this._drawWreck(player);
     }
@@ -326,6 +347,21 @@ export class Renderer {
       turretColor: player.turretc,
       angle: player.angle + Math.PI,
       isBot,
+    });
+  }
+
+  // Round-start variant of _drawTank: same hull centre/radius/angle calibration,
+  // but the tank descends under a parachute onto a planted flag (see spawnAnim).
+  _drawSpawnTank(player: RenderPlayer, isBot: boolean, progress: number) {
+    drawSpawnTank(this.c, {
+      cx: player.position.x + player.size.w / 2,
+      cy: player.position.y + player.size.h / 2,
+      r: Math.min(player.size.w, player.size.h) * 0.46,
+      bodyColor: player.bodyc,
+      turretColor: player.turretc,
+      angle: player.angle + Math.PI,
+      isBot,
+      progress,
     });
   }
 

@@ -123,6 +123,8 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
     // Listen for countdown start from server (after respawn in multiplayer)
     const handleCountdownStartServer = () => {
       setShowCountdown(true);
+      // Kick off the parachute drop in step with the server countdown.
+      engineRef.current?.startSpawnAnimation();
       // Server controls the timing, client just shows the UI
     };
 
