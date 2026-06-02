@@ -4,6 +4,7 @@
 // (see tankShape.ts / shapes.ts) so it sits seamlessly on the field.
 import { palette, tankColors } from "../theme/palette";
 import { drawTank } from "./tankShape";
+import { clamp } from "./interpolation";
 
 const INK = palette.ink;
 
@@ -12,10 +13,6 @@ const INK = palette.ink;
 const LAND_T = 0.78;
 // How high above its spawn the tank starts the drop, in hull radii.
 const DROP_RADII = 17;
-
-function clamp01(t: number): number {
-  return t < 0 ? 0 : t > 1 ? 1 : t;
-}
 
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
@@ -47,13 +44,10 @@ export function drawSpawnTank(
   // Invisible tanks (spectator / "none") get no flag or chute either.
   if (body.fill === "transparent") return;
 
-  const progress = clamp01(o.progress);
-  const descent = clamp01(progress / LAND_T); // 0 = high up, 1 = touched down
+  const progress = clamp(o.progress, 0, 1);
+  const descent = clamp(progress / LAND_T, 0, 1); // 0 = high up, 1 = touched down
   const landed = progress >= LAND_T;
-
-  // The flag marks the landing spot for the whole animation (drawn first so the
-  // tank lands in front of the pole).
-  drawLandingFlag(c, cx, cy, r, body.fill);
+  const after = landed ? (progress - LAND_T) / (1 - LAND_T) : 0; // 0..1 post-land
 
   const eased = easeOutCubic(descent);
   // Gentle pendulum sway that settles to nothing as the chute nears the ground.
@@ -61,36 +55,29 @@ export function drawSpawnTank(
   const tx = landed ? cx : cx + swing * r * 0.7;
   const ty = landed ? cy : cy - r * DROP_RADII * (1 - eased);
 
-  if (landed) {
-    // Touchdown: a quick expanding dust ring under the tank...
-    const after = (progress - LAND_T) / (1 - LAND_T); // 0..1 after landing
-    drawDustRing(c, cx, cy, r, after);
-    drawTank(c, {
-      cx: tx,
-      cy: ty,
-      r,
-      bodyColor,
-      turretColor,
-      angle,
-      isBot: !!isBot,
-    });
-    // ...then the cut-away canopy drifts up and fades out above the tank.
-    if (after < 0.85) {
-      const rise = r * 6 * easeOutCubic(after);
-      drawParachute(c, cx, cy - rise, r, body.fill, 0.25, 1 - after / 0.85);
-    }
-  } else {
-    // Descending: canopy above (behind) the tank, swaying with the pendulum.
-    drawParachute(c, tx, ty, r, body.fill, swing * 0.18, 1);
-    drawTank(c, {
-      cx: tx,
-      cy: ty,
-      r,
-      bodyColor,
-      turretColor,
-      angle,
-      isBot: !!isBot,
-    });
+  // The flag marks the landing spot for the whole animation, and the touchdown
+  // dust sits on the ground — both drawn before the tank so it lands in front.
+  drawLandingFlag(c, cx, cy, r, body.fill);
+  if (landed) drawDustRing(c, cx, cy, r, after);
+
+  // While descending, the canopy is above (behind) the tank, swaying with the
+  // pendulum; drawn before the hull so the shroud-line tops tuck under it.
+  if (!landed) drawParachute(c, tx, ty, r, body.fill, swing * 0.18, 1);
+
+  drawTank(c, {
+    cx: tx,
+    cy: ty,
+    r,
+    bodyColor,
+    turretColor,
+    angle,
+    isBot: !!isBot,
+  });
+
+  // After landing, the cut-away canopy drifts up and fades out above the tank.
+  if (landed && after < 0.85) {
+    const rise = r * 6 * easeOutCubic(after);
+    drawParachute(c, cx, cy - rise, r, body.fill, 0.25, 1 - after / 0.85);
   }
 }
 
