@@ -79,10 +79,11 @@ interface GameState {
   Bcollision?: CollisionBox[];
   bullets?: Bullet[];
   players?: Record<string, RenderPlayer>;
-  // When present, tanks are parachuting onto their spawn flags (round start).
-  // `progress` runs 0→1 over the countdown; once it reaches 1 (or is absent)
-  // tanks render normally.
-  spawnAnim?: { progress: number };
+  // When present, the local player's tank is parachuting onto its spawn flag
+  // (round start). `progress` runs 0→1 over the countdown; once it reaches 1 (or
+  // is absent) tanks render normally. `selfId` is the socket id of the tank to
+  // animate — only that one drops, everyone else renders normally.
+  spawnAnim?: { progress: number; selfId: string | null };
 }
 
 interface DrawableEffect {
@@ -109,6 +110,9 @@ export class Renderer {
   // Spawn-animation progress (0→1) for the current frame, or null when no
   // round-start parachute drop is in flight. Set from GameState in draw().
   _spawnProgress: number | null;
+  // Socket id of the tank to play the spawn drop for (the local player); only
+  // that tank parachutes in. Set alongside _spawnProgress in draw().
+  _spawnSelfId: string | null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -135,6 +139,7 @@ export class Renderer {
     this.theme = 6;
     this.skipEnvironment = false;
     this._spawnProgress = null;
+    this._spawnSelfId = null;
 
     // Pre-rendered graph-paper field, seeded onto the (back) fading canvas so
     // the grid is present from frame 0.
@@ -191,6 +196,7 @@ export class Renderer {
     // (animation finished) tanks render normally, so treat that as inactive.
     this._spawnProgress =
       spawnAnim && spawnAnim.progress < 1 ? spawnAnim.progress : null;
+    this._spawnSelfId = spawnAnim ? spawnAnim.selfId : null;
 
     if (mines) {
       mines.forEach((mine) => this._drawMine(mine));
@@ -308,8 +314,8 @@ export class Renderer {
   _drawPlayer(player: RenderPlayer, socketId: string) {
     if (player.alive) {
       const isBot = socketId.includes("bot");
-      if (this._spawnProgress !== null) {
-        // Round start: parachute the tank onto its spawn flag.
+      if (this._spawnProgress !== null && socketId === this._spawnSelfId) {
+        // Round start: parachute the local player's tank onto its spawn flag.
         this._drawSpawnTank(player, isBot, this._spawnProgress);
       } else {
         // Shape-based arcade tank: treads + barrel + circle hull + ink outline.

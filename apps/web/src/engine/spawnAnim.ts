@@ -13,9 +13,25 @@ const INK = palette.ink;
 const LAND_T = 0.78;
 // How high above its spawn the tank starts the drop, in hull radii.
 const DROP_RADII = 17;
+// Progress at which the planted flag starts fading out, so it never pops away
+// when the animation ends.
+const FLAG_FADE_START = 0.85;
 
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
+}
+
+// Slow-in / slow-out: a floatier descent than a plain ease-out — the tank eases
+// away from the top and settles softly onto its flag.
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// Damped bounce starting from rest (returns 1 at touchdown): the hull compresses
+// then springs back, settling within the first part of the touchdown. Used as a
+// vertical scale anchored at the hull base for a "plant" on landing.
+function landingSquash(after: number): number {
+  return 1 - 0.22 * Math.exp(-after * 5) * Math.sin(after * Math.PI * 4);
 }
 
 export interface DrawSpawnTankOpts {
@@ -49,35 +65,72 @@ export function drawSpawnTank(
   const landed = progress >= LAND_T;
   const after = landed ? (progress - LAND_T) / (1 - LAND_T) : 0; // 0..1 post-land
 
-  const eased = easeOutCubic(descent);
-  // Gentle pendulum sway that settles to nothing as the chute nears the ground.
-  const swing = Math.sin(progress * 9) * (1 - eased);
-  const tx = landed ? cx : cx + swing * r * 0.7;
+  // Floaty descent (slow-in/slow-out) with a pendulum drift that is wide up high
+  // and settles to nothing as the chute nears the ground.
+  const eased = easeInOutCubic(descent);
+  const swing = Math.sin(progress * 6) * (1 - eased);
+  const tx = landed ? cx : cx + swing * r;
   const ty = landed ? cy : cy - r * DROP_RADII * (1 - eased);
 
-  // The flag marks the landing spot for the whole animation, and the touchdown
-  // dust sits on the ground — both drawn before the tank so it lands in front.
-  drawLandingFlag(c, cx, cy, r, body.fill);
+  // The flag marks the landing spot, fading out once the tank has settled so it
+  // never pops away. Touchdown dust sits on the ground — both drawn before the
+  // tank so it lands in front.
+  const flagAlpha =
+    progress < FLAG_FADE_START
+      ? 1
+      : 1 - (progress - FLAG_FADE_START) / (1 - FLAG_FADE_START);
+  drawLandingFlag(c, cx, cy, r, body.fill, flagAlpha);
   if (landed) drawDustRing(c, cx, cy, r, after);
 
-  // While descending, the canopy is above (behind) the tank, swaying with the
-  // pendulum; drawn before the hull so the shroud-line tops tuck under it.
-  if (!landed) drawParachute(c, tx, ty, r, body.fill, swing * 0.18, 1);
+  // While descending, the canopy is above (behind) the tank and "breathes"
+  // slightly; drawn before the hull so the shroud-line tops tuck under it.
+  if (!landed) {
+    const breath = 1 + 0.05 * Math.sin(progress * 11);
+    drawParachute(c, tx, ty, r, body.fill, swing * 0.16, 1, breath);
+  }
 
-  drawTank(c, {
-    cx: tx,
-    cy: ty,
-    r,
-    bodyColor,
-    turretColor,
-    angle,
-    isBot: !!isBot,
-  });
+  // The hull, with a quick squash-and-spring on touchdown (anchored at its base
+  // so it plants onto the flag).
+  const drawHull = () =>
+    drawTank(c, {
+      cx: tx,
+      cy: ty,
+      r,
+      bodyColor,
+      turretColor,
+      angle,
+      isBot: !!isBot,
+    });
+  if (landed && after < 0.6) {
+    const sy = landingSquash(after);
+    const sx = 1 + (1 - sy) * 0.5; // bulge wide as it flattens, thin as it springs
+    const baseY = ty + r;
+    c.save();
+    c.translate(tx, baseY);
+    c.scale(sx, sy);
+    c.translate(-tx, -baseY);
+    drawHull();
+    c.restore();
+  } else {
+    drawHull();
+  }
 
-  // After landing, the cut-away canopy drifts up and fades out above the tank.
+  // After landing, the cut-away canopy drifts up, slides aside and tumbles as it
+  // fades out above the tank.
   if (landed && after < 0.85) {
-    const rise = r * 6 * easeOutCubic(after);
-    drawParachute(c, cx, cy - rise, r, body.fill, 0.25, 1 - after / 0.85);
+    const rise = r * 7 * easeOutCubic(after);
+    const driftX = r * 1.5 * after;
+    // Tilt starts at 0 to match the attached canopy at the instant of release,
+    // then tumbles as it lifts away.
+    drawParachute(
+      c,
+      cx + driftX,
+      cy - rise,
+      r,
+      body.fill,
+      after * 0.6,
+      1 - after / 0.85
+    );
   }
 }
 
@@ -88,12 +141,15 @@ function drawLandingFlag(
   cx: number,
   cy: number,
   r: number,
-  fill: string
+  fill: string,
+  alpha: number
 ): void {
+  if (alpha <= 0) return;
   const baseX = cx - r * 0.95;
   const baseY = cy + r * 0.5;
   const topY = cy - r * 1.7;
   c.save();
+  c.globalAlpha = alpha;
   c.lineCap = "round";
   c.lineJoin = "round";
   c.strokeStyle = INK;
@@ -128,10 +184,11 @@ function drawParachute(
   r: number,
   fill: string,
   tilt: number,
-  alpha: number
+  alpha: number,
+  breath = 1
 ): void {
   if (alpha <= 0) return;
-  const W = r * 2.4; // canopy half-width
+  const W = r * 2.4 * breath; // canopy half-width (breathes during descent)
   const rimY = -r * 3.4; // canopy rim height above the harness
   const domeH = r * 1.7; // dome height above the rim
 

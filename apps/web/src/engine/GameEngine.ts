@@ -1003,11 +1003,15 @@ export class GameEngine {
       }
     });
 
-    // Round-start parachute drop: progress 0→1 over SPAWN_ANIM_MS, or undefined
-    // once finished / inactive so the renderer draws tanks normally.
+    // Round-start parachute drop for the local player's tank: progress 0→1 over
+    // SPAWN_ANIM_MS, or undefined once finished / inactive so the renderer draws
+    // tanks normally.
     const spawnAnim =
       this.spawnAnimElapsed !== null
-        ? { progress: clamp(this.spawnAnimElapsed / SPAWN_ANIM_MS, 0, 1) }
+        ? {
+            progress: clamp(this.spawnAnimElapsed / SPAWN_ANIM_MS, 0, 1),
+            selfId: this.mysocketid,
+          }
         : undefined;
 
     // Render game state. The engine holds these entities loosely (server- or
