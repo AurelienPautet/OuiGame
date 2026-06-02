@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, RotateCcw, Languages } from "lucide-react";
+import { Keyboard, RotateCcw, Languages, Gamepad2 } from "lucide-react";
 import { useModal, useSettings, MODALS } from "../../contexts";
 import {
   KEY_PRESETS,
@@ -9,6 +9,7 @@ import {
   type GameAction,
   type EffectSettings,
   type PresetName,
+  type TouchControlsMode,
 } from "../../lib/settings";
 import { SUPPORTED_LANGUAGES } from "../../i18n";
 import {
@@ -17,6 +18,7 @@ import {
   DialogTitle,
   Button,
   Switch,
+  SegmentedControl,
 } from "../ui/primitives";
 import { cn } from "../../lib/cn";
 
@@ -59,8 +61,15 @@ interface SettingsModalProps {
 export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
   const { t, i18n } = useTranslation();
   const modal = useModal();
-  const { settings, setKeybinding, applyPreset, setEffect, resetSettings } =
-    useSettings();
+  const {
+    settings,
+    setKeybinding,
+    applyPreset,
+    setEffect,
+    setTouchControls,
+    setAutoFire,
+    resetSettings,
+  } = useSettings();
 
   const isOpen = open ?? modal.isOpen(MODALS.SETTINGS);
   const close = onClose ?? modal.closeModal;
@@ -192,6 +201,35 @@ export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
           <p className="text-xs text-ink-soft mt-2.5">
             {t("settings.aimNote")}
           </p>
+        </div>
+
+        {/* --- Touch controls --- */}
+        <div className="mb-6">
+          <h3 className="font-display font-bold text-sm uppercase tracking-wide text-ink-soft mb-3 flex items-center gap-1.5">
+            <Gamepad2 className="w-4 h-4" strokeWidth={2.5} />
+            {t("settings.touch.title")}
+          </h3>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className="text-sm font-semibold text-ink">
+              {t("settings.touch.show")}
+            </span>
+            <SegmentedControl<TouchControlsMode>
+              value={settings.touchControls}
+              onValueChange={setTouchControls}
+              aria-label={t("settings.touch.show")}
+              options={[
+                { value: "auto", label: t("settings.touch.modes.auto") },
+                { value: "on", label: t("settings.touch.modes.on") },
+                { value: "off", label: t("settings.touch.modes.off") },
+              ]}
+            />
+          </div>
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <span className="text-sm font-semibold text-ink">
+              {t("settings.touch.autoFire")}
+            </span>
+            <Switch checked={settings.autoFire} onCheckedChange={setAutoFire} />
+          </label>
         </div>
 
         {/* --- Effects --- */}

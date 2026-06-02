@@ -205,6 +205,16 @@
       "flashes": "Éclairs de dégâts/victoire",
       "scenery": "Décor animé",
       "sound": "Effets sonores"
+    },
+    "touch": {
+      "title": "Commandes tactiles",
+      "show": "Afficher les commandes à l'écran",
+      "autoFire": "Tir automatique (maintenir pour tirer)",
+      "modes": {
+        "auto": "Auto",
+        "on": "Activé",
+        "off": "Désactivé"
+      }
     }
   },
   "stats": {

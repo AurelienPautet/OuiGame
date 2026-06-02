@@ -22,7 +22,15 @@ import type { GameAction, KeyBindings } from "../lib/settings";
 export interface GameInputState {
   direction: { x: number; y: number };
   aim: { x: number; y: number };
+  // Touch aiming is *relative*: the right virtual joystick reports a normalized
+  // direction here instead of an absolute point. When non-null the engine
+  // synthesises `aim` from the player's centre + this vector (only the angle
+  // matters to the sim), so it works on the CSS-scaled stage without de-scaling.
+  // null ⇒ aim follows the mouse (`aim`) as before.
+  aimVector: { x: number; y: number } | null;
   click: boolean;
+  // Held auto-fire flag from the touch aim-stick (vs the one-shot `click`).
+  firing: boolean;
   plant: boolean;
   escapePressed: boolean;
   mvtSpeed: number;
@@ -33,7 +41,9 @@ export interface GameInputState {
 export interface InputSnapshot {
   direction: { x: number; y: number };
   aim: { x: number; y: number };
+  aimVector: { x: number; y: number } | null;
   click: boolean;
+  firing: boolean;
   plant: boolean;
   escapePressed: boolean;
 }
@@ -90,7 +100,9 @@ if (typeof window !== "undefined") {
     window.gameInput = {
       direction: { x: 0, y: 0 },
       aim: { x: 575, y: 400 }, // Center of 1150x800 canvas
+      aimVector: null,
       click: false,
+      firing: false,
       plant: false,
       escapePressed: false,
       // Only the SIGN of `direction` is consumed (Player.update / the server's
@@ -243,7 +255,10 @@ export class InputHandler {
     const state: InputSnapshot = {
       direction: { ...input.direction },
       aim: { ...input.aim },
+      // aimVector and firing are held state (like direction) — not reset here.
+      aimVector: input.aimVector ? { ...input.aimVector } : null,
       click: input.click,
+      firing: input.firing,
       plant: input.plant,
       escapePressed: input.escapePressed,
     };

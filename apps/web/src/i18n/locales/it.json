@@ -205,6 +205,16 @@
       "flashes": "Lampi di danno/eliminazione",
       "scenery": "Scenografia animata",
       "sound": "Effetti sonori"
+    },
+    "touch": {
+      "title": "Comandi touch",
+      "show": "Mostra comandi a schermo",
+      "autoFire": "Fuoco automatico (tieni premuto per sparare)",
+      "modes": {
+        "auto": "Auto",
+        "on": "Sì",
+        "off": "No"
+      }
     }
   },
   "stats": {

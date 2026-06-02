@@ -205,6 +205,16 @@
       "flashes": "Damage / kill flashes",
       "scenery": "Animated scenery",
       "sound": "Sound effects"
+    },
+    "touch": {
+      "title": "Touch controls",
+      "show": "Show on-screen controls",
+      "autoFire": "Auto-fire (hold aim to shoot)",
+      "modes": {
+        "auto": "Auto",
+        "on": "On",
+        "off": "Off"
+      }
     }
   },
   "stats": {

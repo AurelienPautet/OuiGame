@@ -38,9 +38,20 @@ export interface EffectSettings {
   sound: boolean;
 }
 
+// When to show the on-screen touch controls: auto-detect the device, or force
+// on/off (handy for hybrid touchscreen laptops, or misdetected devices).
+export type TouchControlsMode = "auto" | "on" | "off";
+
 export interface Settings {
   keybindings: KeyBindings;
   effects: EffectSettings;
+  /** When to show the on-screen touch controls (default "auto"). */
+  touchControls: TouchControlsMode;
+  /**
+   * Touch: hold the right (aim) joystick to fire continuously. When off, the
+   * right stick only aims and a dedicated fire button is shown (one shot / tap).
+   */
+  autoFire: boolean;
 }
 
 export const ACTION_LABELS: Record<GameAction, string> = {
@@ -82,6 +93,8 @@ export const DEFAULT_SETTINGS: Settings = {
     scenery: true,
     sound: true,
   },
+  touchControls: "auto",
+  autoFire: true,
 };
 
 // Layout presets for the four movement keys (plant stays Space). The settings
@@ -153,6 +166,8 @@ export function loadSettings(): Settings {
   return {
     keybindings: { ...DEFAULT_SETTINGS.keybindings, ...stored.keybindings },
     effects: { ...DEFAULT_SETTINGS.effects, ...stored.effects },
+    touchControls: stored.touchControls ?? DEFAULT_SETTINGS.touchControls,
+    autoFire: stored.autoFire ?? DEFAULT_SETTINGS.autoFire,
   };
 }
 

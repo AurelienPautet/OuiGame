@@ -205,6 +205,16 @@
       "flashes": "Destello de daño / muerte",
       "scenery": "Escenario animado",
       "sound": "Efectos de sonido"
+    },
+    "touch": {
+      "title": "Controles táctiles",
+      "show": "Mostrar controles en pantalla",
+      "autoFire": "Disparo automático (mantén para disparar)",
+      "modes": {
+        "auto": "Auto",
+        "on": "Sí",
+        "off": "No"
+      }
     }
   },
   "stats": {

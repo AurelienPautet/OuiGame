@@ -172,6 +172,33 @@ class LocalIO implements RoomIo {
   off() {}
 }
 
+// Distance (in canvas units) at which a relative touch aim-vector is projected
+// from the player's centre to synthesise the absolute `aim` point. Only the
+// resulting angle is consumed by the sim (Player.CalculateAngle), so the exact
+// value is arbitrary — it just needs to be non-zero.
+const AIM_RADIUS = 300;
+
+// Resolve the absolute aim point from a possibly-relative input snapshot. With a
+// touch aim-vector we project from the local player's centre; otherwise we keep
+// the pointer-driven `aim`. The resolved point is also written back to
+// `window.gameInput.aim` so the on-screen reticle (GameCursor) keeps tracking.
+function resolveAim(
+  input: InputSnapshot,
+  center: { x: number; y: number } | null
+): { x: number; y: number } {
+  if (input.aimVector && center) {
+    const aim = {
+      x: center.x + input.aimVector.x * AIM_RADIUS,
+      y: center.y + input.aimVector.y * AIM_RADIUS,
+    };
+    if (typeof window !== "undefined" && window.gameInput) {
+      window.gameInput.aim = aim;
+    }
+    return aim;
+  }
+  return input.aim;
+}
+
 export class GameEngine {
   canvas: HTMLCanvasElement;
   socket: GameSocket | null;
@@ -622,11 +649,13 @@ export class GameEngine {
     const player = room.players[this.mysocketid!]; // mysocketid is 999 for solo
     if (player) {
       player.direction = input.direction;
-      player.aim = input.aim;
+      player.aim = resolveAim(input, this._localPlayerCenter());
       if (input.plant) {
         player.plant(room);
       }
-      if (input.click) {
+      // `click` is a one-shot tap; `firing` is the held touch auto-fire. Both
+      // flow through Player.shoot(), which gates on alive + bullet count.
+      if (input.click || input.firing) {
         if (
           player.alive &&
           (player.bulletcount as number) < (player.max_bulletcount as number)
@@ -639,6 +668,22 @@ export class GameEngine {
         }
       }
     }
+  }
+
+  // Centre (canvas coords) of the local player, used to project a relative touch
+  // aim-vector into an absolute aim point. Reads solo room state or the latest
+  // online snapshot — whichever this mode populates. null if not yet known.
+  _localPlayerCenter(): { x: number; y: number } | null {
+    const p =
+      this.mode === "solo"
+        ? this.localRoom?.players[this.mysocketid!]
+        : this.mysocketid
+          ? this.players[this.mysocketid]
+          : undefined;
+    const pos = p?.position as { x: number; y: number } | undefined;
+    const size = p?.size as { w: number; h: number } | undefined;
+    if (!pos || !size) return null;
+    return { x: pos.x + size.w / 2, y: pos.y + size.h / 2 };
   }
 
   // Advance the local authoritative room by exactly one fixed step.
@@ -753,8 +798,9 @@ export class GameEngine {
       playerid: this.playerId,
       direction: input.direction,
       plant: input.plant,
-      click: input.click,
-      aim: input.aim,
+      // Held touch auto-fire fires every step (server re-gates on bullet count).
+      click: input.click || input.firing,
+      aim: resolveAim(input, this._localPlayerCenter()),
       room_id: this.roomId,
       mytick: this.tick,
     });
