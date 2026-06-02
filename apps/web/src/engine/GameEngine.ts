@@ -98,6 +98,11 @@ interface ServerFrame {
   mines: RenderMine[];
 }
 
+// Duration of the round-start parachute drop. Kept comfortably under the ~3s
+// countdown (solo 3-2-1-GO; server countdownDuration) so tanks have touched down
+// and the chutes have cleared before play begins.
+const SPAWN_ANIM_MS = 2600;
+
 // LocalIO is the solo-mode sink the local Room broadcasts through. It satisfies
 // the shared RoomIo contract, so its `emit` is type-checked against the same
 // ServerToClientEvents map the online socket uses: the event names below are
@@ -192,6 +197,10 @@ export class GameEngine {
   running: boolean;
   paused: boolean;
   inCountdown: boolean;
+  // Elapsed time (ms) into the round-start parachute drop, or null when no drop
+  // is in flight. Advances in _frame (frozen while paused) so the animation
+  // stays in step with the on-screen countdown.
+  spawnAnimElapsed: number | null;
   loopId: ReturnType<typeof setInterval> | null;
   animationId: number | null;
 
@@ -290,6 +299,7 @@ export class GameEngine {
     this.running = false;
     this.paused = false;
     this.inCountdown = false; // When true, render but ignore input
+    this.spawnAnimElapsed = null;
     this.loopId = null;
     this.animationId = null;
 
@@ -502,6 +512,8 @@ export class GameEngine {
     // Start in countdown mode (solo only - multiplayer countdown is triggered by server)
     if (this.mode === "solo") {
       this.inCountdown = true;
+      // Kick off the round-start parachute drop alongside the countdown.
+      this.startSpawnAnimation();
 
       // Trigger countdown callback so UI can show countdown
       if (this.onCountdownStart) {
@@ -521,9 +533,18 @@ export class GameEngine {
     this.animationId = requestAnimationFrame(this._frame);
   }
 
+  // Begin the round-start parachute drop. Solo calls this from _startLoops;
+  // online calls it when the server's `countdown_start` arrives, so both modes
+  // animate the drop in step with their countdown.
+  startSpawnAnimation() {
+    this.spawnAnimElapsed = 0;
+  }
+
   // Called when countdown finishes to enable gameplay
   endCountdown() {
     this.inCountdown = false;
+    // The drop is finished; render tanks normally from here on.
+    this.spawnAnimElapsed = null;
     // Clear any input that was buffered during countdown to prevent teleporting
     this.input.clearInput();
     // Reset start time for accurate timing
@@ -539,6 +560,12 @@ export class GameEngine {
   // fully decouples game speed (fixed 60 Hz) from the display refresh rate.
   _frame(now: number) {
     if (!this.running) return;
+
+    // Advance the round-start drop on the wall clock, frozen while paused so it
+    // stays aligned with the (also pausable) countdown overlay.
+    if (this.spawnAnimElapsed !== null && !this.paused) {
+      this.spawnAnimElapsed += Math.min(now - this.oldTime, MAX_FRAME_MS);
+    }
 
     const simulating =
       !this.paused && !(this.mode === "solo" && this.inCountdown);
@@ -976,6 +1003,13 @@ export class GameEngine {
       }
     });
 
+    // Round-start parachute drop: progress 0→1 over SPAWN_ANIM_MS, or undefined
+    // once finished / inactive so the renderer draws tanks normally.
+    const spawnAnim =
+      this.spawnAnimElapsed !== null
+        ? { progress: clamp(this.spawnAnimElapsed / SPAWN_ANIM_MS, 0, 1) }
+        : undefined;
+
     // Render game state. The engine holds these entities loosely (server- or
     // Room-shaped); the Renderer's GameState describes the same shapes, so cast.
     this.renderer.draw({
@@ -985,6 +1019,7 @@ export class GameEngine {
       Bcollision: this.Bcollision,
       bullets: bullets,
       players: players,
+      spawnAnim: spawnAnim,
     } as unknown as Parameters<typeof this.renderer.draw>[0]);
 
     // Flying cannon debris sits above the wrecks/tanks but below the spark
@@ -1055,6 +1090,7 @@ export class GameEngine {
     this.particles.clear();
     this.debris.clear();
     this.prevAlive = {};
+    this.spawnAnimElapsed = null;
     this.sounds.clear();
 
     // Release WebGL resources / drop the context.
