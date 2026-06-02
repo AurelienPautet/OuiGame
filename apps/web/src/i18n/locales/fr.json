@@ -264,6 +264,9 @@
   "countdown": {
     "go": "GO!"
   },
+  "orientation": {
+    "rotate": "Tournez votre appareil en mode paysage"
+  },
   "pause": {
     "title": "En pause",
     "resume": "Continuer",

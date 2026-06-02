@@ -39,3 +39,31 @@ export function useTouchControlsEnabled(): boolean {
   if (mode === "off") return false;
   return detected;
 }
+
+/** True when the viewport is taller than it is wide (portrait). */
+export function isPortrait(): boolean {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia === "function") {
+    return window.matchMedia("(orientation: portrait)").matches;
+  }
+  return window.innerHeight > window.innerWidth;
+}
+
+/** Reactive portrait/landscape orientation, updated as the device rotates. */
+export function useIsPortrait(): boolean {
+  const [portrait, setPortrait] = useState(isPortrait);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
+      return;
+    const mql = window.matchMedia("(orientation: portrait)");
+    const onChange = () => setPortrait(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return portrait;
+}

@@ -21,12 +21,10 @@ import { PauseOverlay } from "./PauseOverlay";
 import { SettingsModal } from "../modals/SettingsModal";
 import { GameCursor } from "./GameCursor";
 import { TouchControls } from "./TouchControls";
+import { FixedUiLayer } from "./FixedUiLayer";
+import { OrientationHint } from "./OrientationHint";
 import { useTouchControlsEnabled } from "../../lib/touch";
 import { tankColors as resolveTankColors, palette } from "../../theme/palette";
-
-interface GameCanvasProps {
-  scale?: number;
-}
 
 // History sentinel used to map the browser Back button to "quit the game".
 // While a game is mounted we push one entry carrying this flag; popping it
@@ -37,7 +35,7 @@ const isInGameHistoryEntry = () =>
     (window.history.state as { ouigameInGame?: boolean } | null)?.ouigameInGame
   );
 
-export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
+export const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fadingCanvasRef = useRef<HTMLCanvasElement | null>(null);
   // WebGL output canvas. The two 2D canvases above become texture sources for
@@ -399,7 +397,6 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
       engine.onQuit = requestQuit;
       engine.onGameOver = handleGameOver;
       engine.onCountdownStart = handleCountdownStart;
-      engine.setScale(scale);
 
       // Start the game (countdown will be triggered by engine)
       engine.startSolo(levelId, playerNameRef.current, tankColorsRef.current);
@@ -407,7 +404,6 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
   }, [
     levelId,
     socket,
-    scale,
     handlePause,
     requestQuit,
     handleGameOver,
@@ -429,13 +425,6 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
     setInterstitial(null);
     startCampaign({ campaignId, levelIds: campaignLevelIds });
   }, [startCampaign, campaignId, campaignLevelIds]);
-
-  // Update engine scale when window is resized
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.setScale(scale);
-    }
-  }, [scale]);
 
   // Update engine theme
   useEffect(() => {
@@ -538,121 +527,134 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
   const cursorColor = turretFill === "transparent" ? palette.red : turretFill;
 
   return (
-    <div
-      className="absolute inset-0 w-full h-full flex items-center justify-center bg-field"
-      style={{ cursor: showCursor ? "none" : "default" }}
-    >
-      {/* Fading canvas (field layer). A texture source for the WebGL canvas
+    <>
+      {/* Scaled layer: the canvases and the reticle live inside the 1150×800
+          stage transform. The reticle is positioned in canvas coordinates, so
+          it must scale with the arena. */}
+      <div
+        className="absolute inset-0 w-full h-full flex items-center justify-center bg-field"
+        style={{ cursor: showCursor ? "none" : "default" }}
+      >
+        {/* Fading canvas (field layer). A texture source for the WebGL canvas
           when post-processing is active, so it is hidden in that case. */}
-      <canvas
-        ref={fadingCanvasRef}
-        className="absolute"
-        style={{
-          width: 1150,
-          height: 800,
-          ...(postActive ? { visibility: "hidden" } : {}),
-          ...canvasBlurStyle,
-        }}
-      />
-      {/* Main game canvas. When post-processing is active this is only a
+        <canvas
+          ref={fadingCanvasRef}
+          className="absolute"
+          style={{
+            width: 1150,
+            height: 800,
+            ...(postActive ? { visibility: "hidden" } : {}),
+            ...canvasBlurStyle,
+          }}
+        />
+        {/* Main game canvas. When post-processing is active this is only a
           texture source for the WebGL canvas below, so it is hidden. */}
-      <canvas
-        ref={canvasRef}
-        className="absolute z-10"
-        style={{
-          width: 1150,
-          height: 800,
-          ...(postActive ? { visibility: "hidden" } : {}),
-          ...canvasBlurStyle,
-        }}
-      />
-      {/* WebGL post-processing output (bloom / shockwave). Shown only when the
+        <canvas
+          ref={canvasRef}
+          className="absolute z-10"
+          style={{
+            width: 1150,
+            height: 800,
+            ...(postActive ? { visibility: "hidden" } : {}),
+            ...canvasBlurStyle,
+          }}
+        />
+        {/* WebGL post-processing output (bloom / shockwave). Shown only when the
           GL context initialised; otherwise the 2D canvas above is used. */}
-      <canvas
-        ref={glCanvasRef}
-        className="absolute z-10"
-        style={{
-          width: 1150,
-          height: 800,
-          ...(postActive ? {} : { display: "none" }),
-          ...canvasBlurStyle,
-        }}
-      />
-
-      {/* Custom in-game pointer (replaces the OS cursor during play) */}
-      {showCursor && <GameCursor color={cursorColor} />}
-
-      {/* On-screen touch controls (mobile / touch devices). Hidden whenever an
-          overlay is up, mirroring the cursor logic. */}
-      {touchEnabled && !overlayUp && (
-        <TouchControls
-          autoFire={settings.autoFire}
-          onPause={() => handlePause()}
-          color={cursorColor}
+        <canvas
+          ref={glCanvasRef}
+          className="absolute z-10"
+          style={{
+            width: 1150,
+            height: 800,
+            ...(postActive ? {} : { display: "none" }),
+            ...canvasBlurStyle,
+          }}
         />
-      )}
 
-      {/* Campaign lives / progress HUD */}
-      {mode === "campaign" && !campaignRunResult && !interstitial && (
-        <LivesHud
-          lives={lives}
-          levelIndex={campaignIndex + 1}
-          totalLevels={campaignLevelIds.length}
+        {/* Custom in-game pointer (replaces the OS cursor during play) */}
+        {showCursor && <GameCursor color={cursorColor} />}
+      </div>
+
+      {/* Fixed UI layer: rendered at true window size (outside the stage
+          transform) so touch controls and menus stay a usable physical size
+          on small screens regardless of how much the arena is zoomed. */}
+      <FixedUiLayer>
+        {/* On-screen touch controls (mobile / touch devices). Hidden whenever an
+            overlay is up, mirroring the cursor logic. */}
+        {touchEnabled && !overlayUp && (
+          <TouchControls
+            autoFire={settings.autoFire}
+            onPause={() => handlePause()}
+            color={cursorColor}
+          />
+        )}
+
+        {/* Campaign lives / progress HUD */}
+        {mode === "campaign" && !campaignRunResult && !interstitial && (
+          <LivesHud
+            lives={lives}
+            levelIndex={campaignIndex + 1}
+            totalLevels={campaignLevelIds.length}
+          />
+        )}
+
+        {/* Countdown overlay (freezes while paused) */}
+        <CountdownOverlay
+          isActive={showCountdown}
+          isPaused={isPaused}
+          onComplete={handleCountdownComplete}
         />
-      )}
 
-      {/* Countdown overlay (freezes while paused) */}
-      <CountdownOverlay
-        isActive={showCountdown}
-        isPaused={isPaused}
-        onComplete={handleCountdownComplete}
-      />
+        {/* Pause overlay (can be opened during the countdown too) */}
+        {isPaused && (
+          <PauseOverlay
+            onResume={handlePause}
+            onQuit={requestQuit}
+            onSettings={() => setSettingsOpen(true)}
+            onRetry={
+              mode === "solo" || mode === "campaign" ? handleRetry : undefined
+            }
+          />
+        )}
 
-      {/* Pause overlay (can be opened during the countdown too) */}
-      {isPaused && (
-        <PauseOverlay
-          onResume={handlePause}
-          onQuit={requestQuit}
-          onSettings={() => setSettingsOpen(true)}
-          onRetry={
-            mode === "solo" || mode === "campaign" ? handleRetry : undefined
-          }
+        {/* Settings overlay (opened from the pause menu) */}
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
         />
-      )}
 
-      {/* Settings overlay (opened from the pause menu) */}
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+        {/* End game screen overlay (solo / online) */}
+        {mode !== "campaign" && (
+          <EndGameScreen
+            externalResult={soloResult}
+            onReplay={handleReplay}
+            onQuit={requestQuit}
+            levelId={levelId}
+          />
+        )}
 
-      {/* End game screen overlay (solo / online) */}
-      {mode !== "campaign" && (
-        <EndGameScreen
-          externalResult={soloResult}
-          onReplay={handleReplay}
-          onQuit={requestQuit}
-          levelId={levelId}
-        />
-      )}
+        {/* Between-level screen (stats + life animation) */}
+        {mode === "campaign" && interstitial && !campaignRunResult && (
+          <CampaignInterstitial
+            data={interstitial}
+            onContinue={handleInterstitialContinue}
+          />
+        )}
 
-      {/* Between-level screen (stats + life animation) */}
-      {mode === "campaign" && interstitial && !campaignRunResult && (
-        <CampaignInterstitial
-          data={interstitial}
-          onContinue={handleInterstitialContinue}
-        />
-      )}
+        {/* Campaign end screen overlay */}
+        {mode === "campaign" && campaignRunResult && (
+          <CampaignEndScreen
+            result={campaignRunResult}
+            totalLevels={campaignLevelIds.length}
+            onReplay={handleCampaignReplay}
+            onQuit={requestQuit}
+          />
+        )}
 
-      {/* Campaign end screen overlay */}
-      {mode === "campaign" && campaignRunResult && (
-        <CampaignEndScreen
-          result={campaignRunResult}
-          totalLevels={campaignLevelIds.length}
-          onReplay={handleCampaignReplay}
-          onQuit={requestQuit}
-        />
-      )}
-    </div>
+        {/* Rotate-to-landscape prompt (touch + portrait only) */}
+        <OrientationHint />
+      </FixedUiLayer>
+    </>
   );
 };
