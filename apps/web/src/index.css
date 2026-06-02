@@ -44,6 +44,9 @@
   body {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* Kill pull-to-refresh / rubber-band scrolling so dragging the on-screen
+       touch controls never bounces the page. */
+    overscroll-behavior: none;
   }
 }
 

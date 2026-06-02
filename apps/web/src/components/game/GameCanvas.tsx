@@ -20,6 +20,8 @@ import { LIFE_EVERY } from "../../constants/campaign";
 import { PauseOverlay } from "./PauseOverlay";
 import { SettingsModal } from "../modals/SettingsModal";
 import { GameCursor } from "./GameCursor";
+import { TouchControls } from "./TouchControls";
+import { useTouchControlsEnabled } from "../../lib/touch";
 import { tankColors as resolveTankColors, palette } from "../../theme/palette";
 
 interface GameCanvasProps {
@@ -80,6 +82,7 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
   const { socket } = useSocket()!;
   const { openModal } = useModal();
   const { settings } = useSettings();
+  const touchEnabled = useTouchControlsEnabled();
 
   // In-game settings overlay (opened from the pause menu). Local state rather
   // than ModalContext, since ModalRenderer isn't mounted over the game stage.
@@ -578,6 +581,16 @@ export const GameCanvas = ({ scale = 1 }: GameCanvasProps) => {
 
       {/* Custom in-game pointer (replaces the OS cursor during play) */}
       {showCursor && <GameCursor color={cursorColor} />}
+
+      {/* On-screen touch controls (mobile / touch devices). Hidden whenever an
+          overlay is up, mirroring the cursor logic. */}
+      {touchEnabled && !overlayUp && (
+        <TouchControls
+          autoFire={settings.autoFire}
+          onPause={() => handlePause()}
+          color={cursorColor}
+        />
+      )}
 
       {/* Campaign lives / progress HUD */}
       {mode === "campaign" && !campaignRunResult && !interstitial && (

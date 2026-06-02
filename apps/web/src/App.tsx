@@ -90,6 +90,9 @@ const GameView = () => {
           height: CANVAS_HEIGHT,
           transform: `scale(${scale})`,
           transformOrigin: "center center",
+          // Prevent the browser from claiming touch gestures (scroll/zoom) over
+          // the game stage so the on-screen controls get every pointer event.
+          touchAction: "none",
         }}
       >
         <GameCanvas scale={scale} />

@@ -16,6 +16,7 @@ import {
   type GameAction,
   type EffectSettings,
   type PresetName,
+  type TouchControlsMode,
 } from "../lib/settings";
 import { applyKeyBindings } from "../engine/InputHandler";
 
@@ -24,6 +25,8 @@ interface SettingsContextValue {
   setKeybinding: (action: GameAction, code: string) => void;
   applyPreset: (preset: PresetName) => void;
   setEffect: (effect: keyof EffectSettings, value: boolean) => void;
+  setTouchControls: (mode: TouchControlsMode) => void;
+  setAutoFire: (value: boolean) => void;
   resetSettings: () => void;
 }
 
@@ -76,6 +79,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
+  const setTouchControls = useCallback((mode: TouchControlsMode) => {
+    setSettings((prev) => ({ ...prev, touchControls: mode }));
+  }, []);
+
+  const setAutoFire = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, autoFire: value }));
+  }, []);
+
   const resetSettings = useCallback(() => {
     setSettings(structuredClone(DEFAULT_SETTINGS));
   }, []);
@@ -86,9 +97,19 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setKeybinding,
       applyPreset,
       setEffect,
+      setTouchControls,
+      setAutoFire,
       resetSettings,
     }),
-    [settings, setKeybinding, applyPreset, setEffect, resetSettings]
+    [
+      settings,
+      setKeybinding,
+      applyPreset,
+      setEffect,
+      setTouchControls,
+      setAutoFire,
+      resetSettings,
+    ]
   );
 
   return (

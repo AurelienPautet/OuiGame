@@ -205,6 +205,16 @@
       "flashes": "Schaden-/Kill-Blitze",
       "scenery": "Animierte Kulissen",
       "sound": "Soundeffekte"
+    },
+    "touch": {
+      "title": "Touch-Steuerung",
+      "show": "Bildschirmsteuerung anzeigen",
+      "autoFire": "Auto-Feuer (zum Schießen halten)",
+      "modes": {
+        "auto": "Auto",
+        "on": "An",
+        "off": "Aus"
+      }
     }
   },
   "stats": {
