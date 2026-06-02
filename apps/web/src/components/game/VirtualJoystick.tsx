@@ -47,7 +47,7 @@ export const VirtualJoystick = ({
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (pointerIdRef.current !== null) return; // already tracking a finger
     e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
     pointerIdRef.current = e.pointerId;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;

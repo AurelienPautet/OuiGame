@@ -226,12 +226,15 @@ export class InputHandler {
     // Scale is handled via canvas reference in global handlers
   }
 
-  // Clear all input state (used when countdown ends to prevent teleporting)
+  // Clear all input state (used when countdown ends to prevent teleporting).
+  // `firing` is reset too so a held touch aim-stick doesn't auto-fire on the
+  // first live frame; `aimVector` is left so the turret keeps its facing.
   clearInput() {
     const input = window.gameInput;
     if (!input) return;
     input.direction = { x: 0, y: 0 };
     input.click = false;
+    input.firing = false;
     input.plant = false;
     input.escapePressed = false;
   }

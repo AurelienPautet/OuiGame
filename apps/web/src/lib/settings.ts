@@ -163,11 +163,22 @@ export function keyLabel(code: string): string {
 export function loadSettings(): Settings {
   const stored = storage.getSettings<Partial<Settings>>();
   if (!stored) return structuredClone(DEFAULT_SETTINGS);
+  // Constrain the scalar fields to their valid shapes — a tampered/corrupted
+  // blob shouldn't yield e.g. touchControls: "evil" or a non-boolean autoFire.
+  const touchControls: TouchControlsMode =
+    stored.touchControls === "auto" ||
+    stored.touchControls === "on" ||
+    stored.touchControls === "off"
+      ? stored.touchControls
+      : DEFAULT_SETTINGS.touchControls;
   return {
     keybindings: { ...DEFAULT_SETTINGS.keybindings, ...stored.keybindings },
     effects: { ...DEFAULT_SETTINGS.effects, ...stored.effects },
-    touchControls: stored.touchControls ?? DEFAULT_SETTINGS.touchControls,
-    autoFire: stored.autoFire ?? DEFAULT_SETTINGS.autoFire,
+    touchControls,
+    autoFire:
+      typeof stored.autoFire === "boolean"
+        ? stored.autoFire
+        : DEFAULT_SETTINGS.autoFire,
   };
 }
 
