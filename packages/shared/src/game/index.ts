@@ -19,3 +19,6 @@ export * from "./possible_moves.js";
 export * from "./Bot.js";
 export * from "./level_loader.js";
 export * from "./Room.js";
+// The typed broadcast contract, so a consumer that hosts a Room (the web's solo
+// LocalIO) can implement the same RoomIo the server's real Socket.io satisfies.
+export type { RoomIo, RoomEmitter, RoomBroadcastEvent } from "./types.js";

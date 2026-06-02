@@ -18,6 +18,7 @@ import {
   MAX_FRAME_MS,
   INTERP_DELAY_MS,
 } from "@ouigame/shared/game";
+import type { RoomIo } from "@ouigame/shared/game";
 import {
   clamp,
   lerpPose,
@@ -97,8 +98,14 @@ interface ServerFrame {
   mines: RenderMine[];
 }
 
-// LocalIO class for solo mode - forwards events to particle/sound/post systems
-class LocalIO {
+// LocalIO is the solo-mode sink the local Room broadcasts through. It satisfies
+// the shared RoomIo contract, so its `emit` is type-checked against the same
+// ServerToClientEvents map the online socket uses: the event names below are
+// verified against the wire contract and each payload is the type the contract
+// declares for it. Solo only reacts to the explosion + sound broadcasts; the
+// rest (tick, winner, level_change, ...) are read straight off the local Room
+// each frame, so they fall through.
+class LocalIO implements RoomIo {
   particles: ParticleSystem;
   sounds: SoundManager;
   post: PostProcessor | null;
@@ -113,25 +120,24 @@ class LocalIO {
     this.post = post;
   }
 
-  // The Room runtime forwards the union of these payloads (PositionEvent /
-  // PositionAngleEvent for explosions, SoundEvents for tick_sounds). `data` is
-  // typed `unknown` and narrowed per-event rather than trusting a single shape.
-  emit(event: string, data: unknown) {
-    // Handle particle events
+  emit<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ) {
     switch (event) {
       case "ricochet_explosion": {
-        const { position, angle } = data as PositionAngleEvent;
+        const { position, angle } = args[0] as PositionAngleEvent;
         this.particles.ricochetSparks(position, angle, 20);
         break;
       }
       case "bullet_explosion": {
-        const { position } = data as PositionEvent;
+        const { position } = args[0] as PositionEvent;
         this.particles.bulletExplosion(position, 100);
         this.post?.shockwave(position, 0.016, 420);
         break;
       }
       case "shoot_explosion": {
-        const { position, angle } = data as PositionAngleEvent;
+        const { position, angle } = args[0] as PositionAngleEvent;
         this.particles.shootExplosion(position, angle, 30);
         // Small, short muzzle pop at the barrel tip — subtle since firing is
         // frequent, so it punches without churning the screen.
@@ -139,26 +145,26 @@ class LocalIO {
         break;
       }
       case "player_explosion": {
-        const { position } = data as PositionEvent;
+        const { position } = args[0] as PositionEvent;
         this.particles.explosion(position, 100);
         this.post?.shockwave(position, 0.04, 650);
         this.post?.shake(0.6);
         break;
       }
       case "mine_explosion": {
-        const { position } = data as PositionEvent;
+        const { position } = args[0] as PositionEvent;
         this.particles.explosion(position, 100);
         this.post?.shockwave(position, 0.04, 650);
         this.post?.shake(0.6);
         break;
       }
       case "tick_sounds":
-        this.sounds.playSounds(data as SoundEvents);
+        this.sounds.playSounds(args[0] as SoundEvents);
         break;
     }
   }
 
-  to() {
+  to(): this {
     return this; // Allow chaining: io.to(roomId).emit(...)
   }
 

@@ -2,18 +2,13 @@
 // and composing the repo + format helpers into the wire shapes the client
 // expects. No req/res here — the route maps results/errors to HTTP.
 import * as repo from "../repositories/campaigns.repo";
-
-// Controlled, route-mappable failures (vs. unexpected errors which bubble to the
-// route's catch for the 409/500 mapping). `status` + `message` are mapped 1:1.
-class ServiceError extends Error {
-  status: number;
-  isServiceError: boolean;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-    this.isServiceError = true;
-  }
-}
+import {
+  badRequest,
+  forbidden,
+  notFound,
+  conflict,
+  isUniqueViolation,
+} from "../errors";
 
 // Raw campaign meta row shape (the fields formatCampaigns reads off the repo rows).
 interface CampaignMetaRow {
@@ -111,7 +106,7 @@ async function listMyCampaigns(name: string, playerId: number) {
 async function getCampaignDetail(campaignId: number, playerId: number | null) {
   const rows = await repo.getCampaignById(campaignId);
   if (rows.length === 0) {
-    throw new ServiceError(404, "Campaign not found");
+    throw notFound("Campaign not found");
   }
   const [formatted] = await formatCampaigns(rows, playerId);
   const levels = await getCampaignLevels(campaignId);
@@ -132,16 +127,21 @@ async function createCampaign({
 }) {
   const ordered = await filterSoloLevelIds(levelIds);
   if (ordered.length < 1) {
-    throw new ServiceError(
-      400,
-      "Campaign must contain at least one solo level"
-    );
+    throw badRequest("Campaign must contain at least one solo level");
   }
-  const campaignId = await repo.insertCampaign({
-    name: name.trim(),
-    description,
-    creatorId,
-  });
+  // The campaign name is UNIQUE; translate the Postgres violation to a 409 here
+  // rather than letting the route inspect the driver error shape.
+  let campaignId: number;
+  try {
+    campaignId = await repo.insertCampaign({
+      name: name.trim(),
+      description,
+      creatorId,
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) throw conflict("Campaign name already taken");
+    throw err;
+  }
   await repo.insertCampaignLevels(campaignId, ordered);
   return { campaignId };
 }
@@ -163,18 +163,20 @@ async function updateCampaign({
 }) {
   const existing = await repo.getOwnedCampaign(campaignId, playerId);
   if (existing.length === 0) {
-    throw new ServiceError(403, "Not your campaign");
+    throw forbidden("Not your campaign");
   }
 
   const ordered = await filterSoloLevelIds(levelIds);
   if (ordered.length < 1) {
-    throw new ServiceError(
-      400,
-      "Campaign must contain at least one solo level"
-    );
+    throw badRequest("Campaign must contain at least one solo level");
   }
 
-  await repo.updateCampaign(campaignId, { name: name.trim(), description });
+  try {
+    await repo.updateCampaign(campaignId, { name: name.trim(), description });
+  } catch (err) {
+    if (isUniqueViolation(err)) throw conflict("Campaign name already taken");
+    throw err;
+  }
   await repo.replaceCampaignLevels(campaignId, ordered);
   return { campaignId };
 }
@@ -184,7 +186,7 @@ async function updateCampaign({
 async function deleteCampaign(campaignId: number, playerId: number) {
   const existing = await repo.getOwnedCampaign(campaignId, playerId);
   if (existing.length === 0) {
-    throw new ServiceError(403, "Not your campaign");
+    throw forbidden("Not your campaign");
   }
   await repo.deleteCampaign(campaignId);
   return { success: true };
@@ -209,7 +211,7 @@ async function submitRun({
 }) {
   const exists = await repo.campaignExists(campaignId);
   if (exists.length === 0) {
-    throw new ServiceError(404, "Campaign not found");
+    throw notFound("Campaign not found");
   }
   await repo.insertCampaignRun({
     playerId,
@@ -223,7 +225,6 @@ async function submitRun({
 }
 
 export {
-  ServiceError,
   listCampaigns,
   listMyCampaigns,
   getCampaignDetail,

@@ -16,11 +16,39 @@ export interface Size {
   h: number;
 }
 
-// The minimal Socket.io-ish sink the Room broadcasts through. Both the server's
-// real Socket.io `Server` and the web client's solo `LocalIO` satisfy it. The
-// Room only ever calls `io.to(id).emit(event, data)`, so that is all we model.
+import type { ServerToClientEvents } from "../socket";
+
+// The subset of ServerToClientEvents that the game runtime itself broadcasts
+// from inside a Room (via `emit_to_room`). Listing them explicitly turns a
+// stray or misspelled event name into a compile error and ties each call to the
+// wire payload the socket contract declares. The two remaining room broadcasts
+// — `level_change_info` and `countdown_start` — are emitted by the server's
+// tick loop through `room.io`, not by the runtime, so they are not listed here
+// but are still permitted by RoomEmitter below.
+export type RoomBroadcastEvent =
+  | "tick"
+  | "tick_sounds"
+  | "level_change"
+  | "winner"
+  | "player-kill"
+  | "player-disconnection"
+  | "player_explosion"
+  | "bullet_explosion"
+  | "mine_explosion"
+  | "shoot_explosion"
+  | "ricochet_explosion";
+
+// The minimal Socket.io-ish sink the Room broadcasts through, now typed against
+// the wire contract instead of `(string, unknown)`: `emit` accepts any
+// server->client event name and exactly the payload `ServerToClientEvents`
+// declares for it. Both the server's real Socket.io `Server` and the web
+// client's solo `LocalIO` satisfy this shape. The Room only ever calls
+// `io.to(id).emit(event, data)`, so that is all we model.
 export interface RoomEmitter {
-  emit(event: string, data: unknown): void;
+  emit<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ): void;
 }
 export interface RoomIo {
   to(target?: number): RoomEmitter;

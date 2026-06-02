@@ -4,9 +4,10 @@
 // objects — that matches Socket.io's variadic emit/on. Single-arg events take
 // one parameter; no-arg events take ().
 //
-// Authored from the OBSERVED wire (the JS server is not yet typed against these),
-// so a later server change can silently drift these types until apps/api adopts
-// them in a future phase. That is the accepted Phase 1b boundary.
+// Both ends are now typed against this map, so it is an enforced contract rather
+// than only-documented: the server (apps/api, via AppServer/AppSocket in
+// socket/types.ts) and the isomorphic game runtime (@ouigame/shared/game, whose
+// Room broadcasts through the typed RoomIo) both check every emit against it.
 import type {
   RoomSnapshot,
   TickSounds,
@@ -64,10 +65,10 @@ export interface ClientToServerEvents {
 // Server -> Client. Covers the events the web client consumes plus the
 // connect/handshake and gameplay events (including several the client does not
 // currently listen to — welcome, socketid, authenticated, error_getting_json,
-// wrongserver, room_list — for wire completeness). It is NOT yet exhaustive of
-// every server emit: the level-admin events player_stats / rate_success /
-// rate_fail (and the legacy save_level_success / save_level_fail) are not
-// modelled and must be added before apps/api is typed against this map.
+// wrongserver, room_list — for wire completeness). The historical level-admin
+// events player_stats / rate_success / rate_fail (and save_level_success /
+// save_level_fail) are not emitted by the current server, so they are
+// intentionally absent rather than pending.
 export interface ServerToClientEvents {
   welcome: (msg: string) => void; // literal contains the typo "has joinded the server"
   serverid: (id: string) => void; // 15-char makeid; echoed back in every "tock"
