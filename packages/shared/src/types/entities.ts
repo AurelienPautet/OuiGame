@@ -51,6 +51,7 @@ export interface Player {
 // appears in the tick's `players` map. (Not a JSON cycle; Player has no bullet
 // back-reference.) The renderer reads position, size, angle, bounce, type.
 export interface Bullet {
+  id: number;
   type: number;
   velocity: Vector2;
   angle: number;
@@ -66,6 +67,7 @@ export interface Bullet {
 }
 
 export interface Mine {
+  id: number;
   position: Vector2;
   radius: number;
   timealive: number;

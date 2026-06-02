@@ -1,4 +1,5 @@
 import { rectRect, distance, rectanglesSeTouchent } from "./check_collision.js";
+import { SIM_STEP_S } from "./loop.js";
 import { generateBcollision } from "./level_loader.js";
 import { Player } from "./Player.js";
 import { Bot, type BotKind } from "./Bot.js";
@@ -64,7 +65,9 @@ export class Room {
   timetoeplode: number;
   mines_explsion_radius: number;
   waitingtime: number;
-  fps_corector: number;
+  // Delta time (seconds) of the current fixed simulation step, handed to every
+  // entity's continuous integrator. Always SIM_STEP_S under the fixed loop.
+  dt: number;
   bot1_spawns: Vec2[];
   bot2_spawns: Vec2[];
   bot3_spawns: Vec2[];
@@ -121,7 +124,7 @@ export class Room {
     this.timetoeplode = 300;
     this.mines_explsion_radius = 90;
     this.waitingtime = 5000;
-    this.fps_corector = 1;
+    this.dt = SIM_STEP_S;
     this.bot1_spawns = [];
     this.bot2_spawns = [];
     this.bot3_spawns = [];
@@ -221,11 +224,7 @@ export class Room {
     }
   }
 
-  update(
-    fps_corector: number,
-    ctx?: DrawingContext,
-    debug_visual?: boolean
-  ): boolean {
+  update(dt: number, ctx?: DrawingContext, debug_visual?: boolean): boolean {
     this.sounds = {
       plant: false,
       kill: false,
@@ -234,7 +233,7 @@ export class Room {
       explose: false,
     };
     this.tick++;
-    this.fps_corector = fps_corector;
+    this.dt = dt;
     //console.log("Updating room:", this.name, "tick:", this.tick);
     this.update_bullets();
     this.update_mines();
@@ -349,13 +348,13 @@ export class Room {
     for (const sckid in this.players) {
       const player = this.players[sckid];
       if (!player) continue;
-      player.update(this, this.fps_corector, ctx, debug_visual);
+      player.update(this, this.dt, ctx, debug_visual);
     }
   }
 
   update_bullets(): void {
     bulleting: for (let i = 0; i < this.bullets.length; i++) {
-      this.bullets[i]!.update(this, this.fps_corector);
+      this.bullets[i]!.update(this, this.dt);
       if (this.bullets[i]!.bounce >= this.bullets[i]!.max_bounce) {
         this.emit_to_room("bullet_explosion", {
           position: {
@@ -445,7 +444,7 @@ export class Room {
   update_mines(): void {
     //update the mines
     mining: for (let i = 0; i < this.mines.length; i++) {
-      this.mines[i]!.update(this.fps_corector);
+      this.mines[i]!.update();
       if (this.mines[i]!.timealive > this.timetoeplode) {
         for (let m = 0; m < this.blocks.length; m++) {
           if (this.blocks[m]!.type == 2) {

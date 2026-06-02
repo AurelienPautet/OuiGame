@@ -1,9 +1,9 @@
 import { Bullet } from "../Bullet.js";
 import { Stats } from "../Stats.js";
 
-// Characterization tests for bullet physics: construction side-effects and the
-// wall-reflection / anti-stick logic in collision_walls. Reflection geometry is
-// captured from the live detectCollision math — any diff is a regression.
+// Tests for bullet physics: construction side-effects and the continuous
+// (swept) wall-collision in update(), which reflects off walls and guarantees a
+// bullet can never tunnel through geometry in a single step, whatever its speed.
 
 const makeEmitter = () => ({
   bulletcount: 0,
@@ -60,91 +60,78 @@ describe("Bullet construction", () => {
   });
 });
 
-describe("Bullet.collision_walls — reflection + bounce accounting", () => {
-  // Helper: a fresh bullet positioned at (100,100) with controllable velocity.
-  const freshBullet = (room) => {
+describe("Bullet.update — continuous (swept) wall collision", () => {
+  const wall = (x, y, w, h) => ({ position: { x, y }, size: { w, h } });
+
+  // A bullet centred at (100,100) (size 10 → position 95,95) with a velocity we
+  // control directly (px/second); update() is stepped with dt = 1 so the
+  // displacement equals the velocity, making the geometry easy to reason about.
+  const makeBullet = (room, vx, vy) => {
     const b = new Bullet(
-      { x: 107.5, y: 107.5 },
+      { x: 100, y: 100 },
       0,
-      5,
-      { w: 15, h: 15 },
+      0,
+      { w: 10, h: 10 },
       3,
       1,
       makeEmitter(),
       room
     );
-    // position becomes (100,100) after the -size/2 offset.
-    expect(b.position).toEqual({ x: 100, y: 100 });
+    b.velocity.x = vx;
+    b.velocity.y = vy;
     return b;
   };
 
-  it("reflects on the X axis for a right-side hit and counts the bounce", () => {
+  it("reflects on the X axis instead of crossing a wall to the right", () => {
     const room = makeRoom();
-    const b = freshBullet(room);
+    room.Bcollision = [wall(140, 80, 50, 50)];
+    const b = makeBullet(room, 100, 0); // would travel +100px through the wall
     room.emitted.length = 0; // drop the construction shoot_explosion
-    const obj = { position: { x: 108, y: 100 }, size: { w: 50, h: 50 } };
 
-    b.collision_walls(obj, room);
+    b.update(room, 1);
 
-    expect(b.side).toBe("right");
-    expect(b.velocity.x).toBe(5); // -(-5)
-    expect(b.angle).toBeCloseTo(Math.PI, 12); // PI - 0
+    expect(b.velocity.x).toBeLessThan(0); // bounced back
     expect(b.bounce).toBe(1);
-    expect(b.last_collision_object).toBe(obj);
+    // never tunneled: the centre stays on the near side of the wall's left face
+    expect(b.position.x + b.size.w / 2).toBeLessThanOrEqual(140);
     expect(room.sounds.ricochet).toBe(true);
-    expect(room.emitted.map((e) => e.event)).toEqual(["ricochet_explosion"]);
+    expect(room.emitted.map((e) => e.event)).toContain("ricochet_explosion");
   });
 
-  it("reflects on the X axis for a left-side hit", () => {
+  it("reflects on the Y axis instead of crossing a wall below", () => {
     const room = makeRoom();
-    const b = freshBullet(room);
-    const obj = { position: { x: 60, y: 100 }, size: { w: 50, h: 50 } };
-    b.collision_walls(obj, room);
-    expect(b.side).toBe("left");
-    expect(b.velocity.x).toBe(5);
+    room.Bcollision = [wall(80, 140, 50, 50)];
+    const b = makeBullet(room, 0, 100);
+
+    b.update(room, 1);
+
+    expect(b.velocity.y).toBeLessThan(0);
+    expect(b.position.y + b.size.h / 2).toBeLessThanOrEqual(140);
   });
 
-  it("reflects on the Y axis for an up-side hit", () => {
+  it("does not tunnel through a thin wall even at very high speed", () => {
     const room = makeRoom();
-    const b = freshBullet(room);
-    b.velocity.y = 4;
-    const obj = { position: { x: 100, y: 60 }, size: { w: 50, h: 50 } };
-    b.collision_walls(obj, room);
-    expect(b.side).toBe("up");
-    expect(b.velocity.y).toBe(-4);
-  });
+    room.Bcollision = [wall(200, 0, 20, 300)]; // thin vertical wall
+    const b = makeBullet(room, 5000, 0); // far overshoots the wall in one step
 
-  it("reflects on the Y axis for a down-side hit", () => {
-    const room = makeRoom();
-    const b = freshBullet(room);
-    b.velocity.y = 4;
-    const obj = { position: { x: 100, y: 108 }, size: { w: 50, h: 50 } };
-    b.collision_walls(obj, room);
-    expect(b.side).toBe("down");
-    expect(b.velocity.y).toBe(-4);
-  });
+    b.update(room, 1);
 
-  it("ignores a second hit against the same object (anti-stick guard)", () => {
-    const room = makeRoom();
-    const b = freshBullet(room);
-    const obj = { position: { x: 108, y: 100 }, size: { w: 50, h: 50 } };
-    b.collision_walls(obj, room);
-    const bounceAfterFirst = b.bounce;
-    const velAfterFirst = b.velocity.x;
-    b.collision_walls(obj, room); // same obj -> early return
-    expect(b.bounce).toBe(bounceAfterFirst);
-    expect(b.velocity.x).toBe(velAfterFirst);
+    expect(b.velocity.x).toBeLessThan(0); // reflected, did not pass through
+    expect(b.bounce).toBeGreaterThanOrEqual(1);
+    expect(b.position.x + b.size.w / 2).toBeLessThanOrEqual(200);
   });
 
   it("stops emitting ricochet sparks once bounce reaches max_bounce", () => {
     const room = makeRoom();
-    const b = freshBullet(room);
+    room.Bcollision = [wall(140, 80, 50, 50)];
+    const b = makeBullet(room, 100, 0);
     b.bounce = 3; // already at max
     room.emitted.length = 0;
-    const obj = { position: { x: 108, y: 100 }, size: { w: 50, h: 50 } };
-    b.collision_walls(obj, room);
+
+    b.update(room, 1);
+
     expect(b.bounce).toBe(4); // still counts
-    expect(b.velocity.x).toBe(5); // still reflects
+    expect(b.velocity.x).toBeLessThan(0); // still reflects
     expect(room.emitted).toEqual([]); // but no ricochet_explosion
   });
 });

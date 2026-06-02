@@ -15,7 +15,7 @@ describe("Player construction defaults", () => {
     expect(p.size).toEqual({ w: 45, h: 45 });
     expect(p.max_bulletcount).toBe(5);
     expect(p.max_minecount).toBe(3);
-    expect(p.mvtspeed).toBe(3);
+    expect(p.mvtspeed).toBe(180); // px/second (3 px per 60 Hz step)
     expect(p.bulletcount).toBe(0);
     expect(p.minecount).toBe(0);
     expect(p.alive).toBe(true);
@@ -128,10 +128,12 @@ describe("Player.shoot / plant — ammo caps + alive gating", () => {
 });
 
 describe("Player.update — movement + boundary clamps", () => {
+  const STEP = 1 / 60; // one fixed simulation step, in seconds
+
   it("moves at mvtspeed along a cardinal direction", () => {
     const p = mkPlayer();
     p.direction = { x: 1, y: 0 };
-    p.update(makeFakeRoom(), 1);
+    p.update(makeFakeRoom(), STEP); // 180 px/s * (1/60) = 3 px
     expect(p.position.x).toBe(203);
     expect(p.position.y).toBe(200);
     expect(p.mytick).toBe(1);
@@ -140,10 +142,25 @@ describe("Player.update — movement + boundary clamps", () => {
   it("normalises diagonal movement by 1/sqrt(2)", () => {
     const p = mkPlayer();
     p.direction = { x: 1, y: 1 };
-    p.update(makeFakeRoom(), 1);
+    p.update(makeFakeRoom(), STEP);
     const step = 3 / Math.sqrt(2);
     expect(p.position.x).toBeCloseTo(200 + step, 12);
     expect(p.position.y).toBeCloseTo(200 + step, 12);
+  });
+
+  it("covers the same distance for the same game-time, whatever the dt", () => {
+    // Half a second of game time, integrated at 60 Hz vs 120 Hz, must land in
+    // the exact same place — speed is a function of time, not of frame rate.
+    const coarse = mkPlayer();
+    coarse.direction = { x: 1, y: 0 };
+    for (let i = 0; i < 30; i++) coarse.update(makeFakeRoom(), 1 / 60);
+
+    const fine = mkPlayer();
+    fine.direction = { x: 1, y: 0 };
+    for (let i = 0; i < 60; i++) fine.update(makeFakeRoom(), 1 / 120);
+
+    expect(coarse.position.x).toBeCloseTo(fine.position.x, 9);
+    expect(coarse.position.x).toBeCloseTo(200 + 180 * 0.5, 9); // 90 px
   });
 
   it("clamps to the left/top map edges (>= 50)", () => {

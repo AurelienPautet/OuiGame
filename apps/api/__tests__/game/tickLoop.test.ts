@@ -25,6 +25,9 @@ let perfSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.useFakeTimers();
+  // createTickLoop() captures oldTime = performance.now() = 1000. Each test then
+  // bumps this so the first tick sees a real elapsed gap and the fixed-timestep
+  // accumulator runs at least one step (the loop only steps when time elapses).
   perfSpy = jest.spyOn(performance, "now").mockReturnValue(1000);
   (levelsService.getLevelJson as jest.Mock).mockResolvedValue({
     data: new Array(368).fill(0),
@@ -73,7 +76,7 @@ function mkPlayer() {
   };
 }
 
-test("scales movement by fps_corector = elapsed / 16.67", async () => {
+test("advances the sim in fixed dt steps, independent of timer jitter", async () => {
   const room = makeRoom(1, false);
   const rooms = { 1: room };
   const roomTimers: RoomTimers = new Map();
@@ -83,11 +86,14 @@ test("scales movement by fps_corector = elapsed / 16.67", async () => {
     roomTimers,
   });
 
-  perfSpy.mockReturnValue(1033.34); // next performance.now() read by tick()
+  perfSpy.mockReturnValue(1100); // first tick sees ~100ms elapsed → fixed steps run
   loop.start();
-  await jest.advanceTimersByTimeAsync(17); // one tick fires
+  await jest.advanceTimersByTimeAsync(40);
 
-  expect(room.update).toHaveBeenCalledWith(expect.closeTo(2, 2));
+  // Every step advances the room by exactly one fixed dt (1/60 s); the real
+  // elapsed time only decides how many steps run, never their size.
+  expect(room.update).toHaveBeenLastCalledWith(expect.closeTo(1 / 60, 4));
+  expect(room.update.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
 
 test("on round end, records each player's round then schedules a respawn", async () => {
@@ -103,6 +109,7 @@ test("on round end, records each player's round then schedules a respawn", async
     roomTimers,
   });
 
+  perfSpy.mockReturnValue(1100); // first tick sees ~100ms elapsed → fixed steps run
   loop.start();
   await jest.advanceTimersByTimeAsync(20);
 
@@ -126,6 +133,7 @@ test("records a null playerId for a socket with no logged-in user", async () => 
     roomTimers: new Map(),
   });
 
+  perfSpy.mockReturnValue(1100); // first tick sees ~100ms elapsed → fixed steps run
   loop.start();
   await jest.advanceTimersByTimeAsync(20);
 
@@ -148,6 +156,7 @@ test("skips the round insert when the level list is empty", async () => {
     roomTimers: new Map(),
   });
 
+  perfSpy.mockReturnValue(1100); // first tick sees ~100ms elapsed → fixed steps run
   loop.start();
   await jest.advanceTimersByTimeAsync(20);
 
@@ -166,6 +175,7 @@ test("after the wait, reloads + respawns the room and runs the countdown", async
     roomTimers,
   });
 
+  perfSpy.mockReturnValue(1100); // first tick sees ~100ms elapsed → fixed steps run
   loop.start();
   await jest.advanceTimersByTimeAsync(20); // round-end tick arms the respawn
   await jest.advanceTimersByTimeAsync(5100); // respawn fires (waitingtime = 5000)
@@ -187,6 +197,7 @@ test("aborts the respawn if the room was deleted during the wait", async () => {
     roomTimers: new Map(),
   });
 
+  perfSpy.mockReturnValue(1100); // first tick sees ~100ms elapsed → fixed steps run
   loop.start();
   await jest.advanceTimersByTimeAsync(20); // respawn armed
   delete rooms[6]; // room emptied/removed mid-wait

@@ -28,6 +28,7 @@ export interface RoomPlayer {
  * richer shared `Bullet` snapshot remains assignable to it.
  */
 export interface RenderBullet {
+  id?: number;
   position: { x: number; y: number };
   size: { w: number; h: number };
   angle: number;
@@ -38,6 +39,7 @@ export interface RenderBullet {
 
 /** The loose mine shape the web engine reads (fuse timing + render fields). */
 export interface RenderMine {
+  id?: number;
   position: { x: number; y: number };
   radius: number;
   timealive: number;

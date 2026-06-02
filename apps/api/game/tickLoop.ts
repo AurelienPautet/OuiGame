@@ -2,7 +2,13 @@
 // every room and, on a round end, records the round and schedules the respawn +
 // countdown. The respawn/countdown timers are tracked per-room (via the
 // registry's roomTimers) so they can be cleared if the room is deleted mid-wait.
-import { loadlevel } from "@ouigame/shared/game";
+import {
+  loadlevel,
+  SIM_STEP_S,
+  SIM_STEP_MS,
+  MAX_SUBSTEPS,
+  MAX_FRAME_MS,
+} from "@ouigame/shared/game";
 import type { Room } from "@ouigame/shared/game";
 import * as levelsService from "../services/levels.service";
 import * as ratingsRepo from "../repositories/ratings.repo";
@@ -92,13 +98,17 @@ function createTickLoop({
     roomTimers.set(room.id, tracked);
   }
 
-  function tick() {
-    setTimeout(tick, 16.67);
-    const TimeElapsed = getTimeElapsed();
-    const fps_corector = TimeElapsed / 16.67;
+  // Fixed-timestep accumulator. The setTimeout is just a ~60 Hz wake-up clock;
+  // the actual simulation always advances in whole SIM_STEP_S slices, so game
+  // speed is independent of how punctual the timer is. Real elapsed time is
+  // banked in `accumulator` and drained one fixed step at a time. A long stall
+  // (clamped to MAX_FRAME_MS, then capped at MAX_SUBSTEPS catch-up steps) drops
+  // its backlog instead of fast-forwarding — the "spiral of death" guard.
+  let accumulator = 0;
 
+  function stepAllRooms() {
     for (const room of Object.values(rooms)) {
-      if (room.update(fps_corector)) {
+      if (room.update(SIM_STEP_S)) {
         // room.levels holds level IDs; the current entry is present for a live
         // room. Guard so a malformed/empty list skips the round insert.
         const levelId = room.levels[room.levelid];
@@ -116,8 +126,21 @@ function createTickLoop({
     }
   }
 
+  function tick() {
+    setTimeout(tick, SIM_STEP_MS);
+    accumulator += Math.min(getTimeElapsed(), MAX_FRAME_MS);
+
+    let steps = 0;
+    while (accumulator >= SIM_STEP_MS && steps < MAX_SUBSTEPS) {
+      stepAllRooms();
+      accumulator -= SIM_STEP_MS;
+      steps++;
+    }
+    if (steps === MAX_SUBSTEPS) accumulator = 0; // drop the backlog
+  }
+
   function start() {
-    setTimeout(tick, 16.67); // 16.67 ms ≈ 60 fps
+    setTimeout(tick, SIM_STEP_MS); // ~60 fps wake-up clock
   }
 
   return { start };

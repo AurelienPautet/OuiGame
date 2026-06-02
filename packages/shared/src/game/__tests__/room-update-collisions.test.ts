@@ -13,7 +13,7 @@ import { makeGrid, makeRecordingIo } from "./fixtures/levels.js";
 
 const mkRoom = (io = null) => {
   const room = new Room("arena", 1, [10], "creator", io);
-  room.fps_corector = 1;
+  room.dt = 1 / 60; // one fixed step
   return room;
 };
 

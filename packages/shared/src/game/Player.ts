@@ -90,8 +90,10 @@ export class Player {
     this.alive = true;
     this.max_bulletcount = 5;
     this.max_minecount = 3;
-    this.mvtspeed = 3;
-    this.shoot_speed = 5;
+    // Speeds are in px/second (integrated as `velocity * dt`). 180 px/s and
+    // 300 px/s reproduce the historical 3 px and 5 px per 60 Hz step.
+    this.mvtspeed = 180;
+    this.shoot_speed = 300;
     this.shoot_max_bounce = 3;
     this.bullet_size = {
       w: 15,
@@ -140,7 +142,7 @@ export class Player {
   // matches Bot.update (the same `players` map holds both) and Room.update_players.
   update(
     room: Room,
-    fps_corector: number,
+    dt: number,
     _ctx?: DrawingContext,
     _debug_visual?: boolean
   ): void {
@@ -208,8 +210,8 @@ export class Player {
       this.velocity.y = this.velocity.y / Math.sqrt(2);
     }
     if (this.alive) {
-      this.position.x += this.velocity.x * fps_corector;
-      this.position.y += this.velocity.y * fps_corector;
+      this.position.x += this.velocity.x * dt;
+      this.position.y += this.velocity.y * dt;
       if (this.position.x < 0 + 50) {
         this.position.x = 0 + 50;
       }
@@ -222,6 +224,11 @@ export class Player {
       if (this.position.y + this.size.h > 50 * 16) {
         this.position.y = 50 * 16 - this.size.h;
       }
+      // Safety net: the velocity gate above stops a tank moving *into* a wall,
+      // but a tank shoved by other bodies can still end up overlapping geometry.
+      // Resolve any residual penetration against the walls along the shallowest
+      // axis so nothing ever rests inside a wall.
+      this.resolveWallPenetration(room.Bcollision);
     }
   }
   endofbarrel(): void {
@@ -288,6 +295,31 @@ export class Player {
     }
     if (this.side == "down") {
       if (this.velocity.y > 0) this.velocity.y = 0;
+    }
+  }
+
+  // Push the tank out of any wall it overlaps, along the axis of least
+  // penetration (standard AABB minimum-translation resolution). With the fixed
+  // timestep keeping each step's displacement well under a wall's thickness,
+  // this guarantees a tank can never settle inside or tunnel through geometry.
+  resolveWallPenetration(walls: Collidable[]): void {
+    for (const wall of walls) {
+      const overlapX =
+        Math.min(this.position.x + this.size.w, wall.position.x + wall.size.w) -
+        Math.max(this.position.x, wall.position.x);
+      const overlapY =
+        Math.min(this.position.y + this.size.h, wall.position.y + wall.size.h) -
+        Math.max(this.position.y, wall.position.y);
+      if (overlapX <= 0 || overlapY <= 0) continue; // not penetrating
+      if (overlapX < overlapY) {
+        const wallCx = wall.position.x + wall.size.w / 2;
+        const selfCx = this.position.x + this.size.w / 2;
+        this.position.x += selfCx < wallCx ? -overlapX : overlapX;
+      } else {
+        const wallCy = wall.position.y + wall.size.h / 2;
+        const selfCy = this.position.y + this.size.h / 2;
+        this.position.y += selfCy < wallCy ? -overlapY : overlapY;
+      }
     }
   }
 }

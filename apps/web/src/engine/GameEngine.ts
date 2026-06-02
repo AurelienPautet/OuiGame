@@ -9,8 +9,27 @@
  * runs. This replaces the old browser <script> tags that exposed those classes
  * as window globals.
  */
-import { Room, loadlevel } from "@ouigame/shared/game";
+import {
+  Room,
+  loadlevel,
+  SIM_STEP_S,
+  SIM_STEP_MS,
+  MAX_SUBSTEPS,
+  MAX_FRAME_MS,
+  INTERP_DELAY_MS,
+} from "@ouigame/shared/game";
 import type { RoomIo } from "@ouigame/shared/game";
+import {
+  clamp,
+  lerpPose,
+  poseOf,
+  withPose,
+  sampleBuffer,
+  pruneBuffer,
+  type Pose,
+  type Posable,
+  type TimedFrame,
+} from "./interpolation.js";
 import type { RoomPlayer, RenderBullet, RenderMine } from "./runtimeTypes.js";
 import type { Socket } from "socket.io-client";
 import type {
@@ -25,7 +44,7 @@ import type {
 } from "@ouigame/shared/types";
 import type { ReceiveJsonFromId } from "@ouigame/shared/api";
 import { Renderer } from "./Renderer.js";
-import { InputHandler } from "./InputHandler.js";
+import { InputHandler, type InputSnapshot } from "./InputHandler.js";
 import { ParticleSystem } from "./ParticleSystem.js";
 import { DebrisSystem } from "./Debris.js";
 import { SoundManager, type SoundEvents } from "./SoundManager.js";
@@ -62,6 +81,22 @@ interface SoloGameOverResult {
 }
 
 type GameMode = "solo" | "online";
+
+// Captured render poses for one simulation step, keyed by entity id, used to
+// interpolate the solo display between fixed sim steps.
+interface PoseFrame {
+  players: Record<string, Pose>;
+  bullets: Record<number, Pose>;
+  mines: Record<number, Pose>;
+}
+
+// The positioned slice of a server snapshot we interpolate for the online
+// display (other fields are read from the latest snapshot directly).
+interface ServerFrame {
+  players: Record<string, RoomPlayer>;
+  bullets: RenderBullet[];
+  mines: RenderMine[];
+}
 
 // LocalIO is the solo-mode sink the local Room broadcasts through. It satisfies
 // the shared RoomIo contract, so its `emit` is type-checked against the same
@@ -160,10 +195,20 @@ export class GameEngine {
   loopId: ReturnType<typeof setInterval> | null;
   animationId: number | null;
 
-  // Timing
+  // Timing — fixed-timestep accumulator (the sim advances in whole SIM_STEP_S
+  // slices; the render loop interpolates between sim states with `renderAlpha`).
   oldTime: number;
-  fpsCorrector: number;
+  simAccumulator: number;
   tick: number;
+
+  // Render interpolation buffers. Solo keeps the previous + current captured sim
+  // poses; online buffers timestamped server snapshots and renders slightly in
+  // the past (INTERP_DELAY_MS) so it always has two states to blend.
+  soloPrev: PoseFrame | null;
+  soloCurr: PoseFrame | null;
+  snapshotBuffer: TimedFrame<ServerFrame>[];
+  // Input sampled once for the current frame (solo), applied to the fixed steps.
+  private _frameInput: InputSnapshot | null;
 
   // Solo mode state
   localRoom: Room | null;
@@ -250,8 +295,12 @@ export class GameEngine {
 
     // Timing
     this.oldTime = performance.now();
-    this.fpsCorrector = 1;
+    this.simAccumulator = 0;
     this.tick = 0;
+    this.soloPrev = null;
+    this.soloCurr = null;
+    this.snapshotBuffer = [];
+    this._frameInput = null;
 
     // Solo mode state
     this.localRoom = null;
@@ -283,7 +332,7 @@ export class GameEngine {
     this.onCountdownStart = null; // Called when countdown should begin
 
     // Bind methods
-    this._renderLoop = this._renderLoop.bind(this);
+    this._frame = this._frame.bind(this);
     this._onTick = this._onTick.bind(this);
     this._onLevelChange = this._onLevelChange.bind(this);
 
@@ -458,27 +507,18 @@ export class GameEngine {
       if (this.onCountdownStart) {
         this.onCountdownStart();
       }
+
+      // Seed both interpolation snapshots so the very first rendered frame has a
+      // previous + current state to blend (identical → no motion).
+      this._captureSolo();
+      this._captureSolo();
     }
 
-    // Start render loop (requestAnimationFrame)
-    this.animationId = requestAnimationFrame(this._renderLoop);
-
-    // Start game loop (60fps via setInterval for consistent timing)
-    if (this.mode === "solo") {
-      this.loopId = setInterval(() => {
-        if (!this.paused) {
-          this._soloUpdate();
-        }
-      }, 1000 / 60);
-    } else {
-      // Online mode: send input every tick
-      this.loopId = setInterval(() => {
-        if (!this.paused) {
-          this._sendInput();
-        }
-        this.tick++;
-      }, 1000 / 60);
-    }
+    // Single requestAnimationFrame loop drives both the fixed-timestep
+    // simulation and the interpolated display (see _frame).
+    this.simAccumulator = 0;
+    this.oldTime = performance.now();
+    this.animationId = requestAnimationFrame(this._frame);
   }
 
   // Called when countdown finishes to enable gameplay
@@ -488,20 +528,85 @@ export class GameEngine {
     this.input.clearInput();
     // Reset start time for accurate timing
     this.startTime = performance.now();
+    // Drop any time banked during the countdown so play doesn't start with a
+    // burst of catch-up steps.
+    this.simAccumulator = 0;
+    this.oldTime = performance.now();
   }
 
-  _soloUpdate() {
-    if (!this.localRoom) return;
+  // The unified frame: advance the simulation in fixed steps to catch up with
+  // real time, then render the display interpolated between sim states. This
+  // fully decouples game speed (fixed 60 Hz) from the display refresh rate.
+  _frame(now: number) {
+    if (!this.running) return;
 
-    // During countdown, just render current state - NO game updates (freeze everything)
-    if (this.inCountdown) {
-      // Just sync state for rendering (no room.update() - freeze players and bots)
-      this._syncStateFromRoom(this.localRoom);
+    const simulating =
+      !this.paused && !(this.mode === "solo" && this.inCountdown);
+
+    if (simulating) {
+      let elapsed = now - this.oldTime;
+      if (elapsed > MAX_FRAME_MS) elapsed = MAX_FRAME_MS;
+      this.simAccumulator += elapsed;
+
+      // Sample input once per frame; the fixed steps below consume it. One-shot
+      // actions (shoot/plant) are handled here so a click maps to exactly one
+      // shot regardless of how many sim steps or render frames occur.
+      if (this.mode === "solo") this._beginSoloFrameInput();
+
+      let steps = 0;
+      while (this.simAccumulator >= SIM_STEP_MS && steps < MAX_SUBSTEPS) {
+        this._simStep();
+        this.simAccumulator -= SIM_STEP_MS;
+        steps++;
+      }
+      // Spiral-of-death guard: if we hit the cap, drop the unprocessed backlog.
+      if (steps === MAX_SUBSTEPS) this.simAccumulator = 0;
+
+      if (this.mode === "solo" && this.localRoom) {
+        this._syncStateFromRoom(this.localRoom);
+        this._checkSoloGameOver();
+      }
+    } else {
+      // Not simulating (paused or countdown): keep current state on screen and
+      // don't let real time pile up into the accumulator.
+      this.simAccumulator = 0;
+      if (this.mode === "solo" && this.localRoom) {
+        this._syncStateFromRoom(this.localRoom);
+      }
+    }
+    this.oldTime = now;
+
+    const alpha = clamp(this.simAccumulator / SIM_STEP_MS, 0, 1);
+    this._render(alpha);
+
+    this.animationId = requestAnimationFrame(this._frame);
+  }
+
+  // One fixed simulation step. Solo advances the local authoritative room;
+  // online ships the player's input at the fixed cadence (server is the sim).
+  _simStep() {
+    if (this.mode === "solo") {
+      this._simStepSolo();
+    } else {
+      this._sendInput();
+      this.tick++;
+    }
+  }
+
+  // Sample input once for this frame and apply the UI-level / one-shot parts
+  // (audio resume, pause, shoot, plant). Continuous input (direction/aim) is set
+  // on the player here too; the fixed sim steps then read it off the player.
+  // One-shots fire once per frame so a single click is always exactly one shot,
+  // independent of the display refresh rate.
+  _beginSoloFrameInput() {
+    const room = this.localRoom;
+    if (!room) {
+      this._frameInput = null;
       return;
     }
 
-    // Get input
     const input = this.input.getInputState();
+    this._frameInput = input;
 
     // Resume AudioContext on first interaction if needed
     if (input.click || input.direction.x !== 0 || input.direction.y !== 0) {
@@ -514,103 +619,109 @@ export class GameEngine {
       return;
     }
 
-    // Check for game over conditions
-    const myPlayer = this.localRoom.players[this.mysocketid!];
-    if (myPlayer) {
-      // 1. Check for Loss (Player died)
-      if (!myPlayer.alive && this.running && !this.gameOverTriggered) {
-        this.gameOverTriggered = true;
-        this.post?.flash(1);
-        this._triggerSoloGameOver(false);
-        return;
-      }
-
-      // 2. Check for Win (All bots/enemies died)
-      // Players are stored with socketid as key. Filter out our player by key.
-      const enemyEntries = Object.entries(this.localRoom.players).filter(
-        ([socketid, _player]) => socketid !== this.mysocketid
-      );
-
-      // Check if any enemy is alive
-      const anyEnemyAlive = enemyEntries.some(([_id, p]) => p.alive);
-
-      if (
-        this.initialBotCount > 0 &&
-        !anyEnemyAlive &&
-        this.running &&
-        !this.gameOverTriggered
-      ) {
-        this.gameOverTriggered = true;
-        this._triggerSoloGameOver(true);
-        return;
-      }
-    }
-
-    // Update player
-    const player = this.localRoom.players[this.mysocketid!]; // mysocketid is 999 for solo
+    const player = room.players[this.mysocketid!]; // mysocketid is 999 for solo
     if (player) {
       player.direction = input.direction;
       player.aim = input.aim;
       if (input.plant) {
-        player.plant(this.localRoom);
+        player.plant(room);
       }
       if (input.click) {
         if (
           player.alive &&
           (player.bulletcount as number) < (player.max_bulletcount as number)
         ) {
-          player.shoot(this.localRoom);
+          player.shoot(room);
           // Manually play sound because Room.update() resets sounds before emitting
           this.sounds.playSounds({ shoot: true });
         } else {
-          player.shoot(this.localRoom);
+          player.shoot(room);
         }
       }
     }
+  }
 
-    // Update room (handles bot updates via Room.update_players)
+  // Advance the local authoritative room by exactly one fixed step.
+  _simStepSolo() {
+    const room = this.localRoom;
+    if (!room) return;
+
     // Fuse sound logic for mines. Room.mines is loosely typed (unknown[]) by the
     // ambient runtime contract; narrow to the render shape we read here.
-    (this.localRoom.mines as RenderMine[]).forEach((mine) => {
+    (room.mines as RenderMine[]).forEach((mine) => {
       // 220 is when visual flashing starts (300 is explosion)
       if (mine.timealive > 220 && mine.timealive % 40 === 0) {
         this.sounds.playFuse();
       }
     });
 
-    // Calculate fps correction
-    const now = performance.now();
-    this.fpsCorrector = (now - this.oldTime) / 16.67;
-    this.oldTime = now;
+    // Advance one fixed step. The bots' AI reads game state from the room it is
+    // passed; the canvas context + debug flag are threaded in for the bots'
+    // optional debug raycast overlays.
+    room.update(SIM_STEP_S, this.renderer.c, this.renderer.debugVisual);
 
-    // Update room. The bots' AI reads game state from the room it is passed
-    // (no more window.* sync); the canvas context + debug flag are threaded in
-    // for the bots' optional debug raycast overlays.
-    this.localRoom.update(
-      this.fpsCorrector,
-      this.renderer.c,
-      this.renderer.debugVisual
-    );
-
-    // Kill-confirmed pop when our own kill count ticks up this frame.
+    // Kill-confirmed pop when our own kill count ticks up this step.
     const myKills =
-      this.localRoom.players[this.mysocketid!]?.round_stats?.stats?.kills ?? 0;
+      room.players[this.mysocketid!]?.round_stats?.stats?.kills ?? 0;
     if (myKills > this.prevMyKills) this.post?.killFlash(1);
     this.prevMyKills = myKills;
 
-    // Play sounds - LocalIO handles this via tick_sounds event from Room?
-    // If we play it here AND in LocalIO, it might be double.
-    // However, if Room.js clears sounds after emission, checking here is safe effectively if empty.
-    // But if sound works "sometimes", maybe we are overflooding the pool?
-    // Let's try to keep both but ensure we don't error.
-    // Room.sounds is a runtime sound-events object (the web's loose ambient
-    // type only knows it as unknown[]).
-    this.sounds.playSounds(this.localRoom.sounds as unknown as SoundEvents);
+    // Room.sounds is a runtime sound-events object (the web's loose ambient type
+    // only knows it as unknown[]).
+    this.sounds.playSounds(room.sounds as unknown as SoundEvents);
 
-    // Sync local state for rendering
-    this._syncStateFromRoom(this.localRoom);
+    // Record this step's poses for display interpolation.
+    this._captureSolo();
 
     this.tick++;
+  }
+
+  // Win/lose detection for solo, run once per frame off the latest room state.
+  _checkSoloGameOver() {
+    const room = this.localRoom;
+    if (!room || this.gameOverTriggered || !this.running) return;
+
+    const myPlayer = room.players[this.mysocketid!];
+    if (!myPlayer) return;
+
+    // 1. Loss — our player died.
+    if (!myPlayer.alive) {
+      this.gameOverTriggered = true;
+      this.post?.flash(1);
+      this._triggerSoloGameOver(false);
+      return;
+    }
+
+    // 2. Win — every enemy (non-self entry) is dead.
+    const anyEnemyAlive = Object.entries(room.players).some(
+      ([socketid, p]) => socketid !== this.mysocketid && p.alive
+    );
+    if (this.initialBotCount > 0 && !anyEnemyAlive) {
+      this.gameOverTriggered = true;
+      this._triggerSoloGameOver(true);
+    }
+  }
+
+  // Snapshot the current room poses (by entity id) into the interpolation
+  // buffer, shifting the previous current into prev.
+  _captureSolo() {
+    const room = this.localRoom;
+    if (!room) return;
+    this.soloPrev = this.soloCurr;
+
+    const players: Record<string, Pose> = {};
+    for (const id in room.players) {
+      players[id] = poseOf(room.players[id]!);
+    }
+    const bullets: Record<number, Pose> = {};
+    for (const b of room.bullets as unknown as RenderBullet[]) {
+      if (b.id !== undefined) bullets[b.id] = poseOf(b);
+    }
+    const mines: Record<number, Pose> = {};
+    for (const m of room.mines as unknown as RenderMine[]) {
+      if (m.id !== undefined) mines[m.id] = poseOf(m);
+    }
+    this.soloCurr = { players, bullets, mines };
   }
 
   // Copy the Room's strictly-typed entity arrays into the engine's
@@ -658,6 +769,20 @@ export class GameEngine {
     // map the renderer/state fields expect.
     this.players = data.players as unknown as Record<string, RoomPlayer>;
     this.holes = data.holes;
+
+    // Buffer the timestamped snapshot for render interpolation. The display
+    // renders ~INTERP_DELAY_MS in the past so there are always two server states
+    // to blend between, hiding network jitter. Keep ~1s of history.
+    const now = performance.now();
+    this.snapshotBuffer.push({
+      t: now,
+      state: {
+        players: this.players,
+        bullets: this.bullets,
+        mines: this.mines,
+      },
+    });
+    pruneBuffer(this.snapshotBuffer, now - 1000);
 
     // Death flash on our player's alive→dead transition; kill pop when our
     // kill count rises. Both read off our entry in the tick snapshot.
@@ -719,8 +844,107 @@ export class GameEngine {
     this.prevAlive = next;
   }
 
-  _renderLoop() {
-    if (!this.running) return;
+  // Interpolate one entity between an older (`a`) and newer (`b`) snapshot. The
+  // newer snapshot is the source of truth for membership and all non-pose
+  // fields; only position/angle are blended. Loose render types carry `unknown`
+  // positions, so we cross the Posable boundary with explicit casts here.
+  private _lerpEntity<T>(a: T | undefined, b: T, alpha: number): T {
+    if (a === undefined) return b;
+    const pose = lerpPose(
+      poseOf(a as unknown as Posable),
+      poseOf(b as unknown as Posable),
+      alpha
+    );
+    return withPose(b as unknown as Posable, pose) as unknown as T;
+  }
+
+  // Build the interpolated solo entities: live room entities placed at a pose
+  // blended between the previous and current captured sim step.
+  private _interpolatedSolo(alpha: number) {
+    const room = this.localRoom;
+    if (!room) {
+      return {
+        players: this.players,
+        bullets: this.bullets,
+        mines: this.mines,
+      };
+    }
+    const prev = this.soloPrev;
+    const curr = this.soloCurr;
+
+    const players: Record<string, RoomPlayer> = {};
+    for (const id in room.players) {
+      const p = room.players[id]!;
+      const cp = curr?.players[id];
+      const pp = prev?.players[id];
+      const pose = pp && cp ? lerpPose(pp, cp, alpha) : (cp ?? poseOf(p));
+      players[id] = withPose(
+        p as unknown as Posable,
+        pose
+      ) as unknown as RoomPlayer;
+    }
+    const bullets = (room.bullets as unknown as RenderBullet[]).map((b) => {
+      const cp = b.id !== undefined ? curr?.bullets[b.id] : undefined;
+      const pp = b.id !== undefined ? prev?.bullets[b.id] : undefined;
+      const pose = pp && cp ? lerpPose(pp, cp, alpha) : (cp ?? poseOf(b));
+      return withPose(b as unknown as Posable, pose) as unknown as RenderBullet;
+    });
+    const mines = (room.mines as unknown as RenderMine[]).map((m) => {
+      const cp = m.id !== undefined ? curr?.mines[m.id] : undefined;
+      const pp = m.id !== undefined ? prev?.mines[m.id] : undefined;
+      const pose = pp && cp ? lerpPose(pp, cp, alpha) : (cp ?? poseOf(m));
+      return withPose(m as unknown as Posable, pose) as unknown as RenderMine;
+    });
+    return { players, bullets, mines };
+  }
+
+  // Build the interpolated online entities from the snapshot buffer, rendering
+  // INTERP_DELAY_MS in the past so two server states always straddle the render
+  // time. Falls back to the latest snapshot when the buffer is too short.
+  private _interpolatedOnline() {
+    const fallback = {
+      players: this.players,
+      bullets: this.bullets,
+      mines: this.mines,
+    };
+    const renderTime = performance.now() - INTERP_DELAY_MS;
+    const sample = sampleBuffer(this.snapshotBuffer, renderTime);
+    if (!sample) return fallback;
+    const { a, b, alpha } = sample;
+
+    const players: Record<string, RoomPlayer> = {};
+    for (const id in b.state.players) {
+      players[id] = this._lerpEntity(
+        a.state.players[id],
+        b.state.players[id]!,
+        alpha
+      );
+    }
+    const bullets = b.state.bullets.map((bb) => {
+      const ab =
+        bb.id !== undefined
+          ? a.state.bullets.find((x) => x.id === bb.id)
+          : undefined;
+      return this._lerpEntity(ab, bb, alpha);
+    });
+    const mines = b.state.mines.map((bm) => {
+      const am =
+        bm.id !== undefined
+          ? a.state.mines.find((x) => x.id === bm.id)
+          : undefined;
+      return this._lerpEntity(am, bm, alpha);
+    });
+    return { players, bullets, mines };
+  }
+
+  // The display loop: draw the world at the interpolated positions for this
+  // render frame. Particle/debris/post effects are unchanged; only the entity
+  // positions handed to the renderer are interpolated.
+  _render(alpha: number) {
+    const { players, bullets, mines } =
+      this.mode === "solo"
+        ? this._interpolatedSolo(alpha)
+        : this._interpolatedOnline();
 
     // Update particles
     this.particles.update();
@@ -733,36 +957,34 @@ export class GameEngine {
     );
 
     // Trigger fast bullet particles (Rocket trails)
-    if (this.bullets) {
-      this.bullets.forEach((bullet) => {
-        if (bullet.type === 2) {
-          this.particles.fastBullets(
-            {
-              x:
-                bullet.position.x +
-                bullet.size.w / 2 +
-                (Math.cos(bullet.angle) * bullet.size.w) / 2,
-              y:
-                bullet.position.y +
-                bullet.size.h / 2 +
-                (Math.sin(bullet.angle) * bullet.size.h) / 2,
-            },
-            bullet.angle,
-            10
-          );
-        }
-      });
-    }
+    bullets.forEach((bullet) => {
+      if (bullet.type === 2) {
+        this.particles.fastBullets(
+          {
+            x:
+              bullet.position.x +
+              bullet.size.w / 2 +
+              (Math.cos(bullet.angle) * bullet.size.w) / 2,
+            y:
+              bullet.position.y +
+              bullet.size.h / 2 +
+              (Math.sin(bullet.angle) * bullet.size.h) / 2,
+          },
+          bullet.angle,
+          10
+        );
+      }
+    });
 
     // Render game state. The engine holds these entities loosely (server- or
     // Room-shaped); the Renderer's GameState describes the same shapes, so cast.
     this.renderer.draw({
-      mines: this.mines,
+      mines: mines,
       holes: this.holes,
       blocks: this.blocks,
       Bcollision: this.Bcollision,
-      bullets: this.bullets,
-      players: this.players,
+      bullets: bullets,
+      players: players,
     } as unknown as Parameters<typeof this.renderer.draw>[0]);
 
     // Flying cannon debris sits above the wrecks/tanks but below the spark
@@ -783,9 +1005,6 @@ export class GameEngine {
         this.holes as EnvHole[]
       );
     }
-
-    // Continue loop
-    this.animationId = requestAnimationFrame(this._renderLoop);
   }
 
   pause() {
@@ -795,6 +1014,8 @@ export class GameEngine {
   resume() {
     this.paused = false;
     this.oldTime = performance.now();
+    // Discard any wall-clock time that elapsed while paused.
+    this.simAccumulator = 0;
   }
 
   quit() {

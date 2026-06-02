@@ -37,44 +37,45 @@ export function detectCollision(
   rect2: CollisionRect,
   velocity1: Vec2
 ): CollisionSide {
-  // Vérifier s'il position.y a une collision
-  if (
-    rect1.position.x + velocity1.x + velocity1.x <
-      rect2.position.x + rect2.size.w &&
-    rect1.position.x + velocity1.x + rect1.size.w > rect2.position.x &&
-    rect1.position.y + velocity1.y < rect2.position.y + rect2.size.h &&
-    rect1.position.y + velocity1.y + rect1.size.h > rect2.position.y
-  ) {
-    // Calculer les distances entre les bords des rectangles
-    const overlapLeft = rect2.position.x + rect2.size.w - rect1.position.x;
-    const overlapRight =
-      rect1.position.x + velocity1.x + rect1.size.w - rect2.position.x;
-    const overlapTop =
-      rect2.position.y + rect2.size.h - rect1.position.y + velocity1.y;
-    const overlapBottom =
-      rect1.position.y + velocity1.y + rect1.size.h - rect2.position.y;
+  // Swept position of rect1 (its leading edges after applying velocity).
+  const x1 = rect1.position.x + velocity1.x;
+  const y1 = rect1.position.y + velocity1.y;
+  const w1 = rect1.size.w;
+  const h1 = rect1.size.h;
+  const x2 = rect2.position.x;
+  const y2 = rect2.position.y;
+  const w2 = rect2.size.w;
+  const h2 = rect2.size.h;
 
-    // Déterminer le côté de collision en trouvant la plus petite distance de chevauchement
-    const minOverlap = Math.min(
-      overlapLeft,
-      overlapRight,
-      overlapTop,
-      overlapBottom
-    );
-
-    if (minOverlap === overlapLeft) {
-      return "left";
-    } else if (minOverlap === overlapRight) {
-      return "right";
-    } else if (minOverlap === overlapTop) {
-      return "up";
-    } else {
-      return "down";
-    }
+  // No overlap between the swept rect1 and rect2 → no collision.
+  if (!(x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2)) {
+    return "";
   }
 
-  // S'il n't a pas de collision, retourner null
-  return "";
+  // Minimum-translation overlap on each side; the smallest one is the contact
+  // face. (Symmetric — the previous version double-applied velocity on the left
+  // edge and mis-parenthesised the top overlap.)
+  const overlapLeft = x2 + w2 - x1;
+  const overlapRight = x1 + w1 - x2;
+  const overlapTop = y2 + h2 - y1;
+  const overlapBottom = y1 + h1 - y2;
+
+  const minOverlap = Math.min(
+    overlapLeft,
+    overlapRight,
+    overlapTop,
+    overlapBottom
+  );
+
+  if (minOverlap === overlapLeft) {
+    return "left";
+  } else if (minOverlap === overlapRight) {
+    return "right";
+  } else if (minOverlap === overlapTop) {
+    return "up";
+  } else {
+    return "down";
+  }
 }
 
 export function colliderect(

@@ -3,6 +3,10 @@ import type { Player } from "./Player.js";
 import type { Room } from "./Room.js";
 
 export class Mine {
+  // Stable per-mine id, used to match a mine across simulation steps / server
+  // snapshots for render interpolation.
+  static _nextId = 1;
+  id: number;
   position: Vec2;
   radius: number;
   timealive: number;
@@ -10,6 +14,7 @@ export class Mine {
   emitter: Player;
 
   constructor(position: Vec2, emitter: Player, room: Room) {
+    this.id = Mine._nextId++;
     this.position = position;
     this.radius = 15;
     this.timealive = 0;
@@ -21,7 +26,11 @@ export class Mine {
     room.mines.push(this);
   }
 
-  update(fps_corector: number): void {
-    this.timealive += fps_corector;
+  // `timealive` is counted in fixed simulation ticks (1 tick = SIM_STEP_S). The
+  // fuse threshold (Room.timetoeplode) and the renderer's blink/flash thresholds
+  // are expressed in the same tick unit, so this advances by exactly one per
+  // fixed step.
+  update(): void {
+    this.timealive += 1;
   }
 }
