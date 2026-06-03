@@ -264,6 +264,9 @@
   "countdown": {
     "go": "GO!"
   },
+  "orientation": {
+    "rotate": "Rotate your device to landscape"
+  },
   "pause": {
     "title": "Paused",
     "resume": "Resume",
