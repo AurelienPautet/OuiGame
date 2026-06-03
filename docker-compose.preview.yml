@@ -27,6 +27,14 @@ services:
       # Google sign-in is disabled in previews (OAuth origins are dynamic per
       # PR). The server only warns when this is empty — everything else works.
       - GOOGLE_CLIENT_ID=
+      # Production snapshot to restore at boot (full copy — see PREVIEW.md).
+      # Set these on the Coolify resource. Leave PREVIEW_DUMP_S3_ENDPOINT empty
+      # to skip seeding and start with an empty database.
+      - PREVIEW_DUMP_S3_ENDPOINT=
+      - PREVIEW_DUMP_S3_BUCKET=
+      - PREVIEW_DUMP_S3_ACCESS_KEY=
+      - PREVIEW_DUMP_S3_SECRET_KEY=
+      - PREVIEW_DUMP_OBJECT=preview-seed/latest.sql.gz
       # Coolify magic var: generates a domain for the `app` service on port 8000
       # and wires up its reverse proxy. Leave the value empty — Coolify fills it.
       - SERVICE_FQDN_APP_8000

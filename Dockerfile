@@ -17,6 +17,16 @@ ENV HUSKY=0
 RUN corepack enable
 WORKDIR /app
 
+# Runtime tools for seeding the preview DB from a production snapshot:
+#   - postgresql-client : `psql` to restore the dump
+#   - mc (MinIO client)  : pulls the dump from any S3-compatible storage
+# (Both are no-ops when no snapshot is configured — see scripts/preview-db-init.sh.)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client curl ca-certificates \
+  && curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc \
+  && chmod +x /usr/local/bin/mc \
+  && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first for better layer caching. Copy every workspace
 # manifest so `--frozen-lockfile` sees the full dependency graph.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -42,8 +52,8 @@ RUN pnpm --filter @ouigame/shared build \
 ENV NODE_ENV=production
 EXPOSE 8000
 
-# Sync the schema onto the fresh preview DB with `push` (not `migrate`:
-# migration 0000 assumes a pre-existing DB, the same reason the Jest setup uses
-# push), then start the server. drizzle-kit reads the DB_* vars via
-# drizzle.config.js.
-CMD ["sh", "-c", "pnpm exec drizzle-kit push --force && pnpm exec tsx apps/api/server.ts"]
+# Optionally seed the fresh DB from a production snapshot, reconcile the schema
+# to THIS PR's version (`push`, not `migrate` — migration 0000 assumes a
+# pre-existing DB, the same reason the Jest setup uses push), then start the
+# server. See scripts/preview-db-init.sh.
+CMD ["sh", "scripts/preview-db-init.sh"]
