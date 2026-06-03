@@ -1,0 +1,51 @@
+# Per-PR preview environment for Coolify.
+#
+# Two services on a private network:
+#   - app      : the built web client + Express/Socket.io server (Dockerfile)
+#   - postgres : an EPHEMERAL Postgres, isolated from prod and thrown away with
+#                the preview. No named volume on purpose — each preview gets a
+#                fresh DB (the app's startup `drizzle-kit push` applies the
+#                schema).
+#
+# Coolify assigns the public domain to the `app` service (port 8000). See
+# PREVIEW.md for the one-time Coolify setup. The DB creds here are NOT secrets:
+# the database is internal-only and disposable.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ouigame
+      - DB_PASSWORD=ouigame
+      - DB_NAME=ouigame
+      # Google sign-in is disabled in previews (OAuth origins are dynamic per
+      # PR). The server only warns when this is empty — everything else works.
+      - GOOGLE_CLIENT_ID=
+      # Coolify magic var: generates a domain for the `app` service on port 8000
+      # and wires up its reverse proxy. Leave the value empty — Coolify fills it.
+      - SERVICE_FQDN_APP_8000
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=ouigame
+      - POSTGRES_PASSWORD=ouigame
+      - POSTGRES_DB=ouigame
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ouigame -d ouigame"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped

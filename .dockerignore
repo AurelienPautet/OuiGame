@@ -1,0 +1,12 @@
+# Keep the build context small and the build deterministic. Anything generated
+# is rebuilt inside the image.
+.git
+**/node_modules
+**/dist
+**/dist-types
+**/.turbo
+**/coverage
+*.log
+.env
+.env.*
+.DS_Store
