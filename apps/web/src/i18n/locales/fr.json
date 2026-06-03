@@ -361,5 +361,9 @@
     "title": "Quelque chose s'est mal passé",
     "message": "Le jeu a rencontré une erreur inattendue. Recharger règle généralement le problème.",
     "reload": "Recharger"
+  },
+  "rotate": {
+    "title": "Tournez votre appareil",
+    "subtitle": "Ce jeu se joue mieux en mode paysage."
   }
 }

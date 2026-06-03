@@ -15,12 +15,14 @@ import { ToastContainer } from "./components/ui";
 import { LandingPage } from "./components/landing";
 import { MenuLayout } from "./components/layout";
 import { GameCanvas } from "./components/game";
+import { RotateDevicePrompt } from "./components/game/RotateDevicePrompt";
 import {
   LevelEditor,
   CampaignEditor,
   LevelsScreen,
   RankingsScreen,
 } from "./pages";
+import { useTouchControlsEnabled } from "./lib/touch";
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from "./constants/canvas";
 
 // Hook to calculate scale factor to fit the fixed gameplay/editor stage to window
@@ -31,8 +33,9 @@ const useWindowScale = () => {
     const calculateScale = () => {
       const widthRatio = window.innerWidth / CANVAS_WIDTH;
       const heightRatio = window.innerHeight / CANVAS_HEIGHT;
-      // Use the smaller ratio to ensure content fits, with 5% margin
-      setScale(Math.min(widthRatio, heightRatio) * 0.95);
+      // Use the smaller ratio so the fixed-aspect board fits the limiting
+      // dimension edge-to-edge (no perpetual margin around it).
+      setScale(Math.min(widthRatio, heightRatio));
     };
 
     calculateScale();
@@ -46,6 +49,7 @@ const useWindowScale = () => {
 // The scaled, fixed-size stage used by gameplay and the editors.
 const ScaledStage = ({ children }: { children: React.ReactNode }) => {
   const scale = useWindowScale();
+  const touchEnabled = useTouchControlsEnabled();
   return (
     <div className="w-screen h-screen overflow-hidden bg-ink flex items-center justify-center">
       <div
@@ -62,6 +66,7 @@ const ScaledStage = ({ children }: { children: React.ReactNode }) => {
             without this container they'd add to state but never render. */}
         <ToastContainer />
       </div>
+      {touchEnabled && <RotateDevicePrompt />}
     </div>
   );
 };
@@ -69,6 +74,7 @@ const ScaledStage = ({ children }: { children: React.ReactNode }) => {
 // In-game stage: also owns the theme-cycle (T) shortcut.
 const GameView = () => {
   const scale = useWindowScale();
+  const touchEnabled = useTouchControlsEnabled();
   const { cycleTheme } = useGame();
 
   useEffect(() => {
@@ -98,6 +104,7 @@ const GameView = () => {
         <GameCanvas scale={scale} />
         <ToastContainer />
       </div>
+      {touchEnabled && <RotateDevicePrompt />}
     </div>
   );
 };

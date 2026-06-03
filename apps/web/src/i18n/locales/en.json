@@ -361,5 +361,9 @@
     "title": "Something went wrong",
     "message": "The game hit an unexpected error. Reloading usually fixes it.",
     "reload": "Reload"
+  },
+  "rotate": {
+    "title": "Rotate your device",
+    "subtitle": "This game plays best in landscape."
   }
 }

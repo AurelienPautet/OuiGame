@@ -361,5 +361,9 @@
     "title": "Algo salió mal",
     "message": "El juego encontró un error inesperado. Recargar generalmente lo soluciona.",
     "reload": "Recargar"
+  },
+  "rotate": {
+    "title": "Gira tu dispositivo",
+    "subtitle": "Este juego se juega mejor en horizontal."
   }
 }

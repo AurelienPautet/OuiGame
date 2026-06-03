@@ -361,5 +361,9 @@
     "title": "Qualcosa è andato storto",
     "message": "Il gioco ha riscontrato un errore imprevisto. Di solito ricaricarlo lo risolve.",
     "reload": "Ricarica"
+  },
+  "rotate": {
+    "title": "Ruota il dispositivo",
+    "subtitle": "Questo gioco si gioca meglio in orizzontale."
   }
 }

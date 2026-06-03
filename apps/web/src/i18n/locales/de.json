@@ -361,5 +361,9 @@
     "title": "Etwas ist schief gelaufen",
     "message": "Das Spiel ist auf einen unerwarteten Fehler gestoßen. Neuladen behebt es meist.",
     "reload": "Neu laden"
+  },
+  "rotate": {
+    "title": "Gerät drehen",
+    "subtitle": "Dieses Spiel spielt sich am besten im Querformat."
   }
 }
