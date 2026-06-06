@@ -1,0 +1,69 @@
+# Surfaces the Coolify preview URL directly on the pull request.
+#
+# Coolify deploys docker-compose.preview.yml per PR; this workflow posts (and
+# keeps updated) a sticky comment with the deterministic preview URL, so the
+# link shows up in the PR conversation. It does NOT deploy anything itself.
+#
+# Requirements:
+#   - In Coolify, set the preview domain template to:  pr-{{pr_id}}.<base>
+#   - Add a repository variable PREVIEW_BASE_DOMAIN = <base>
+#     (Settings -> Secrets and variables -> Actions -> Variables),
+#     e.g. PREVIEW_BASE_DOMAIN = preview.pautet.net
+#
+# Dependabot PRs are skipped (no preview is built for them).
+
+name: preview-url
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  comment:
+    if: ${{ github.actor != 'dependabot[bot]' && vars.PREVIEW_BASE_DOMAIN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.issue.number;
+            const base = process.env.BASE_DOMAIN;
+            const url = `https://pr-${pr}.${base}`;
+            const marker = "<!-- coolify-preview-url -->";
+
+            const body =
+              context.payload.action === "closed"
+                ? `${marker}\n🧹 Preview environment for this PR has been torn down.`
+                : `${marker}\n🚀 **Preview environment**\n\n` +
+                  `Once Coolify finishes deploying this PR, it will be live at:\n\n` +
+                  `👉 ${url}\n\n` +
+                  `_Solo play works offline; online play + the database run in an ` +
+                  `isolated, disposable Postgres — your production data is never touched._`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+            });
+            const existing = comments.find((c) => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                body,
+              });
+            }
+        env:
+          BASE_DOMAIN: ${{ vars.PREVIEW_BASE_DOMAIN }}

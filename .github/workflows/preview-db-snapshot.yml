@@ -1,0 +1,49 @@
+# Publishes a fresh production snapshot for the preview environments to restore.
+#
+# Runs on a schedule (and on demand). Dumps prod and uploads it to S3-compatible
+# storage; previews pull it at boot (scripts/preview-db-init.sh).
+#
+# ⚠️  The snapshot is a FULL copy of production (tokens/PII included). Keep the
+#     bucket private and gate previews behind Coolify Basic Auth. See PREVIEW.md.
+#
+# Required configuration (Settings → Secrets and variables → Actions):
+#   Variables: PREVIEW_DUMP_S3_ENDPOINT, PREVIEW_DUMP_S3_BUCKET
+#   Secrets:   PROD_DATABASE_URL, PREVIEW_DUMP_S3_ACCESS_KEY, PREVIEW_DUMP_S3_SECRET_KEY
+
+name: preview-db-snapshot
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # daily at 04:00 UTC
+  workflow_dispatch: {}
+
+# Least privilege: this workflow only checks out the repo and pushes a dump to
+# external storage — it never writes back to GitHub.
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    if: ${{ vars.PREVIEW_DUMP_S3_ENDPOINT != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pg_dump and the MinIO client
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          sudo sed -i 's#deb #deb [signed-by=/usr/share/keyrings/pgdg.gpg] #' /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-16
+          curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          sudo chmod +x /usr/local/bin/mc
+
+      - name: Dump production and upload snapshot
+        run: sh scripts/preview-snapshot.sh
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          PREVIEW_DUMP_S3_ENDPOINT: ${{ vars.PREVIEW_DUMP_S3_ENDPOINT }}
+          PREVIEW_DUMP_S3_BUCKET: ${{ vars.PREVIEW_DUMP_S3_BUCKET }}
+          PREVIEW_DUMP_S3_ACCESS_KEY: ${{ secrets.PREVIEW_DUMP_S3_ACCESS_KEY }}
+          PREVIEW_DUMP_S3_SECRET_KEY: ${{ secrets.PREVIEW_DUMP_S3_SECRET_KEY }}
