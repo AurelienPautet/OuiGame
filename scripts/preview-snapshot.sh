@@ -30,6 +30,8 @@ mc alias set snap \
   "$PREVIEW_DUMP_S3_ENDPOINT" \
   "$PREVIEW_DUMP_S3_ACCESS_KEY" \
   "$PREVIEW_DUMP_S3_SECRET_KEY" >/dev/null
+# Create the bucket on first run so no manual console step is needed.
+mc mb --ignore-existing "snap/${PREVIEW_DUMP_S3_BUCKET}"
 mc cp /tmp/preview-seed.sql.gz "snap/${PREVIEW_DUMP_S3_BUCKET}/${OBJECT}"
 rm -f /tmp/preview-seed.sql.gz
 echo "✓ Snapshot published."
