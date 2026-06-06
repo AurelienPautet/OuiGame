@@ -21,8 +21,12 @@ OBJECT="${PREVIEW_DUMP_OBJECT:-preview-seed/latest.sql.gz}"
 echo "→ Dumping production database…"
 # --clean --if-exists makes the dump idempotent so it restores cleanly onto a
 # fresh DB; --no-owner/--no-privileges drop prod-specific roles/grants.
+# Dump to a file (not piped into gzip): `sh`/dash has no `pipefail`, so a piped
+# pg_dump failure would be masked by gzip's success and we'd upload an empty
+# snapshot. With `set -e` a direct redirect aborts on a failed pg_dump.
 pg_dump --no-owner --no-privileges --clean --if-exists "$PROD_DATABASE_URL" \
-  | gzip >/tmp/preview-seed.sql.gz
+  >/tmp/preview-seed.sql
+gzip -f /tmp/preview-seed.sql
 echo "✓ Dump size: $(du -h /tmp/preview-seed.sql.gz | cut -f1)"
 
 echo "→ Uploading to ${PREVIEW_DUMP_S3_BUCKET}/${OBJECT}…"
@@ -30,8 +34,10 @@ mc alias set snap \
   "$PREVIEW_DUMP_S3_ENDPOINT" \
   "$PREVIEW_DUMP_S3_ACCESS_KEY" \
   "$PREVIEW_DUMP_S3_SECRET_KEY" >/dev/null
-# Create the bucket on first run so no manual console step is needed.
-mc mb --ignore-existing "snap/${PREVIEW_DUMP_S3_BUCKET}"
+# Best-effort bucket creation. A bucket-scoped key (recommended) isn't entitled
+# to create buckets and the bucket is expected to already exist, so ignore any
+# failure here — the upload below only needs write access to the bucket.
+mc mb --ignore-existing "snap/${PREVIEW_DUMP_S3_BUCKET}" 2>/dev/null || true
 mc cp /tmp/preview-seed.sql.gz "snap/${PREVIEW_DUMP_S3_BUCKET}/${OBJECT}"
 rm -f /tmp/preview-seed.sql.gz
 echo "✓ Snapshot published."
