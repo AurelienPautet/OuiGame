@@ -87,6 +87,11 @@ export const LandingPage = () => {
           <div className="absolute inset-0 opacity-50 pointer-events-none graph-paper-soft" />
           <Stagger className="relative z-10">
             <MotionItem>
+              <span className="inline-block mb-3 rounded-lg border-2 border-ink bg-green px-3 py-1 text-sm font-bold text-white">
+                🚀 Preview deploy test
+              </span>
+            </MotionItem>
+            <MotionItem>
               <SectionLabel className="mb-3.5">
                 {user
                   ? t("landing.welcomeBack", { name: user.username })
