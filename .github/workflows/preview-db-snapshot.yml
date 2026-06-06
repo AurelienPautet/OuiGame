@@ -17,6 +17,11 @@ on:
     - cron: "0 4 * * *" # daily at 04:00 UTC
   workflow_dispatch: {}
 
+# Least privilege: this workflow only checks out the repo and pushes a dump to
+# external storage — it never writes back to GitHub.
+permissions:
+  contents: read
+
 jobs:
   snapshot:
     if: ${{ vars.PREVIEW_DUMP_S3_ENDPOINT != '' }}
