@@ -16,6 +16,18 @@
 #   4. start the server (which also serves apps/web/dist).
 set -eu
 
+# The embedded Postgres is always local to THIS container, so pin the connection
+# params here and export them. This also overrides any stale DB_HOST that
+# Coolify cached from an earlier compose (it imports `environment:` once and the
+# saved copy then wins over the file) — without this, a cached DB_HOST=postgres
+# would keep pointing the app at a non-existent sidecar.
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=ouigame
+DB_PASSWORD=ouigame
+DB_NAME=ouigame
+export DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME
+
 PGBIN="$(ls -d /usr/lib/postgresql/*/bin | head -n1)"
 PGDATA=/var/lib/postgresql/data
 
@@ -25,7 +37,12 @@ chown -R postgres:postgres "$PGDATA" /var/run/postgresql
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
   su postgres -c "$PGBIN/initdb -D $PGDATA --auth-local=trust --auth-host=trust" >/dev/null
 fi
-su postgres -c "$PGBIN/pg_ctl -D $PGDATA -o '-c listen_addresses=127.0.0.1 -p ${DB_PORT}' -w -t 60 start"
+# Start only if not already running (a stale postmaster.pid from a previous boot
+# in the same container would otherwise trip "another server might be running").
+if ! su postgres -c "$PGBIN/pg_ctl -D $PGDATA status" >/dev/null 2>&1; then
+  rm -f "$PGDATA/postmaster.pid"
+  su postgres -c "$PGBIN/pg_ctl -D $PGDATA -o '-c listen_addresses=127.0.0.1 -p ${DB_PORT}' -w -t 60 start"
+fi
 
 # Role + database matching the app's DB_* env (idempotent).
 su postgres -c "psql -p ${DB_PORT} -tAc \"SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'\"" | grep -q 1 \
