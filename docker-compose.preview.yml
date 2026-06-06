@@ -57,3 +57,10 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    # Coolify suffixes compose service/container names per preview, which breaks
+    # the app's `DB_HOST=postgres`. A fixed alias on the shared default network
+    # keeps `postgres` resolvable regardless of the generated container name.
+    networks:
+      default:
+        aliases:
+          - postgres
