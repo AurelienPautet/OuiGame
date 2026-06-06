@@ -30,7 +30,7 @@ jobs:
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
           sudo sed -i 's#deb #deb [signed-by=/usr/share/keyrings/pgdg.gpg] #' /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          sudo apt-get install -y --no-install-recommends postgresql-client-16
           curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
           sudo chmod +x /usr/local/bin/mc
 
