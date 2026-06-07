@@ -19,6 +19,21 @@ const GRID_CELL = 50;
 // Bullet colour by remaining bounces: 0 → red, 1 → orange, 2+ → yellow.
 const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
 
+/**
+ * Order players for drawing so corpses (alive=false) paint *beneath* living
+ * tanks. Players arrive as a map whose iteration order is arbitrary, so without
+ * this a wreck could be drawn after — and therefore on top of — a live player.
+ * Array.prototype.sort is stable, so insertion order is preserved within the
+ * dead and alive groups (only their relative ordering is forced: dead first).
+ */
+export function orderPlayersForDraw<T extends { alive: boolean }>(
+  players: Record<string, T>
+): [string, T][] {
+  return Object.entries(players).sort(
+    ([, a], [, b]) => Number(a.alive) - Number(b.alive)
+  );
+}
+
 interface Vec2 {
   x: number;
   y: number;
@@ -216,11 +231,13 @@ export class Renderer {
       bullets.forEach((bullet) => this._drawBullet(bullet));
     }
 
-    // Draw players
+    // Draw players. Dead tanks (wrecks) must render beneath living tanks, so
+    // corpses are ordered ahead of alive ones — otherwise a wreck whose entry
+    // happens to come later in the map paints over a live player.
     if (players) {
-      Object.entries(players).forEach(([socketId, player]) => {
-        this._drawPlayer(player, socketId);
-      });
+      orderPlayersForDraw(players).forEach(([socketId, player]) =>
+        this._drawPlayer(player, socketId)
+      );
     }
   }
 
