@@ -204,7 +204,8 @@
       "particles": "Particules",
       "flashes": "Éclairs de dégâts/victoire",
       "scenery": "Décor animé",
-      "sound": "Effets sonores"
+      "sound": "Effets sonores",
+      "music": "Musique"
     },
     "touch": {
       "title": "Commandes tactiles",

@@ -204,7 +204,8 @@
       "particles": "Partículas",
       "flashes": "Destello de daño / muerte",
       "scenery": "Escenario animado",
-      "sound": "Efectos de sonido"
+      "sound": "Efectos de sonido",
+      "music": "Música"
     },
     "touch": {
       "title": "Controles táctiles",

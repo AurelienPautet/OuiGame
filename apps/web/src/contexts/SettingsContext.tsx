@@ -19,7 +19,7 @@ import {
   type TouchControlsMode,
 } from "../lib/settings";
 import { applyKeyBindings } from "../engine/InputHandler";
-import { setAudioEnabled } from "../audio";
+import { setAudioEnabled, setMusicEnabled } from "../audio";
 
 interface SettingsContextValue {
   settings: Settings;
@@ -57,6 +57,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     // Mute/unmute the shared audio bus so UI sounds honour the setting even
     // when no game engine is mounted (the engine also applies it in-game).
     setAudioEnabled(settings.effects.sound);
+    setMusicEnabled(settings.effects.music);
   }, [settings]);
 
   const setKeybinding = useCallback((action: GameAction, code: string) => {

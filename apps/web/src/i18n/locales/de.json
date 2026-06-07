@@ -204,7 +204,8 @@
       "particles": "Partikel",
       "flashes": "Schaden-/Kill-Blitze",
       "scenery": "Animierte Kulissen",
-      "sound": "Soundeffekte"
+      "sound": "Soundeffekte",
+      "music": "Musik"
     },
     "touch": {
       "title": "Touch-Steuerung",

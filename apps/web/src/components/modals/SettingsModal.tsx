@@ -36,6 +36,7 @@ const EFFECTS: (keyof EffectSettings)[] = [
   "aberration",
   "vignette",
   "sound",
+  "music",
 ];
 
 // Preset → button label (the binding sets are physical-key based, so a French

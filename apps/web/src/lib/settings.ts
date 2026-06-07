@@ -36,6 +36,8 @@ export interface EffectSettings {
   scenery: boolean;
   /** Sound effects. */
   sound: boolean;
+  /** Adaptive background music. */
+  music: boolean;
 }
 
 // When to show the on-screen touch controls: auto-detect the device, or force
@@ -72,6 +74,7 @@ export const EFFECT_LABELS: Record<keyof EffectSettings, string> = {
   flashes: "Damage / kill flashes",
   scenery: "Animated scenery",
   sound: "Sound effects",
+  music: "Music",
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -92,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
     flashes: true,
     scenery: true,
     sound: true,
+    music: true,
   },
   touchControls: "auto",
   autoFire: true,

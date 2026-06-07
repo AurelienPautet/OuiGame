@@ -204,7 +204,8 @@
       "particles": "Particles",
       "flashes": "Damage / kill flashes",
       "scenery": "Animated scenery",
-      "sound": "Sound effects"
+      "sound": "Sound effects",
+      "music": "Music"
     },
     "touch": {
       "title": "Touch controls",

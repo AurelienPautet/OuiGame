@@ -16,3 +16,8 @@ export function playSfx(name: VoiceName): void {
 export function setAudioEnabled(enabled: boolean): void {
   audioBus.setEnabled(enabled);
 }
+
+/** Mirror the user's "Music" setting onto the shared bus. */
+export function setMusicEnabled(enabled: boolean): void {
+  audioBus.setMusicEnabled(enabled);
+}
