@@ -48,6 +48,41 @@ function routeTo(
   }
 }
 
+// Shared soft-clip (tanh) curve for the optional `drive` saturation. Pushing a
+// signal through it before its envelope adds harmonics and perceived loudness —
+// the "punch" that makes shots/impacts feel real rather than thin.
+let shaperCurve: Float32Array<ArrayBuffer> | null = null;
+function softClipCurve(): Float32Array<ArrayBuffer> {
+  if (shaperCurve) return shaperCurve;
+  const n = 1024;
+  const c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    c[i] = Math.tanh(2.5 * x);
+  }
+  shaperCurve = c;
+  return c;
+}
+
+// Insert a pre-gain → waveshaper before the envelope when `drive` is set,
+// returning the node to feed the envelope. `drive` > 1 pushes harder into the
+// nonlinear region for more saturation/grit.
+function saturate(
+  ctx: AudioContext,
+  node: AudioNode,
+  drive?: number
+): AudioNode {
+  if (drive == null) return node;
+  const pre = ctx.createGain();
+  pre.gain.value = drive;
+  const shaper = ctx.createWaveShaper();
+  shaper.curve = softClipCurve();
+  shaper.oversample = "2x";
+  node.connect(pre);
+  pre.connect(shaper);
+  return shaper;
+}
+
 export interface ToneOpts {
   /** Start frequency (Hz). */
   freq: number;
@@ -67,6 +102,8 @@ export interface ToneOpts {
   /** Stereo position (-1 left .. 1 right). */
   pan?: number;
   detune?: number;
+  /** Waveshaper saturation amount (pre-gain into a tanh curve). */
+  drive?: number;
 }
 
 /** A single enveloped oscillator, optionally pitch-gliding and panned. */
@@ -98,7 +135,7 @@ export function tone(opts: ToneOpts): void {
   env.gain.exponentialRampToValueAtTime(peak, start + attack);
   env.gain.exponentialRampToValueAtTime(MIN_GAIN, end);
 
-  osc.connect(env);
+  saturate(ctx, osc, opts.drive).connect(env);
   routeTo(ctx, env, out, opts.pan);
   osc.start(start);
   osc.stop(end + 0.03);
@@ -118,6 +155,8 @@ export interface NoiseOpts {
   /** Filter resonance. */
   q?: number;
   pan?: number;
+  /** Waveshaper saturation amount (pre-gain into a tanh curve). */
+  drive?: number;
 }
 
 /** An enveloped white-noise burst through an optional sweeping filter. */
@@ -140,6 +179,7 @@ export function noise(opts: NoiseOpts): void {
   env.gain.exponentialRampToValueAtTime(peak, start + attack);
   env.gain.exponentialRampToValueAtTime(MIN_GAIN, end);
 
+  let head: AudioNode = src;
   if (opts.filter) {
     const f = ctx.createBiquadFilter();
     f.type = opts.filter;
@@ -149,11 +189,10 @@ export function noise(opts: NoiseOpts): void {
     }
     if (opts.q != null) f.Q.setValueAtTime(opts.q, start);
     src.connect(f);
-    f.connect(env);
-  } else {
-    src.connect(env);
+    head = f;
   }
 
+  saturate(ctx, head, opts.drive).connect(env);
   routeTo(ctx, env, out, opts.pan);
   src.start(start);
   src.stop(end + 0.03);

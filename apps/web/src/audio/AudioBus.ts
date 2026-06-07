@@ -38,7 +38,16 @@ class AudioBus {
     const ctx = new Ctor();
     const master = ctx.createGain();
     master.gain.value = 1;
-    master.connect(ctx.destination);
+    // Master glue/limiter — tames peaks so layered shots/explosions stay loud
+    // and punchy without hard-clipping at the destination.
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -8;
+    comp.knee.value = 6;
+    comp.ratio.value = 8;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.18;
+    master.connect(comp);
+    comp.connect(ctx.destination);
     const sfx = ctx.createGain();
     sfx.gain.value = this.sfxLevel;
     sfx.connect(master);
