@@ -17,12 +17,15 @@ ENV HUSKY=0
 RUN corepack enable
 WORKDIR /app
 
-# Runtime tools for seeding the preview DB from a production snapshot:
-#   - postgresql-client : `psql` to restore the dump
-#   - mc (MinIO client)  : pulls the dump from any S3-compatible storage
-# (Both are no-ops when no snapshot is configured — see scripts/preview-db-init.sh.)
+# Runtime tools for the embedded, throwaway preview database:
+#   - postgresql        : the server + `psql`/`initdb`/`pg_ctl`, run INSIDE this
+#                         container (Coolify's per-preview container renaming
+#                         breaks cross-container DNS, so a sidecar DB isn't
+#                         reliable — the app talks to 127.0.0.1 instead).
+#   - mc (MinIO client) : pulls the production snapshot from S3-compatible storage.
+# See scripts/preview-db-init.sh.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends postgresql-client curl ca-certificates \
+  && apt-get install -y --no-install-recommends postgresql curl ca-certificates \
   && curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc \
   && chmod +x /usr/local/bin/mc \
   && rm -rf /var/lib/apt/lists/*
