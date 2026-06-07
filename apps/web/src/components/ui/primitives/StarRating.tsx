@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { motion } from "motion/react";
 import { springs } from "../../../lib/motion";
 import { cn } from "../../../lib/cn";
+import { ui } from "../../../audio";
 
 interface StarRatingProps {
   /** Number of filled stars (0..max). */
@@ -71,8 +72,22 @@ export function StarRating({
                   whileTap: { scale: 0.85 },
                 }
               : {})}
-            onMouseEnter={live ? () => setHovered(i) : undefined}
-            onClick={interactive ? () => onRate?.(i + 1) : undefined}
+            onMouseEnter={
+              live
+                ? () => {
+                    ui.hover();
+                    setHovered(i);
+                  }
+                : undefined
+            }
+            onClick={
+              interactive
+                ? () => {
+                    ui.click();
+                    onRate?.(i + 1);
+                  }
+                : undefined
+            }
           >
             <Star
               style={{ width: size, height: size }}

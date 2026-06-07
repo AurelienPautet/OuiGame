@@ -1,9 +1,7 @@
 import { Users, Lock } from "lucide-react";
-import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import type { RoomSummary } from "@ouigame/shared/api";
-import { Tooltip } from "./primitives";
-import { liftable } from "../../lib/motion";
+import { Card, Tooltip } from "./primitives";
 import { cn } from "../../lib/cn";
 
 // The in-memory room summary plus the optional password flag the card displays.
@@ -21,13 +19,10 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
   const isFull = players >= maxPlayers;
 
   return (
-    <motion.div
-      className={cn(
-        "relative flex flex-col gap-2 p-4 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)]",
-        isFull && "opacity-80"
-      )}
-      onClick={isFull ? undefined : onClick}
-      {...(isFull ? {} : liftable)}
+    <Card
+      className={cn("flex flex-col gap-2 p-4", isFull && "opacity-80")}
+      disabled={isFull}
+      onClick={onClick}
     >
       {isFull && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-ink/40 rounded-xl">
@@ -72,6 +67,6 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
         </span>
         <span className="text-xs text-ink-soft font-mono">#{id}</span>
       </div>
-    </motion.div>
+    </Card>
   );
 }

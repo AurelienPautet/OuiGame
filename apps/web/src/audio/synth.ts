@@ -12,17 +12,19 @@ export const clamp = (v: number, lo: number, hi: number): number =>
 export const rand = (min: number, max: number): number =>
   min + Math.random() * (max - min);
 
-// One reusable white-noise buffer per context (rebuilt if the rate changes).
+// One reusable white-noise buffer, cached against the context that owns it (an
+// AudioBuffer can't be played on a different context). Rebuilt if the bus ever
+// hands us a new context.
 let noiseBuf: AudioBuffer | null = null;
-let noiseRate = 0;
+let noiseCtx: AudioContext | null = null;
 function whiteNoise(ctx: AudioContext): AudioBuffer {
-  if (noiseBuf && noiseRate === ctx.sampleRate) return noiseBuf;
+  if (noiseBuf && noiseCtx === ctx) return noiseBuf;
   const len = Math.floor(ctx.sampleRate * 0.5);
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const data = buf.getChannelData(0);
   for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
   noiseBuf = buf;
-  noiseRate = ctx.sampleRate;
+  noiseCtx = ctx;
   return buf;
 }
 

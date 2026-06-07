@@ -1,4 +1,5 @@
 import { cn } from "../../../lib/cn";
+import { ui } from "../../../audio";
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -49,7 +50,11 @@ export function SegmentedControl<T extends string>({
             key={opt.value}
             type="button"
             aria-pressed={active}
-            onClick={() => onValueChange(opt.value)}
+            onClick={() => {
+              ui.tab();
+              onValueChange(opt.value);
+            }}
+            onMouseEnter={() => ui.hover()}
             className={cn(
               "font-display font-bold text-sm px-5 py-2.5 cursor-pointer transition-colors",
               active ? TONE[tone] : "text-white/70 hover:text-white"

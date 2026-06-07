@@ -88,6 +88,7 @@ export const DialogContent = forwardRef<
             {showClose && (
               <RadixDialog.Close
                 aria-label="Close"
+                onClick={() => ui.click()}
                 className={cn(
                   "absolute top-3.5 right-3.5 inline-flex items-center justify-center size-9 rounded-[10px] border-[3px] border-ink cursor-pointer transition-colors",
                   tone === "dark"

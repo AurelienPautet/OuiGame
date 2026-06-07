@@ -1,6 +1,7 @@
 import * as RadixSelect from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import { ui } from "../../../audio";
 
 export interface SelectOption {
   value: string;
@@ -31,7 +32,10 @@ export function Select({
     <RadixSelect.Root
       {...(value !== undefined ? { value } : {})}
       {...(defaultValue !== undefined ? { defaultValue } : {})}
-      {...(onValueChange ? { onValueChange } : {})}
+      onValueChange={(v) => {
+        ui.click();
+        onValueChange?.(v);
+      }}
     >
       <RadixSelect.Trigger
         aria-label={ariaLabel}

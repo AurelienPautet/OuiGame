@@ -50,7 +50,7 @@ game **runtime** (`Room`, `loadlevel`, `makeid`) from `@ouigame/shared/game`.
 │  GameEngine.ts   rAF loop; solo runs a local Room, online listens to   │
 │                  the server `tick`; owns the socket gameplay listeners │
 │  Renderer.ts     canvas drawing            InputHandler.ts  kbd/mouse  │
-│  ParticleSystem.ts  effects               SoundManager.ts  howler      │
+│  ParticleSystem.ts  effects               SoundManager.ts  Web Audio   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,7 +61,7 @@ apps/web/
 ├── index.html
 ├── vite.config.js            base "./" (relative assets — required for itch.io)
 ├── .env.itch                 VITE_API_URL / VITE_SOCKET_URL for the itch build
-├── types/                    ambient .d.ts (the untyped @ouigame/shared/game runtime, howler)
+├── types/                    ambient .d.ts (the untyped @ouigame/shared/game runtime)
 └── src/
     ├── main.tsx · App.tsx
     ├── providers/            QueryProvider, ErrorBoundary
@@ -79,6 +79,7 @@ apps/web/
     │   │                     LevelSelector, MyLevels, TankSelect, Campaign* …
     │   ├── landing/          LandingPage (always visible behind overlays)
     │   └── game/             GameCanvas (the React↔engine bridge), EndGameScreen, …
+    ├── audio/                procedural Web Audio: synth primitives + named voices (game + UI)
     ├── engine/               GameEngine · Renderer · InputHandler · ParticleSystem · SoundManager
     └── pages/                LevelEditor, CampaignEditor (full-screen, route-based)
 ```

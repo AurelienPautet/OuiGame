@@ -17,12 +17,12 @@ export interface SoundEvents {
 }
 
 export class SoundManager {
-  // When false, all playback is suppressed (driven by the "sound" user setting).
-  enabled = true;
-
-  /** Enable/disable all sound playback (mutes the shared bus). */
+  /**
+   * Enable/disable all sound playback. The shared bus is the single source of
+   * truth for mute state (`playSfx` gates on it), so this just forwards the
+   * "sound" user setting onto it.
+   */
   setEnabled(enabled: boolean) {
-    this.enabled = enabled;
     setAudioEnabled(enabled);
   }
 

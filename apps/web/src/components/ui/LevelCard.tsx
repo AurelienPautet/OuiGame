@@ -1,9 +1,7 @@
 import { Lock } from "lucide-react";
-import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { extractBotCounts, getBotColor } from "../../utils/levelUtils";
-import { StarRating, TankAvatar } from "./primitives";
-import { liftable } from "../../lib/motion";
+import { Card, StarRating, TankAvatar } from "./primitives";
 import { cn } from "../../lib/cn";
 
 // Format milliseconds to readable time (MM:SS or HH:MM:SS)
@@ -54,14 +52,14 @@ export function LevelCard({
   const bestTimeFormatted = formatTime(soloBestTimeMs);
 
   return (
-    <motion.div
+    <Card
       className={cn(
-        "relative flex gap-4 p-3 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] shadow-[0_4px_0_rgba(0,0,0,0.12)]",
+        "flex gap-4 p-3",
         selected ? "border-blue ring-3 ring-blue/30" : "border-ink",
         locked && "opacity-80"
       )}
-      onClick={locked ? undefined : onClick}
-      {...(locked ? {} : liftable)}
+      disabled={locked}
+      onClick={onClick}
     >
       {locked && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink/40 rounded-xl text-center">
@@ -139,7 +137,7 @@ export function LevelCard({
           </div>
         )}
       </div>
-    </motion.div>
+    </Card>
   );
 }
 

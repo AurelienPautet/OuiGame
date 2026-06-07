@@ -52,65 +52,65 @@ export const voices: Record<VoiceName, Voice> = {
   shoot() {
     const j = rand(0.94, 1.06);
     noise({
-      duration: 0.16,
-      gain: 0.26,
+      duration: 0.18,
+      gain: 0.28,
       filter: "lowpass",
-      freq: 1800 * j,
-      freqEnd: 200,
+      freq: 1100 * j,
+      freqEnd: 130,
       q: 1,
     });
     tone({
       type: "triangle",
-      freq: 220 * j,
-      freqEnd: 70,
-      duration: 0.16,
-      gain: 0.3,
+      freq: 170 * j,
+      freqEnd: 55,
+      duration: 0.18,
+      gain: 0.32,
       attack: 0.002,
     });
     tone({
       type: "square",
-      freq: 90 * j,
-      freqEnd: 48,
-      duration: 0.12,
-      gain: 0.16,
+      freq: 75 * j,
+      freqEnd: 38,
+      duration: 0.13,
+      gain: 0.18,
     });
   },
 
   // Bullet bouncing off a wall: a short, bright metallic zing.
   ricochet() {
-    const p = rand(0.9, 1.18);
+    const p = rand(0.9, 1.15);
     tone({
       type: "square",
-      freq: 2600 * p,
-      freqEnd: 1700 * p,
-      duration: 0.12,
-      gain: 0.11,
+      freq: 1500 * p,
+      freqEnd: 950 * p,
+      duration: 0.13,
+      gain: 0.1,
       attack: 0.001,
     });
     tone({
       type: "triangle",
-      freq: 3300 * p,
-      freqEnd: 2100 * p,
-      duration: 0.1,
-      gain: 0.07,
+      freq: 1950 * p,
+      freqEnd: 1200 * p,
+      duration: 0.11,
+      gain: 0.06,
       delay: 0.005,
     });
     noise({
       duration: 0.07,
-      gain: 0.08,
+      gain: 0.07,
       filter: "bandpass",
-      freq: 4200 * p,
-      q: 7,
+      freq: 2500 * p,
+      q: 6,
     });
   },
 
   // Mine placed: a soft mechanical thunk topped with a little confirm beep.
   plant() {
-    tone({ type: "sine", freq: 170, freqEnd: 80, duration: 0.12, gain: 0.3 });
-    noise({ duration: 0.05, gain: 0.12, filter: "lowpass", freq: 700 });
+    tone({ type: "sine", freq: 150, freqEnd: 68, duration: 0.13, gain: 0.3 });
+    noise({ duration: 0.05, gain: 0.12, filter: "lowpass", freq: 500 });
     tone({
       type: "square",
-      freq: 880,
+      freq: 560,
       duration: 0.06,
       gain: 0.08,
       delay: 0.05,
@@ -121,9 +121,9 @@ export const voices: Record<VoiceName, Voice> = {
   fuse() {
     tone({
       type: "square",
-      freq: 1500,
+      freq: 850,
       duration: 0.05,
-      gain: 0.12,
+      gain: 0.11,
       attack: 0.001,
     });
   },
@@ -134,8 +134,8 @@ export const voices: Record<VoiceName, Voice> = {
       duration: 0.5,
       gain: 0.4,
       filter: "lowpass",
-      freq: 1200,
-      freqEnd: 60,
+      freq: 1000,
+      freqEnd: 55,
       q: 0.7,
     });
     tone({
@@ -155,20 +155,20 @@ export const voices: Record<VoiceName, Voice> = {
     });
     noise({
       duration: 0.22,
-      gain: 0.12,
+      gain: 0.1,
       filter: "highpass",
-      freq: 1600,
+      freq: 1100,
       delay: 0.02,
     });
   },
 
   // Kill confirmed: a quick three-note upward arpeggio.
   kill() {
-    tone({ type: "square", freq: G4, duration: 0.07, gain: 0.13 });
-    tone({ type: "square", freq: C5, duration: 0.08, gain: 0.13, delay: 0.06 });
+    tone({ type: "square", freq: E4, duration: 0.07, gain: 0.13 });
+    tone({ type: "square", freq: G4, duration: 0.08, gain: 0.13, delay: 0.06 });
     tone({
       type: "triangle",
-      freq: E5,
+      freq: C5,
       duration: 0.12,
       gain: 0.12,
       delay: 0.12,
