@@ -1,11 +1,16 @@
 #!/usr/bin/env sh
-# Dumps the PRODUCTION database and uploads it to S3-compatible storage, so the
-# per-PR preview environments can restore it at boot (scripts/preview-db-init.sh).
+# Dumps the OuiTank tables from the PRODUCTION database and uploads them to
+# S3-compatible storage, so the per-PR preview environments can restore them at
+# boot (scripts/preview-db-init.sh).
 #
-# ⚠️  This is a FULL, UNREDACTED copy of production — including emails, password
-#     hashes, Google IDs, session tokens and IP addresses. The snapshot bucket
-#     and every preview that restores it MUST be access-gated (Coolify Basic
-#     Auth). Do not point this at a public bucket.
+# The prod Postgres is shared with other apps; we dump ONLY the `OuiTank-*`
+# tables (see packages/db/src/schema) — this keeps other projects' data out of
+# the snapshot and avoids confusing drizzle-kit push at restore time.
+#
+# ⚠️  It is still a FULL, UNREDACTED copy of OuiTank's own data — emails,
+#     password hashes, Google IDs, session tokens and IP addresses. The snapshot
+#     bucket and every preview that restores it MUST be access-gated (Coolify
+#     Basic Auth). Do not point this at a public bucket.
 #
 # Intended to run from CI on a schedule (.github/workflows/preview-db-snapshot.yml)
 # or from a cron job. Requires `pg_dump`, `gzip` and `mc` (MinIO client).
@@ -18,13 +23,15 @@ set -eu
 : "${PREVIEW_DUMP_S3_SECRET_KEY:?set PREVIEW_DUMP_S3_SECRET_KEY}"
 OBJECT="${PREVIEW_DUMP_OBJECT:-preview-seed/latest.sql.gz}"
 
-echo "→ Dumping production database…"
-# --clean --if-exists makes the dump idempotent so it restores cleanly onto a
-# fresh DB; --no-owner/--no-privileges drop prod-specific roles/grants.
+echo "→ Dumping OuiTank tables from production…"
+# -t '"OuiTank-"*' restricts the dump to OuiTank's tables (the double quotes keep
+# the prefix case-sensitive; * is the wildcard). --clean --if-exists makes it
+# idempotent; --no-owner/--no-privileges drop prod-specific roles/grants.
 # Dump to a file (not piped into gzip): `sh`/dash has no `pipefail`, so a piped
 # pg_dump failure would be masked by gzip's success and we'd upload an empty
 # snapshot. With `set -e` a direct redirect aborts on a failed pg_dump.
-pg_dump --no-owner --no-privileges --clean --if-exists "$PROD_DATABASE_URL" \
+pg_dump --no-owner --no-privileges --clean --if-exists \
+  -t '"OuiTank-"*' "$PROD_DATABASE_URL" \
   >/tmp/preview-seed.sql
 gzip -f /tmp/preview-seed.sql
 echo "✓ Dump size: $(du -h /tmp/preview-seed.sql.gz | cut -f1)"

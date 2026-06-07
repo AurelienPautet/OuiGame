@@ -10,16 +10,18 @@ is never touched.
 
 The API server already serves the built web client (`apps/api/server.ts` →
 `express.static(../web/dist)`), so a preview is **one container**: front + API +
-websocket on the same origin.
+websocket on the same origin, with **Postgres running embedded inside it**
+(Coolify renames containers per preview, which breaks cross-container DNS — so a
+sidecar DB service isn't reliable; the app talks to `127.0.0.1`).
 
-| File                                        | Role                                                            |
-| ------------------------------------------- | --------------------------------------------------------------- |
-| `Dockerfile`                                | Builds `@ouigame/shared` + the web client, runs the boot script |
-| `docker-compose.preview.yml`                | `app` + an ephemeral `postgres:16` (no persistent volume)       |
-| `scripts/preview-db-init.sh`                | Container entrypoint: restore snapshot → push schema → start    |
-| `scripts/preview-snapshot.sh`               | Dumps prod and uploads it to S3 (run from CI/cron)              |
-| `.github/workflows/preview-db-snapshot.yml` | Scheduled job that publishes a fresh prod snapshot              |
-| `.github/workflows/preview-url.yml`         | Posts the preview URL as a sticky PR comment                    |
+| File                                        | Role                                                                    |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `Dockerfile`                                | Builds `@ouigame/shared` + web + bundles Postgres, runs the boot script |
+| `docker-compose.preview.yml`                | A single `app` container (Postgres is embedded, not a sidecar)          |
+| `scripts/preview-db-init.sh`                | Entrypoint: start embedded PG → restore snapshot → push → start         |
+| `scripts/preview-snapshot.sh`               | Dumps the `OuiTank-*` prod tables to S3 (run from CI/cron)              |
+| `.github/workflows/preview-db-snapshot.yml` | Scheduled job that publishes a fresh prod snapshot                      |
+| `.github/workflows/preview-url.yml`         | Posts the preview URL as a sticky PR comment                            |
 
 The web client is built with `VITE_API_URL=/api` and `VITE_SOCKET_URL=/`
 (**same-origin**), because it otherwise hard-codes the production backend. Same
@@ -37,11 +39,12 @@ On boot the container (`scripts/preview-db-init.sh`):
    reason the Jest setup uses push);
 3. starts the server.
 
-## ⚠️ The snapshot is a FULL copy of production
+## ⚠️ The snapshot is a FULL copy of OuiTank's production data
 
-The preview database is a complete, **unredacted** copy of prod — including
-emails, password hashes, Google IDs, **session tokens** and IP addresses. That
-is a deliberate choice for maximum realism, and it makes two things
+The snapshot is scoped to the `OuiTank-*` tables (other apps sharing the prod
+database are excluded), but it is still an **unredacted** copy of OuiTank's own
+data — emails, password hashes, Google IDs, **session tokens** and IP addresses.
+That is a deliberate choice for maximum realism, and it makes two things
 **mandatory**:
 
 - **Gate every preview behind Coolify Basic Auth** (see setup below). Previews
