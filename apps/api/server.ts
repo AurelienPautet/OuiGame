@@ -74,8 +74,12 @@ const allowedOrigins = [
 // separate <script> tags), the Google Identity script, data:/blob: images
 // (level thumbnails are data URLs), and connections to the API/socket + Google.
 // Cross-origin resource/embedder policies are relaxed so the itch.io build can
-// consume the API cross-origin. (CSP only applies to responses this server
-// serves; the itch.io build is served by itch and uses its own headers.)
+// consume the API cross-origin. The opener policy is set to
+// "same-origin-allow-popups" (helmet's default "same-origin" would sever
+// window.opener) so the Google Sign-In popup can post the credential back to
+// this page; otherwise GSI falls back to a dead redirect and login never
+// completes. (CSP only applies to responses this server serves; the itch.io
+// build is served by itch and uses its own headers.)
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -97,6 +101,7 @@ app.use(
       },
     },
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );

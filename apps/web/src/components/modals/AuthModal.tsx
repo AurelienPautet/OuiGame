@@ -74,6 +74,11 @@ export const AuthModal = () => {
     password: "",
   });
   const [googleUsername, setGoogleUsername] = useState("");
+  // The Google Identity script is injected `async defer` (see index.html), so on
+  // first mount `google` is usually still undefined. Track when it becomes
+  // available so the button effect can run as soon as the script loads instead
+  // of only when the user happens to toggle the Login/Register tab.
+  const [gsiReady, setGsiReady] = useState(() => typeof google !== "undefined");
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -81,25 +86,38 @@ export const AuthModal = () => {
   }, [user, closeModal]);
 
   useEffect(() => {
-    if (typeof google !== "undefined" && googleButtonRef.current) {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-        auto_select: false,
-      });
-      google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: "outline",
-        size: "large",
-        text: isLogin ? "signin_with" : "signup_with",
-        locale: i18n.language,
-        width: "100%",
-      });
-    }
-  }, [isLogin, i18n.language]);
+    if (gsiReady) return;
+    const interval = window.setInterval(() => {
+      if (typeof google !== "undefined") {
+        setGsiReady(true);
+        window.clearInterval(interval);
+      }
+    }, 100);
+    return () => window.clearInterval(interval);
+  }, [gsiReady]);
 
   const handleCredentialResponse = (response: GoogleCredentialResponse) => {
     googleLogin(response.credential, "");
   };
+
+  useEffect(() => {
+    if (!gsiReady || !googleButtonRef.current) return;
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+      auto_select: false,
+    });
+    google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: "outline",
+      size: "large",
+      text: isLogin ? "signin_with" : "signup_with",
+      locale: i18n.language,
+      width: "100%",
+    });
+    // handleCredentialResponse is intentionally omitted: re-initializing on
+    // every render is unnecessary and the closure only calls a stable mutation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gsiReady, isLogin, i18n.language]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
