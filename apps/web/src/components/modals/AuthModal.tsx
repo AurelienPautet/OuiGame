@@ -74,6 +74,11 @@ export const AuthModal = () => {
     password: "",
   });
   const [googleUsername, setGoogleUsername] = useState("");
+  // The Google Identity script is injected `async defer` (see index.html), so on
+  // first mount `google` is usually still undefined. Track when it becomes
+  // available so the button effect can run as soon as the script loads instead
+  // of only when the user happens to toggle the Login/Register tab.
+  const [gsiReady, setGsiReady] = useState(() => typeof google !== "undefined");
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -81,25 +86,47 @@ export const AuthModal = () => {
   }, [user, closeModal]);
 
   useEffect(() => {
-    if (typeof google !== "undefined" && googleButtonRef.current) {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-        auto_select: false,
-      });
-      google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: "outline",
-        size: "large",
-        text: isLogin ? "signin_with" : "signup_with",
-        locale: i18n.language,
-        width: "100%",
-      });
-    }
-  }, [isLogin, i18n.language]);
+    if (gsiReady) return;
+    const interval = window.setInterval(() => {
+      if (typeof google !== "undefined") {
+        setGsiReady(true);
+        window.clearInterval(interval);
+      }
+    }, 100);
+    return () => window.clearInterval(interval);
+  }, [gsiReady]);
 
   const handleCredentialResponse = (response: GoogleCredentialResponse) => {
     googleLogin(response.credential, "");
   };
+
+  // GSI captures the callback once at initialize() time, so route it through a
+  // ref that always points at the latest handler. This keeps the closure
+  // current (e.g. if `googleLogin` changes) without re-initializing GSI on
+  // every render.
+  const credentialHandlerRef = useRef(handleCredentialResponse);
+  useEffect(() => {
+    credentialHandlerRef.current = handleCredentialResponse;
+  });
+
+  useEffect(() => {
+    if (!gsiReady || !googleButtonRef.current) return;
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (response) => credentialHandlerRef.current(response),
+      auto_select: false,
+    });
+    // Clear any previously rendered button before re-rendering on tab/locale
+    // change so GSI never stacks duplicate buttons into the same node.
+    googleButtonRef.current.innerHTML = "";
+    google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: "outline",
+      size: "large",
+      text: isLogin ? "signin_with" : "signup_with",
+      locale: i18n.language,
+      width: "100%",
+    });
+  }, [gsiReady, isLogin, i18n.language]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
