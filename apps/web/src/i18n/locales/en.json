@@ -273,7 +273,23 @@
     "resume": "Resume",
     "retry": "Retry",
     "settings": "Settings",
-    "quit": "Quit"
+    "quit": "Quit",
+    "controls": {
+      "title": "Controls",
+      "move": "Move",
+      "aim": "Aim",
+      "fire": "Fire",
+      "plant": "Plant mine",
+      "pause": "Pause",
+      "mouse": "Mouse",
+      "click": "Click",
+      "esc": "Esc",
+      "moveStick": "Left stick",
+      "aimStick": "Right stick",
+      "fireButton": "Fire button",
+      "holdAim": "Hold to aim",
+      "mineButton": "Mine button"
+    }
   },
   "livesHud": {
     "level": "Level {{current}}/{{total}}"

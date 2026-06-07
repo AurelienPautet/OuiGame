@@ -273,7 +273,23 @@
     "resume": "Riprendi",
     "retry": "Riprova",
     "settings": "Impostazioni",
-    "quit": "Esci"
+    "quit": "Esci",
+    "controls": {
+      "title": "Controlli",
+      "move": "Muoviti",
+      "aim": "Mira",
+      "fire": "Spara",
+      "plant": "Piazza mina",
+      "pause": "Pausa",
+      "mouse": "Mouse",
+      "click": "Clic",
+      "esc": "Esc",
+      "moveStick": "Stick sinistro",
+      "aimStick": "Stick destro",
+      "fireButton": "Pulsante fuoco",
+      "holdAim": "Tieni premuto per mirare",
+      "mineButton": "Pulsante mina"
+    }
   },
   "livesHud": {
     "level": "Livello {{current}}/{{total}}"
