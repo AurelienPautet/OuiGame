@@ -29,7 +29,7 @@ export function OverlayActions({
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "r" || e.key === "R") onReplay();
-      if (e.key === "q" || e.key === "Q") onQuit();
+      if (e.key === "e" || e.key === "E") onQuit();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -48,7 +48,7 @@ export function OverlayActions({
         <LogOut className="w-4 h-4" />
         {quit}
         <kbd className="ml-1 px-1.5 py-0.5 text-xs font-mono font-normal bg-black/10 border border-black/15 rounded">
-          Q
+          E
         </kbd>
       </Button>
     </div>
