@@ -39,4 +39,10 @@ services:
       - SERVICE_FQDN_APP_8000
     expose:
       - "8000"
+    # Publish the app on a fixed host port so it can be reached directly at
+    # http://<server-ip>:8083, bypassing Coolify's reverse proxy entirely (its
+    # per-preview domain routing wasn't working on this instance). Temporary —
+    # only one preview can use this host port at a time.
+    ports:
+      - "8083:8000"
     restart: unless-stopped
