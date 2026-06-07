@@ -1,14 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { orderPlayersForDraw } from "../Renderer.js";
+import { partitionPlayersByLife } from "../Renderer.js";
 
-// Regression for: "a dead tank's corpse can show above an alive player". Players
-// arrive in a map with arbitrary iteration order, so the draw loop must order
-// corpses (alive=false) ahead of living tanks — otherwise a wreck drawn later
-// paints over a live player.
-describe("orderPlayersForDraw", () => {
-  it("draws every corpse before any living tank", () => {
-    // Interleaved, with a dead entry (`d`) last — the case where the raw
-    // iteration order would paint a corpse over the live tanks.
+// Regression for: "a dead tank's corpse — and the cannon barrel that broke off
+// it — can show above an alive player". Players arrive in a map with arbitrary
+// iteration order; the draw loop splits them into wrecks and live tanks so every
+// wreck (and the debris layered between the two groups) renders beneath the
+// living tanks, instead of a later map entry painting over a live player.
+describe("partitionPlayersByLife", () => {
+  const ids = (entries: [string, unknown][]) => entries.map(([id]) => id);
+
+  it("separates wrecks from living tanks", () => {
     const players = {
       a: { alive: true },
       b: { alive: false },
@@ -16,14 +17,13 @@ describe("orderPlayersForDraw", () => {
       d: { alive: false },
     };
 
-    const order = orderPlayersForDraw(players).map(([id]) => id);
+    const { wrecks, liveTanks } = partitionPlayersByLife(players);
 
-    // Both corpses come first (in their original relative order), both living
-    // tanks last — so the top-most thing drawn is always a live tank.
-    expect(order).toEqual(["b", "d", "a", "c"]);
+    expect(ids(wrecks)).toEqual(["b", "d"]);
+    expect(ids(liveTanks)).toEqual(["a", "c"]);
   });
 
-  it("keeps insertion order within the dead and alive groups (stable sort)", () => {
+  it("preserves insertion order within each group", () => {
     const players = {
       d1: { alive: false },
       a1: { alive: true },
@@ -31,32 +31,46 @@ describe("orderPlayersForDraw", () => {
       a2: { alive: true },
     };
 
-    const order = orderPlayersForDraw(players).map(([id]) => id);
+    const { wrecks, liveTanks } = partitionPlayersByLife(players);
 
-    expect(order).toEqual(["d1", "d2", "a1", "a2"]);
+    expect(ids(wrecks)).toEqual(["d1", "d2"]);
+    expect(ids(liveTanks)).toEqual(["a1", "a2"]);
   });
 
-  it("leaves an all-alive or all-dead set in its original order", () => {
-    const alive = { x: { alive: true }, y: { alive: true } };
-    const dead = { x: { alive: false }, y: { alive: false } };
+  it("handles all-alive, all-dead, and empty sets", () => {
+    const alive = partitionPlayersByLife({
+      x: { alive: true },
+      y: { alive: true },
+    });
+    expect(ids(alive.wrecks)).toEqual([]);
+    expect(ids(alive.liveTanks)).toEqual(["x", "y"]);
 
-    expect(orderPlayersForDraw(alive).map(([id]) => id)).toEqual(["x", "y"]);
-    expect(orderPlayersForDraw(dead).map(([id]) => id)).toEqual(["x", "y"]);
+    const dead = partitionPlayersByLife({
+      x: { alive: false },
+      y: { alive: false },
+    });
+    expect(ids(dead.wrecks)).toEqual(["x", "y"]);
+    expect(ids(dead.liveTanks)).toEqual([]);
+
+    const empty = partitionPlayersByLife({});
+    expect(empty.wrecks).toEqual([]);
+    expect(empty.liveTanks).toEqual([]);
   });
 
-  it("treats a non-boolean alive value as a corpse (matches _drawPlayer's truthiness)", () => {
-    // draw() reaches orderPlayersForDraw via an `as unknown as` cast, so `alive`
-    // can in principle arrive non-boolean. _drawPlayer renders anything falsy as
-    // a wreck, so the ordering must push it to the back too — a plain numeric
-    // coercion (Number(undefined) === NaN) would wrongly leave it in place.
+  it("groups a non-boolean alive value with the wrecks (matches _drawPlayer)", () => {
+    // draw() reaches partitionPlayersByLife via an `as unknown as` cast, so
+    // `alive` can in principle arrive non-boolean. _drawPlayer renders anything
+    // falsy as a wreck, so the partition must group it with the wrecks too — a
+    // strict `=== false` check would wrongly treat undefined as a live tank.
     const players = {
       x: { alive: true },
       u: { alive: undefined },
       y: { alive: true },
     } as unknown as Record<string, { alive: boolean }>;
 
-    const order = orderPlayersForDraw(players).map(([id]) => id);
+    const { wrecks, liveTanks } = partitionPlayersByLife(players);
 
-    expect(order[0]).toBe("u");
+    expect(ids(wrecks)).toEqual(["u"]);
+    expect(ids(liveTanks)).toEqual(["x", "y"]);
   });
 });

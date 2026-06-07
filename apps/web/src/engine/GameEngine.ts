@@ -1058,22 +1058,24 @@ export class GameEngine {
 
     // Render game state. The engine holds these entities loosely (server- or
     // Room-shaped); the Renderer's GameState describes the same shapes, so cast.
-    this.renderer.draw({
-      mines: mines,
-      holes: this.holes,
-      blocks: this.blocks,
-      Bcollision: this.Bcollision,
-      bullets: bullets,
-      players: players,
-      spawnAnim: spawnAnim,
-    } as unknown as Parameters<typeof this.renderer.draw>[0]);
+    // The flying-cannon debris is drawn via the between-wrecks-and-tanks hook so
+    // a settled barrel sits above the hull it broke off from but below the
+    // living tanks — never covering a live player. It draws on the renderer's 2D
+    // context so post-processing (bloom) picks it up alongside everything else.
+    this.renderer.draw(
+      {
+        mines: mines,
+        holes: this.holes,
+        blocks: this.blocks,
+        Bcollision: this.Bcollision,
+        bullets: bullets,
+        players: players,
+        spawnAnim: spawnAnim,
+      } as unknown as Parameters<typeof this.renderer.draw>[0],
+      () => this.debris.draw(this.renderer.c)
+    );
 
-    // Flying cannon debris sits above the wrecks/tanks but below the spark
-    // particles. Drawn on the renderer's 2D context so post-processing (bloom)
-    // picks it up alongside everything else.
-    this.debris.draw(this.renderer.c);
-
-    // Render particles
+    // Render particles (sparks/shockwaves) on top of every tank.
     this.particles.draw(this.renderer.c);
 
     // Post-process: upload the 2D layers as textures and run the WebGL effect
