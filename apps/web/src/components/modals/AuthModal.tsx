@@ -100,13 +100,25 @@ export const AuthModal = () => {
     googleLogin(response.credential, "");
   };
 
+  // GSI captures the callback once at initialize() time, so route it through a
+  // ref that always points at the latest handler. This keeps the closure
+  // current (e.g. if `googleLogin` changes) without re-initializing GSI on
+  // every render.
+  const credentialHandlerRef = useRef(handleCredentialResponse);
+  useEffect(() => {
+    credentialHandlerRef.current = handleCredentialResponse;
+  });
+
   useEffect(() => {
     if (!gsiReady || !googleButtonRef.current) return;
     google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
+      callback: (response) => credentialHandlerRef.current(response),
       auto_select: false,
     });
+    // Clear any previously rendered button before re-rendering on tab/locale
+    // change so GSI never stacks duplicate buttons into the same node.
+    googleButtonRef.current.innerHTML = "";
     google.accounts.id.renderButton(googleButtonRef.current, {
       theme: "outline",
       size: "large",
@@ -114,9 +126,6 @@ export const AuthModal = () => {
       locale: i18n.language,
       width: "100%",
     });
-    // handleCredentialResponse is intentionally omitted: re-initializing on
-    // every render is unnecessary and the closure only calls a stable mutation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gsiReady, isLogin, i18n.language]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
