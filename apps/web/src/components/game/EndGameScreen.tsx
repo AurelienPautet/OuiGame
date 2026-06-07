@@ -18,7 +18,6 @@ import {
   ScoreRow,
   LeaderRow,
   OverlayActions,
-  type ResultTone,
 } from "./overlay";
 import {
   Clock,
@@ -309,7 +308,6 @@ export const EndGameScreen = ({
     draw: t("endGame.draw"),
   }[result];
 
-  const tone: ResultTone = result;
   const resultIcon =
     result === "win" ? (
       <Trophy className="w-16 h-16 text-yellow-d" />
@@ -353,7 +351,6 @@ export const EndGameScreen = ({
   return (
     <OverlayScrim>
       <OverlayPanel
-        tone={tone}
         icon={resultIcon}
         title={resultText}
         widthClassName="w-[28rem] max-w-[92%]"
