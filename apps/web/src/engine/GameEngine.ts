@@ -1238,7 +1238,8 @@ export class GameEngine {
   applyEffects(effects: EffectSettings) {
     this.particles.setEnabled(effects.particles);
     this.debris.setEnabled(effects.particles);
-    this.sounds.setEnabled(effects.sound);
+    // Sound/music volume is owned globally by the audio bus (SettingsContext),
+    // not the engine.
     this.post?.setEffects(effects);
   }
 }

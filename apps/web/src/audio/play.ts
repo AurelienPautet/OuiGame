@@ -12,12 +12,12 @@ export function playSfx(name: VoiceName): void {
   voices[name]();
 }
 
-/** Mirror the user's "Sound effects" setting onto the shared bus. */
-export function setAudioEnabled(enabled: boolean): void {
-  audioBus.setEnabled(enabled);
+/** Set the sound-effects volume (0..1) on the shared bus. */
+export function setSfxVolume(volume: number): void {
+  audioBus.setSfxVolume(volume);
 }
 
-/** Mirror the user's "Music" setting onto the shared bus. */
-export function setMusicEnabled(enabled: boolean): void {
-  audioBus.setMusicEnabled(enabled);
+/** Set the music volume (0..1) on the shared bus. */
+export function setMusicVolume(volume: number): void {
+  audioBus.setMusicVolume(volume);
 }

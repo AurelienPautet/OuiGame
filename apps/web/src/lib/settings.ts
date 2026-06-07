@@ -34,10 +34,6 @@ export interface EffectSettings {
   flashes: boolean;
   /** Living background, walls and holes (the field breathes, holes swirl). */
   scenery: boolean;
-  /** Sound effects. */
-  sound: boolean;
-  /** Adaptive background music. */
-  music: boolean;
 }
 
 // When to show the on-screen touch controls: auto-detect the device, or force
@@ -47,6 +43,10 @@ export type TouchControlsMode = "auto" | "on" | "off";
 export interface Settings {
   keybindings: KeyBindings;
   effects: EffectSettings;
+  /** Sound-effects volume, 0–1 (0 mutes). */
+  sfxVolume: number;
+  /** Background-music volume, 0–1 (0 mutes). */
+  musicVolume: number;
   /** When to show the on-screen touch controls (default "auto"). */
   touchControls: TouchControlsMode;
   /**
@@ -73,8 +73,6 @@ export const EFFECT_LABELS: Record<keyof EffectSettings, string> = {
   particles: "Particles",
   flashes: "Damage / kill flashes",
   scenery: "Animated scenery",
-  sound: "Sound effects",
-  music: "Music",
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -94,9 +92,10 @@ export const DEFAULT_SETTINGS: Settings = {
     particles: true,
     flashes: true,
     scenery: true,
-    sound: true,
-    music: true,
   },
+  // Music sits a bit under the effects by default.
+  sfxVolume: 0.8,
+  musicVolume: 0.3,
   touchControls: "auto",
   autoFire: true,
 };
@@ -175,9 +174,13 @@ export function loadSettings(): Settings {
     stored.touchControls === "off"
       ? stored.touchControls
       : DEFAULT_SETTINGS.touchControls;
+  const vol = (v: unknown, fallback: number): number =>
+    typeof v === "number" && v >= 0 && v <= 1 ? v : fallback;
   return {
     keybindings: { ...DEFAULT_SETTINGS.keybindings, ...stored.keybindings },
     effects: { ...DEFAULT_SETTINGS.effects, ...stored.effects },
+    sfxVolume: vol(stored.sfxVolume, DEFAULT_SETTINGS.sfxVolume),
+    musicVolume: vol(stored.musicVolume, DEFAULT_SETTINGS.musicVolume),
     touchControls,
     autoFire:
       typeof stored.autoFire === "boolean"

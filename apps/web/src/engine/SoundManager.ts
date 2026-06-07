@@ -3,10 +3,10 @@
  *
  * Sounds are synthesised on the fly (Web Audio oscillators + filtered noise via
  * `../audio`), so there are no audio files to download or decode. Everything
- * routes through the shared `audioBus`, the same one the menu/UI click layer
- * uses, so one master gain mutes the whole app.
+ * routes through the shared `audioBus`; the SFX volume (and mute) is owned
+ * globally by the bus / settings, not per-manager.
  */
-import { audioBus, playSfx, setAudioEnabled } from "../audio";
+import { audioBus, playSfx } from "../audio";
 
 export interface SoundEvents {
   shoot?: boolean;
@@ -17,15 +17,6 @@ export interface SoundEvents {
 }
 
 export class SoundManager {
-  /**
-   * Enable/disable all sound playback. The shared bus is the single source of
-   * truth for mute state (`playSfx` gates on it), so this just forwards the
-   * "sound" user setting onto it.
-   */
-  setEnabled(enabled: boolean) {
-    setAudioEnabled(enabled);
-  }
-
   // Play sounds based on game events.
   playSounds(soundEvents?: SoundEvents | null) {
     if (!soundEvents) return;

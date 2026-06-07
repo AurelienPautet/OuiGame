@@ -2,27 +2,31 @@
  * AudioBus — the single shared Web Audio graph for the whole app.
  *
  * Everything routes through this one context (browsers cap how many you may
- * open). Below the master gain sit two sub-buses with independent mutes:
+ * open). Below the master gain sit two independently-levelled sub-buses:
  *   • sfx   — the in-game SoundManager + the menu/UI click layer ("Sound effects")
  *   • music — the adaptive soundtrack ("Music")
  *
- * The context is created lazily on first use and starts suspended until a user
- * gesture; `resume()` — called from every click/keypress play path — unlocks it.
+ * Their gains track the user's volume sliders (0 = muted). The context is
+ * created lazily on first use and starts suspended until a user gesture;
+ * `resume()` — called from every click/keypress play path — unlocks it.
  */
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 class AudioBus {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private sfx: GainNode | null = null;
   private music: GainNode | null = null;
-  /** Mirrors the "Sound effects" setting; gates SFX playback. */
-  enabled = true;
-  /** Mirrors the "Music" setting; gates the soundtrack. */
-  musicEnabled = true;
-  /** Sub-bus levels when enabled (music sits under the SFX). */
-  private readonly sfxVolume = 0.85;
-  private readonly musicVolume = 0.42;
+  /** Current sub-bus levels (0..1), tracking the volume sliders. */
+  private sfxLevel = 0.8;
+  private musicLevel = 0.3;
+
+  /** True when SFX would be audible — lets `playSfx` skip work when muted. */
+  get enabled(): boolean {
+    return this.sfxLevel > 0.0001;
+  }
 
   /** The shared context, created on first access (null in non-browser envs). */
   get ctx(): AudioContext | null {
@@ -36,10 +40,10 @@ class AudioBus {
     master.gain.value = 1;
     master.connect(ctx.destination);
     const sfx = ctx.createGain();
-    sfx.gain.value = this.enabled ? this.sfxVolume : 0;
+    sfx.gain.value = this.sfxLevel;
     sfx.connect(master);
     const music = ctx.createGain();
-    music.gain.value = this.musicEnabled ? this.musicVolume : 0;
+    music.gain.value = this.musicLevel;
     // Gentle low-pass to round off the soundtrack — warm and soft rather than
     // bright/8-bit.
     const warmth = ctx.createBiquadFilter();
@@ -71,16 +75,16 @@ class AudioBus {
     if (ctx && ctx.state === "suspended") void ctx.resume();
   }
 
-  /** Mute/unmute the SFX bus with a short ramp (the "Sound effects" setting). */
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
-    this.ramp(this.sfx, enabled ? this.sfxVolume : 0);
+  /** Set the SFX volume (0..1), ramped to avoid clicks. */
+  setSfxVolume(v: number): void {
+    this.sfxLevel = clamp01(v);
+    this.ramp(this.sfx, this.sfxLevel);
   }
 
-  /** Mute/unmute the music bus with a short ramp (the "Music" setting). */
-  setMusicEnabled(enabled: boolean): void {
-    this.musicEnabled = enabled;
-    this.ramp(this.music, enabled ? this.musicVolume : 0);
+  /** Set the music volume (0..1), ramped to avoid clicks. */
+  setMusicVolume(v: number): void {
+    this.musicLevel = clamp01(v);
+    this.ramp(this.music, this.musicLevel);
   }
 
   private ramp(node: GainNode | null, target: number): void {
