@@ -16,7 +16,10 @@ export function OverlayScrim({ children, className }: OverlayScrimProps) {
   return (
     <motion.div
       className={cn(
-        "absolute inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm",
+        // `pointer-events-auto` re-enables interaction: this scrim renders inside
+        // FixedUiLayer's `pointer-events-none` host, so without it every overlay
+        // button (replay / quit) is unclickable on both desktop and touch.
+        "pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm",
         className
       )}
       initial={{ opacity: 0 }}
