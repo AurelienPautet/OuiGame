@@ -3,6 +3,9 @@
  * and filtered noise (see `synth.ts`), so nothing is downloaded and each play
  * can vary slightly. Names fall into three groups: in-game events, game-state
  * stingers (countdown / win / lose) and the UI click layer.
+ *
+ * Aesthetic: soft and rounded (sine / triangle, gentle noise) — a cute modern
+ * io game, not a bright 8-bit arcade.
  */
 import { tone, noise, rand } from "./synth";
 
@@ -48,335 +51,300 @@ const C6 = 1046.5;
 export const voices: Record<VoiceName, Voice> = {
   // ── In-game events ────────────────────────────────────────────────────────
 
-  // Tank cannon: a bright noise crack over a low pitch-dropping thump.
+  // Tank cannon: a soft rounded "pew" with a little air.
   shoot() {
     const j = rand(0.94, 1.06);
-    noise({
-      duration: 0.18,
-      gain: 0.28,
-      filter: "lowpass",
-      freq: 1100 * j,
-      freqEnd: 130,
-      q: 1,
-    });
     tone({
-      type: "triangle",
-      freq: 170 * j,
-      freqEnd: 55,
-      duration: 0.18,
-      gain: 0.32,
+      type: "sine",
+      freq: 520 * j,
+      freqEnd: 170,
+      duration: 0.12,
+      gain: 0.22,
       attack: 0.002,
     });
     tone({
-      type: "square",
-      freq: 75 * j,
-      freqEnd: 38,
-      duration: 0.13,
-      gain: 0.18,
+      type: "triangle",
+      freq: 200 * j,
+      freqEnd: 90,
+      duration: 0.12,
+      gain: 0.15,
+    });
+    noise({
+      duration: 0.07,
+      gain: 0.05,
+      filter: "lowpass",
+      freq: 900 * j,
+      freqEnd: 200,
     });
   },
 
-  // Bullet bouncing off a wall: a short, bright metallic zing.
+  // Bullet bouncing off a wall: a soft little "ting".
   ricochet() {
-    const p = rand(0.9, 1.15);
+    const p = rand(0.95, 1.12);
     tone({
-      type: "square",
-      freq: 1500 * p,
-      freqEnd: 950 * p,
-      duration: 0.13,
+      type: "sine",
+      freq: 1400 * p,
+      freqEnd: 1050 * p,
+      duration: 0.14,
       gain: 0.1,
       attack: 0.001,
     });
     tone({
       type: "triangle",
-      freq: 1950 * p,
-      freqEnd: 1200 * p,
-      duration: 0.11,
-      gain: 0.06,
-      delay: 0.005,
-    });
-    noise({
-      duration: 0.07,
-      gain: 0.07,
-      filter: "bandpass",
-      freq: 2500 * p,
-      q: 6,
+      freq: 2100 * p,
+      duration: 0.09,
+      gain: 0.035,
+      delay: 0.004,
     });
   },
 
-  // Mine placed: a soft mechanical thunk topped with a little confirm beep.
+  // Mine placed: a soft "bloop" with a gentle confirm note.
   plant() {
-    tone({ type: "sine", freq: 150, freqEnd: 68, duration: 0.13, gain: 0.3 });
-    noise({ duration: 0.05, gain: 0.12, filter: "lowpass", freq: 500 });
-    tone({
-      type: "square",
-      freq: 560,
-      duration: 0.06,
-      gain: 0.08,
-      delay: 0.05,
-    });
+    tone({ type: "sine", freq: 300, freqEnd: 140, duration: 0.14, gain: 0.26 });
+    tone({ type: "sine", freq: 620, duration: 0.07, gain: 0.1, delay: 0.05 });
   },
 
-  // Mine fuse tick — the repeating warning blip before it blows.
+  // Mine fuse tick — a soft rounded warning blip.
   fuse() {
-    tone({
-      type: "square",
-      freq: 850,
-      duration: 0.05,
-      gain: 0.11,
-      attack: 0.001,
-    });
+    tone({ type: "sine", freq: 760, duration: 0.06, gain: 0.1, attack: 0.002 });
   },
 
-  // Explosion (tank or mine): a long filtered-noise roar over a sub boom.
+  // Explosion (tank or mine): a deep, soft "whump" — boomy, not harsh.
   explose() {
     noise({
-      duration: 0.5,
-      gain: 0.4,
+      duration: 0.45,
+      gain: 0.3,
       filter: "lowpass",
-      freq: 1000,
-      freqEnd: 55,
+      freq: 900,
+      freqEnd: 60,
       q: 0.7,
     });
     tone({
       type: "sine",
-      freq: 120,
-      freqEnd: 32,
+      freq: 140,
+      freqEnd: 38,
       duration: 0.5,
       gain: 0.5,
       attack: 0.005,
     });
-    tone({
-      type: "sawtooth",
-      freq: 80,
-      freqEnd: 28,
-      duration: 0.34,
-      gain: 0.16,
-    });
-    noise({
-      duration: 0.22,
-      gain: 0.1,
-      filter: "highpass",
-      freq: 1100,
-      delay: 0.02,
-    });
+    tone({ type: "sine", freq: 320, freqEnd: 80, duration: 0.18, gain: 0.13 });
   },
 
-  // Kill confirmed: a quick three-note upward arpeggio.
+  // Kill confirmed: a quick three-note marimba arpeggio.
   kill() {
-    tone({ type: "square", freq: E4, duration: 0.07, gain: 0.13 });
-    tone({ type: "square", freq: G4, duration: 0.08, gain: 0.13, delay: 0.06 });
+    tone({ type: "triangle", freq: C5, duration: 0.1, gain: 0.12 });
     tone({
       type: "triangle",
-      freq: C5,
-      duration: 0.12,
+      freq: E5,
+      duration: 0.1,
       gain: 0.12,
-      delay: 0.12,
+      delay: 0.06,
     });
+    tone({ type: "sine", freq: G5, duration: 0.16, gain: 0.11, delay: 0.12 });
   },
 
   // ── Game-state stingers ───────────────────────────────────────────────────
 
-  // Countdown 3-2-1: one clean mid beep.
+  // Countdown 3-2-1: one soft round beep.
   countdownBeep() {
     tone({
-      type: "square",
-      freq: 700,
-      duration: 0.12,
-      gain: 0.18,
-      attack: 0.004,
+      type: "sine",
+      freq: 640,
+      duration: 0.13,
+      gain: 0.16,
+      attack: 0.005,
     });
-    tone({ type: "sine", freq: 700, duration: 0.12, gain: 0.1 });
+    tone({ type: "triangle", freq: 640, duration: 0.1, gain: 0.05 });
   },
 
-  // Countdown "GO!": a bright rising blast.
+  // Countdown "GO!": a warm rising lift.
   countdownGo() {
     tone({
-      type: "square",
-      freq: 700,
-      freqEnd: 1100,
-      duration: 0.26,
-      gain: 0.2,
+      type: "triangle",
+      freq: 660,
+      freqEnd: 990,
+      duration: 0.28,
+      gain: 0.17,
+      attack: 0.005,
     });
     tone({
-      type: "triangle",
-      freq: 1400,
-      freqEnd: 2100,
-      duration: 0.26,
-      gain: 0.1,
+      type: "sine",
+      freq: 990,
+      freqEnd: 1320,
+      duration: 0.28,
+      gain: 0.07,
       delay: 0.02,
     });
   },
 
-  // Victory: a rising major arpeggio with a little sparkle on top.
+  // Victory: a rising major arpeggio with a soft octave sparkle.
   win() {
     const seq = [C5, E5, G5, C6];
     for (let i = 0; i < seq.length; i++) {
       const f = seq[i]!;
       const at = i * 0.12;
-      tone({ type: "triangle", freq: f, duration: 0.2, gain: 0.16, delay: at });
-      tone({ type: "square", freq: f, duration: 0.16, gain: 0.05, delay: at });
+      tone({
+        type: "triangle",
+        freq: f,
+        duration: 0.22,
+        gain: 0.16,
+        delay: at,
+      });
+      tone({
+        type: "sine",
+        freq: f * 2,
+        duration: 0.16,
+        gain: 0.035,
+        delay: at,
+      });
     }
   },
 
-  // Defeat: a slow descending minor figure.
+  // Defeat: a soft, warm descending figure.
   lose() {
     const seq = [G4, E4, C4];
     for (let i = 0; i < seq.length; i++) {
       const f = seq[i]!;
-      const at = i * 0.16;
-      tone({ type: "sawtooth", freq: f, duration: 0.3, gain: 0.12, delay: at });
-      tone({ type: "sine", freq: f / 2, duration: 0.3, gain: 0.1, delay: at });
+      const at = i * 0.17;
+      tone({
+        type: "triangle",
+        freq: f,
+        duration: 0.32,
+        gain: 0.13,
+        delay: at,
+      });
+      tone({ type: "sine", freq: f / 2, duration: 0.32, gain: 0.1, delay: at });
     }
   },
 
   // Draw: two neutral, equal tones.
   draw() {
-    tone({ type: "triangle", freq: A4, duration: 0.2, gain: 0.14 });
+    tone({ type: "triangle", freq: A4, duration: 0.22, gain: 0.13 });
     tone({
       type: "triangle",
       freq: A4,
-      duration: 0.2,
-      gain: 0.14,
+      duration: 0.22,
+      gain: 0.13,
       delay: 0.18,
     });
   },
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
-  // Generic tactile button press.
+  // Generic button press — a soft rounded pop.
   uiClick() {
     tone({
-      type: "triangle",
-      freq: 540,
-      freqEnd: 620,
-      duration: 0.05,
-      gain: 0.1,
-      attack: 0.001,
+      type: "sine",
+      freq: 520,
+      freqEnd: 720,
+      duration: 0.06,
+      gain: 0.11,
+      attack: 0.002,
     });
-    noise({ duration: 0.02, gain: 0.04, filter: "highpass", freq: 2000 });
+    tone({
+      type: "triangle",
+      freq: 1040,
+      duration: 0.03,
+      gain: 0.03,
+      delay: 0.005,
+    });
   },
 
   // Whisper-quiet tick as the pointer lands on something interactive.
   uiHover() {
     tone({
       type: "sine",
-      freq: 1200,
+      freq: 1000,
       duration: 0.03,
-      gain: 0.035,
-      attack: 0.001,
+      gain: 0.03,
+      attack: 0.002,
     });
   },
 
   uiToggleOn() {
-    tone({ type: "triangle", freq: 520, duration: 0.06, gain: 0.1 });
-    tone({
-      type: "triangle",
-      freq: 780,
-      duration: 0.08,
-      gain: 0.1,
-      delay: 0.05,
-    });
+    tone({ type: "sine", freq: 560, duration: 0.07, gain: 0.1 });
+    tone({ type: "sine", freq: 840, duration: 0.09, gain: 0.1, delay: 0.05 });
   },
 
   uiToggleOff() {
-    tone({ type: "triangle", freq: 700, duration: 0.06, gain: 0.1 });
-    tone({
-      type: "triangle",
-      freq: 460,
-      duration: 0.08,
-      gain: 0.1,
-      delay: 0.05,
-    });
+    tone({ type: "sine", freq: 760, duration: 0.07, gain: 0.1 });
+    tone({ type: "sine", freq: 500, duration: 0.09, gain: 0.1, delay: 0.05 });
   },
 
   // Panel / modal opening — a soft upward swoosh.
   uiOpen() {
-    noise({
-      duration: 0.18,
-      gain: 0.06,
-      filter: "bandpass",
-      freq: 600,
-      freqEnd: 2200,
-      q: 0.8,
+    tone({
+      type: "sine",
+      freq: 420,
+      freqEnd: 640,
+      duration: 0.16,
+      gain: 0.09,
+      attack: 0.01,
     });
-    tone({ type: "sine", freq: 380, freqEnd: 560, duration: 0.16, gain: 0.08 });
+    noise({
+      duration: 0.16,
+      gain: 0.04,
+      filter: "lowpass",
+      freq: 700,
+      freqEnd: 1700,
+    });
   },
 
   // Panel / modal closing — the swoosh in reverse.
   uiClose() {
+    tone({ type: "sine", freq: 620, freqEnd: 380, duration: 0.14, gain: 0.09 });
     noise({
-      duration: 0.16,
-      gain: 0.06,
-      filter: "bandpass",
-      freq: 2000,
-      freqEnd: 500,
-      q: 0.8,
+      duration: 0.14,
+      gain: 0.04,
+      filter: "lowpass",
+      freq: 1700,
+      freqEnd: 600,
     });
-    tone({ type: "sine", freq: 540, freqEnd: 340, duration: 0.14, gain: 0.08 });
   },
 
   uiBack() {
-    tone({
-      type: "triangle",
-      freq: 360,
-      freqEnd: 260,
-      duration: 0.08,
-      gain: 0.1,
-    });
+    tone({ type: "sine", freq: 420, freqEnd: 300, duration: 0.09, gain: 0.1 });
   },
 
   uiTab() {
-    tone({ type: "square", freq: 480, duration: 0.04, gain: 0.07 });
-    tone({ type: "sine", freq: 720, duration: 0.05, gain: 0.05, delay: 0.01 });
+    tone({ type: "sine", freq: 560, duration: 0.05, gain: 0.08 });
+    tone({
+      type: "triangle",
+      freq: 840,
+      duration: 0.05,
+      gain: 0.04,
+      delay: 0.01,
+    });
   },
 
-  // Something went wrong — a low buzzy descending tone.
+  // Something went wrong — a soft, polite descending "uh-oh".
   uiError() {
+    tone({ type: "triangle", freq: 420, duration: 0.14, gain: 0.11 });
     tone({
-      type: "sawtooth",
+      type: "triangle",
       freq: 320,
-      freqEnd: 180,
-      duration: 0.22,
-      gain: 0.12,
-    });
-    tone({
-      type: "square",
-      freq: 160,
-      freqEnd: 100,
-      duration: 0.22,
-      gain: 0.06,
+      duration: 0.18,
+      gain: 0.11,
+      delay: 0.12,
     });
   },
 
-  // Something went right — a quick rising triad.
+  // Something went right — a gentle rising triad.
   uiSuccess() {
-    tone({ type: "triangle", freq: C5, duration: 0.09, gain: 0.12 });
+    tone({ type: "triangle", freq: C5, duration: 0.1, gain: 0.11 });
     tone({
       type: "triangle",
       freq: E5,
       duration: 0.1,
-      gain: 0.12,
+      gain: 0.11,
       delay: 0.07,
     });
-    tone({
-      type: "triangle",
-      freq: G5,
-      duration: 0.13,
-      gain: 0.11,
-      delay: 0.14,
-    });
+    tone({ type: "sine", freq: G5, duration: 0.14, gain: 0.1, delay: 0.14 });
   },
 
   // Neutral attention chime for incoming toasts.
   notify() {
-    tone({ type: "sine", freq: 880, duration: 0.08, gain: 0.08 });
-    tone({
-      type: "triangle",
-      freq: 1320,
-      duration: 0.06,
-      gain: 0.05,
-      delay: 0.05,
-    });
+    tone({ type: "sine", freq: 740, duration: 0.09, gain: 0.08 });
+    tone({ type: "sine", freq: 1110, duration: 0.07, gain: 0.04, delay: 0.05 });
   },
 };

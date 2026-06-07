@@ -23,9 +23,12 @@ type LayerName =
   | "cymbal"
   | "timpani";
 
-// ── Musical content (C major, ~120 BPM, a 4-bar I–vi–IV–V loop) ──────────────
-const BPM = 120;
-const STEP_DUR = 60 / BPM / 4; // one sixteenth note, in seconds
+// ── Musical content (C major, a 4-bar I–vi–IV–V loop) ────────────────────────
+// Menus stay slow and gentle; a round runs a bit livelier.
+const BPM_MENU = 80;
+const BPM_GAME = 104;
+const stepDurFor = (mode: Mode): number =>
+  60 / (mode === "game" ? BPM_GAME : BPM_MENU) / 4; // one sixteenth note (s)
 const STEPS_PER_BAR = 16;
 const TOTAL_STEPS = STEPS_PER_BAR * 4;
 
@@ -178,6 +181,7 @@ class MusicEngine {
   private playing = false;
   private currentStep = 0;
   private nextNoteTime = 0;
+  private stepDur = stepDurFor("menu");
   private timer: ReturnType<typeof setInterval> | null = null;
   private layers: Record<LayerName, GainNode> | null = null;
 
@@ -242,54 +246,55 @@ class MusicEngine {
     const game = this.mode === "game";
     const I = this.intensity;
 
-    // Melody — constant, on eighth notes.
+    // Melody — soft music-box triangle, constant, on eighth notes.
     if (step % 2 === 0) {
       const name = MELODY[step / 2];
       const f = name ? freq(name) : 0;
-      if (f) mTone(ctx, L.melody, f, time, 0.16, "triangle", 0.5);
+      if (f) mTone(ctx, L.melody, f, time, 0.2, "triangle", 0.5);
     }
 
-    // Bass — root on beat 1, fifth on beat 3.
+    // Bass — warm round triangle: root on beat 1, fifth on beat 3.
     if (inBar === 0 || inBar === 8) {
       const name = (inBar === 0 ? BASS_ROOT : BASS_FIFTH)[bar];
       const f = name ? freq(name) : 0;
-      if (f) mTone(ctx, L.bass, f, time, 0.26, "sawtooth", 0.5);
+      if (f) mTone(ctx, L.bass, f, time, 0.3, "triangle", 0.45);
     }
 
-    // Arp — sixteenth-note triad (menu, or busy game).
-    if ((game ? I >= 3 : true) && bar < ARP.length) {
+    // Arp — gentle triad. Menu: eighth notes (calm); busy game: sixteenths.
+    const arpActive = game ? I >= 3 : true;
+    if (arpActive && (game || step % 2 === 0) && bar < ARP.length) {
       const chord = ARP[bar];
       const name = chord ? chord[inBar % 4] : undefined;
       const f = name ? freq(name) : 0;
-      if (f) mTone(ctx, L.arp, f, time, 0.1, "square", 0.5);
+      if (f) mTone(ctx, L.arp, f, time, 0.16, "triangle", 0.4);
     }
 
     if (game) {
-      // Kick on 1 & 3.
+      // Soft kick on 1 & 3.
       if (I >= 1 && (inBar === 0 || inBar === 8))
-        mTone(ctx, L.kick, 140, time, 0.13, "sine", 0.95, 45);
-      // Snare backbeat on 2 & 4.
+        mTone(ctx, L.kick, 130, time, 0.14, "sine", 0.85, 48);
+      // Soft "clap" backbeat on 2 & 4 (low-passed, not a bright snare).
       if (I >= 2 && (inBar === 4 || inBar === 12)) {
-        mNoise(ctx, L.snare, time, 0.14, 0.5, 1700);
-        mTone(ctx, L.snare, 190, time, 0.09, "triangle", 0.25);
+        mNoise(ctx, L.snare, time, 0.12, 0.26, 1100);
+        mTone(ctx, L.snare, 180, time, 0.08, "triangle", 0.14);
       }
-      // Crash at the top of bars 1 & 3.
+      // Gentle wash at the top of bars 1 & 3.
       if (I >= 3 && inBar === 0 && bar % 2 === 0)
-        mNoise(ctx, L.cymbal, time, 0.45, 0.4, 5000);
-      // Timpani accent on each downbeat.
+        mNoise(ctx, L.cymbal, time, 0.4, 0.16, 1500);
+      // Round timpani accent on each downbeat.
       if (I >= 1 && inBar === 0) {
         const name = BASS_ROOT[bar];
         const f = name ? freq(name) : 0;
-        if (f) mTone(ctx, L.timpani, f, time, 0.28, "sine", 0.7, f * 0.8);
+        if (f) mTone(ctx, L.timpani, f, time, 0.3, "sine", 0.6, f * 0.8);
       }
     }
 
-    // Hats — eighth notes (sixteenths once it's really busy).
+    // Soft shaker — eighth notes (sixteenths once it's really busy).
     const hatActive = game ? I >= 2 : true;
     const sixteenthHats = game && I >= 4;
     if (hatActive && (sixteenthHats || step % 2 === 0)) {
       const open = inBar === 6 || inBar === 14;
-      mNoise(ctx, L.hat, time, open ? 0.08 : 0.03, 0.3, 7000);
+      mNoise(ctx, L.hat, time, open ? 0.06 : 0.025, 0.12, 1900);
     }
   }
 
@@ -305,7 +310,7 @@ class MusicEngine {
       this.nextNoteTime = ctx.currentTime + 0.02;
     while (this.nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD) {
       this.scheduleStep(this.currentStep, this.nextNoteTime);
-      this.nextNoteTime += STEP_DUR;
+      this.nextNoteTime += this.stepDur;
       this.currentStep = (this.currentStep + 1) % TOTAL_STEPS;
     }
   };
@@ -313,6 +318,7 @@ class MusicEngine {
   /** Start (or switch to) a mode. Safe to call repeatedly; crossfades layers. */
   start(mode: Mode): void {
     this.mode = mode;
+    this.stepDur = stepDurFor(mode);
     const ctx = audioBus.ctx;
     if (!ctx) {
       // No Web Audio (e.g. jsdom) — record intent, stay silent.
