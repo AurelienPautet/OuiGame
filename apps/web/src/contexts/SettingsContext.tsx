@@ -19,12 +19,14 @@ import {
   type TouchControlsMode,
 } from "../lib/settings";
 import { applyKeyBindings } from "../engine/InputHandler";
+import { setSfxVolume, setMusicVolume } from "../audio";
 
 interface SettingsContextValue {
   settings: Settings;
   setKeybinding: (action: GameAction, code: string) => void;
   applyPreset: (preset: PresetName) => void;
   setEffect: (effect: keyof EffectSettings, value: boolean) => void;
+  setVolume: (channel: "sfx" | "music", value: number) => void;
   setTouchControls: (mode: TouchControlsMode) => void;
   setAutoFire: (value: boolean) => void;
   resetSettings: () => void;
@@ -53,6 +55,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     saveSettings(settings);
     applyKeyBindings(settings.keybindings);
+    // Push the volume sliders onto the shared audio bus so they apply app-wide
+    // (UI sounds + music), even when no game engine is mounted.
+    setSfxVolume(settings.sfxVolume);
+    setMusicVolume(settings.musicVolume);
   }, [settings]);
 
   const setKeybinding = useCallback((action: GameAction, code: string) => {
@@ -79,6 +85,13 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
+  const setVolume = useCallback((channel: "sfx" | "music", value: number) => {
+    setSettings((prev) => ({
+      ...prev,
+      [channel === "sfx" ? "sfxVolume" : "musicVolume"]: value,
+    }));
+  }, []);
+
   const setTouchControls = useCallback((mode: TouchControlsMode) => {
     setSettings((prev) => ({ ...prev, touchControls: mode }));
   }, []);
@@ -97,6 +110,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setKeybinding,
       applyPreset,
       setEffect,
+      setVolume,
       setTouchControls,
       setAutoFire,
       resetSettings,
@@ -106,6 +120,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setKeybinding,
       applyPreset,
       setEffect,
+      setVolume,
       setTouchControls,
       setAutoFire,
       resetSettings,

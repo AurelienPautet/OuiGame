@@ -1,8 +1,8 @@
 import { Layers, CheckCircle2, Pencil, Trash2, Trophy } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import { Button } from "./primitives";
-import { liftable, springs } from "../../lib/motion";
+import { Button, Card } from "./primitives";
+import { springs } from "../../lib/motion";
 import { cn } from "../../lib/cn";
 
 /**
@@ -38,11 +38,7 @@ export function CampaignCard({
   const pct = Math.max(0, Math.min(100, completionPercent || 0));
 
   return (
-    <motion.div
-      className="relative flex gap-4 p-3 rounded-xl cursor-pointer transition-[border-color,box-shadow] duration-150 bg-white border-[3px] border-ink shadow-[0_4px_0_rgba(0,0,0,0.12)] group"
-      onClick={onClick}
-      {...liftable}
-    >
+    <Card className="flex gap-4 p-3 group" onClick={onClick}>
       <div className="shrink-0 w-28 h-24 rounded-lg border-[3px] border-ink bg-field flex items-center justify-center">
         {completed ? (
           <Trophy className="w-12 h-12 text-yellow-d" />
@@ -122,6 +118,6 @@ export function CampaignCard({
           )}
         </div>
       )}
-    </motion.div>
+    </Card>
   );
 }

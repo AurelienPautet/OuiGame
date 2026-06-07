@@ -48,6 +48,7 @@ import { InputHandler, type InputSnapshot } from "./InputHandler.js";
 import { ParticleSystem } from "./ParticleSystem.js";
 import { DebrisSystem } from "./Debris.js";
 import { SoundManager, type SoundEvents } from "./SoundManager.js";
+import { setMusicIntensity } from "../audio";
 import { PostProcessor, tryCreatePostProcessor } from "./PostProcessor.js";
 import type { EnvBlock, EnvHole } from "./PostProcessor.js";
 import type { EffectSettings } from "../lib/settings";
@@ -633,7 +634,24 @@ export class GameEngine {
     const alpha = clamp(this.simAccumulator / SIM_STEP_MS, 0, 1);
     this._render(alpha);
 
+    this._updateMusicIntensity();
+
     this.animationId = requestAnimationFrame(this._frame);
+  }
+
+  // Feed the adaptive soundtrack the on-screen intensity — the number of living
+  // enemy tanks — so it layers up as a round heats up and thins out as you clear
+  // them. Throttled; the music engine ignores it outside game mode. Frozen while
+  // paused so the menu music holds its level.
+  private _musicFrame = 0;
+  private _updateMusicIntensity() {
+    if (this.paused) return;
+    if (++this._musicFrame % 15 !== 0) return;
+    let alive = 0;
+    for (const id in this.players) {
+      if (id !== this.mysocketid && this.players[id]?.alive) alive++;
+    }
+    setMusicIntensity(alive);
   }
 
   // One fixed simulation step. Solo advances the local authoritative room;
@@ -1222,7 +1240,8 @@ export class GameEngine {
   applyEffects(effects: EffectSettings) {
     this.particles.setEnabled(effects.particles);
     this.debris.setEnabled(effects.particles);
-    this.sounds.setEnabled(effects.sound);
+    // Sound/music volume is owned globally by the audio bus (SettingsContext),
+    // not the engine.
     this.post?.setEffects(effects);
   }
 }

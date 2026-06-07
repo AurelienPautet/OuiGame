@@ -10,6 +10,7 @@ import {
 import type { PlayerKillPayload } from "@ouigame/shared/types";
 import { useSocket } from "./SocketContext";
 import i18n from "../i18n";
+import { playSfx, type VoiceName } from "../audio";
 
 // Toast types with their colors and icons
 export const TOAST_TYPES = {
@@ -23,6 +24,17 @@ export const TOAST_TYPES = {
 } as const;
 
 export type ToastType = (typeof TOAST_TYPES)[keyof typeof TOAST_TYPES];
+
+// The procedural cue each toast type announces itself with.
+const TOAST_SOUNDS: Record<ToastType, VoiceName> = {
+  [TOAST_TYPES.CONNECTION]: "uiSuccess",
+  [TOAST_TYPES.DISCONNECTION]: "uiError",
+  [TOAST_TYPES.BULLET]: "notify",
+  [TOAST_TYPES.MINE]: "notify",
+  [TOAST_TYPES.INFO]: "notify",
+  [TOAST_TYPES.ERROR]: "uiError",
+  [TOAST_TYPES.SUCCESS]: "uiSuccess",
+};
 
 export interface Toast {
   id: number;
@@ -65,6 +77,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const addToast = useCallback(
     (type: ToastType, title: string, text: string, duration = 1500) => {
       const id = ++toastId;
+
+      playSfx(TOAST_SOUNDS[type]);
 
       setToasts((prev) => [
         ...prev,

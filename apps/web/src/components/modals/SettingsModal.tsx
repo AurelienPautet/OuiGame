@@ -18,8 +18,10 @@ import {
   DialogTitle,
   Button,
   Switch,
+  Slider,
   SegmentedControl,
 } from "../ui/primitives";
+import { ui } from "../../audio";
 import { cn } from "../../lib/cn";
 
 // Rebindable actions, in display order.
@@ -35,7 +37,6 @@ const EFFECTS: (keyof EffectSettings)[] = [
   "flashes",
   "aberration",
   "vignette",
-  "sound",
 ];
 
 // Preset → button label (the binding sets are physical-key based, so a French
@@ -66,6 +67,7 @@ export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
     setKeybinding,
     applyPreset,
     setEffect,
+    setVolume,
     setTouchControls,
     setAutoFire,
     resetSettings,
@@ -237,6 +239,39 @@ export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
           <h3 className="font-display font-bold text-sm uppercase tracking-wide text-ink-soft mb-3">
             {t("settings.effects")}
           </h3>
+          {/* Volume sliders (0 mutes). */}
+          <div className="space-y-3 mb-3.5">
+            {(["sfx", "music"] as const).map((channel) => {
+              const labelKey =
+                channel === "sfx"
+                  ? "settings.effectLabels.sound"
+                  : "settings.effectLabels.music";
+              const value =
+                channel === "sfx" ? settings.sfxVolume : settings.musicVolume;
+              return (
+                <div key={channel} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-sm font-semibold text-ink">
+                    {t(labelKey)}
+                  </span>
+                  <Slider
+                    className="flex-1"
+                    value={[value]}
+                    onValueChange={([v]) => setVolume(channel, v ?? 0)}
+                    onValueCommit={() => {
+                      if (channel === "sfx") ui.click();
+                    }}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    aria-label={t(labelKey)}
+                  />
+                  <span className="w-9 text-right font-mono text-xs tabular-nums text-ink-soft">
+                    {Math.round(value * 100)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
           <div className="space-y-2.5">
             {EFFECTS.map((effect) => (
               <label

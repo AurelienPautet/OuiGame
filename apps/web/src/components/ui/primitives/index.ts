@@ -2,6 +2,7 @@
 // styled with cva + the tokens in theme/palette.ts (mirrored by index.css @theme).
 export { Button, type ButtonProps } from "./Button";
 export { IconButton, type IconButtonProps } from "./IconButton";
+export { Card, type CardProps } from "./Card";
 export { Input, Textarea, type InputProps, type TextareaProps } from "./Input";
 export { Panel, DarkPanel } from "./Panel";
 export { IoTitle } from "./IoTitle";
@@ -22,5 +23,6 @@ export {
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./Tabs";
 export { Select, type SelectOption } from "./Select";
 export { Switch } from "./Switch";
+export { Slider } from "./Slider";
 export { Tooltip } from "./Tooltip";
 export { StarRating } from "./StarRating";

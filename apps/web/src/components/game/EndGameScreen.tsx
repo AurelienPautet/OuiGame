@@ -7,6 +7,7 @@ import type { WinnerPayload } from "@ouigame/shared/types";
 import type { LevelDTO } from "@ouigame/shared/api";
 import type { LevelStats } from "./CampaignInterstitial";
 import { formatTimeSec } from "../../lib/formatTime";
+import { playSfx } from "../../audio";
 import { CountUp } from "../../lib/motionComponents";
 import { StarRating } from "../ui/primitives";
 import {
@@ -92,6 +93,12 @@ export const EndGameScreen = ({
   const [result, setResult] = useState<GameResult | null>(null);
   const [resultName, setResultName] = useState(""); // Winner's name for lose case
   const [scores, setScores] = useState<ScoreRowData[]>([]);
+
+  // Victory / defeat / draw stinger when the end screen appears (solo + online).
+  useEffect(() => {
+    if (!visible || !result) return;
+    playSfx(result === "win" ? "win" : result === "lose" ? "lose" : "draw");
+  }, [visible, result]);
 
   // Handle external result (Solo Mode)
   useEffect(() => {

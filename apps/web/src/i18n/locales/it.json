@@ -204,7 +204,8 @@
       "particles": "Particelle",
       "flashes": "Lampi di danno/eliminazione",
       "scenery": "Scenografia animata",
-      "sound": "Effetti sonori"
+      "sound": "Effetti sonori",
+      "music": "Musica"
     },
     "touch": {
       "title": "Comandi touch",

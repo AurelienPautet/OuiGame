@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { playSfx } from "../../audio";
 
 /**
  * CountdownOverlay - Displays a 3-2-1-GO countdown before game starts.
@@ -25,6 +26,9 @@ export const CountdownOverlay = ({
   const { t } = useTranslation();
   const [count, setCount] = useState(3);
   const [visible, setVisible] = useState(false);
+  // Last count we beeped for, so pause/resume (which re-runs the effect without
+  // changing the number) doesn't replay the current tick.
+  const lastBeep = useRef<number | null>(null);
 
   // (Re)start the countdown whenever it becomes active.
   useEffect(() => {
@@ -53,6 +57,15 @@ export const CountdownOverlay = ({
     }, 1000);
     return () => clearTimeout(tick);
   }, [isActive, isPaused, visible, count, onComplete]);
+
+  // Beep on each new number (3-2-1) and blast on "GO!" (count 0). Tracked by
+  // ref so resuming from pause doesn't re-trigger the same step.
+  useEffect(() => {
+    if (!isActive || !visible || isPaused) return;
+    if (lastBeep.current === count) return;
+    lastBeep.current = count;
+    playSfx(count > 0 ? "countdownBeep" : "countdownGo");
+  }, [isActive, visible, isPaused, count]);
 
   // Hide the badge while paused so the pause menu shows on its own.
   if (!visible || isPaused) return null;

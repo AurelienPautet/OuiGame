@@ -14,6 +14,7 @@ import { QueryProvider } from "./providers/QueryProvider";
 import { LandingPage } from "./components/landing";
 import { MenuLayout, ScaledStage } from "./components/layout";
 import { GameCanvas } from "./components/game";
+import { MusicController } from "./components/MusicController";
 import {
   LevelEditor,
   CampaignEditor,
@@ -105,6 +106,7 @@ function App() {
                 <ModalProvider>
                   <SettingsProvider>
                     <GameProvider>
+                      <MusicController />
                       <AppRouter />
                     </GameProvider>
                   </SettingsProvider>
