@@ -19,6 +19,29 @@ const GRID_CELL = 50;
 // Bullet colour by remaining bounces: 0 → red, 1 → orange, 2+ → yellow.
 const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
 
+/**
+ * Split players into wrecks (dead tanks) and live tanks for drawing. A dead tank
+ * stays in the map as a wreck, and the map's iteration order is arbitrary, so
+ * without this a wreck could be drawn after — and therefore on top of — a live
+ * player. Drawing every wreck first and every live tank last keeps corpses (and
+ * the floor-level debris layered between the two groups) beneath living tanks.
+ *
+ * The predicate is the same truthiness test as `_drawPlayer` (`if
+ * (player.alive)`), so anything that renders as a wreck also groups with the
+ * wrecks — even if `alive` arrives non-boolean through the wire/cast path.
+ * Insertion order is preserved within each group.
+ */
+export function partitionPlayersByLife<T extends { alive: boolean }>(
+  players: Record<string, T>
+): { wrecks: [string, T][]; liveTanks: [string, T][] } {
+  const wrecks: [string, T][] = [];
+  const liveTanks: [string, T][] = [];
+  for (const entry of Object.entries(players)) {
+    (entry[1].alive ? liveTanks : wrecks).push(entry);
+  }
+  return { wrecks, liveTanks };
+}
+
 interface Vec2 {
   x: number;
   y: number;
@@ -180,7 +203,12 @@ export class Renderer {
     }
   }
 
-  draw(gameState: GameState) {
+  // `drawBetweenWrecksAndTanks` is run after the dead-tank wrecks are painted
+  // but before the living tanks, so a caller can slot floor-level effects (the
+  // flying-cannon debris) into that gap — above the hull a barrel broke off
+  // from, but never over a live player. clear() wipes the canvas at the top of
+  // every frame, so this hook is the only place such effects can layer in.
+  draw(gameState: GameState, drawBetweenWrecksAndTanks?: () => void) {
     this.drawTicks++;
     this.clear();
 
@@ -216,11 +244,19 @@ export class Renderer {
       bullets.forEach((bullet) => this._drawBullet(bullet));
     }
 
-    // Draw players
-    if (players) {
-      Object.entries(players).forEach(([socketId, player]) => {
-        this._drawPlayer(player, socketId);
-      });
+    // Draw players, split so wrecks render beneath living tanks: a dead tank
+    // stays in the map as a wreck and must not paint over a live player. The
+    // between-hook (floor-level debris) layers into the gap, above the wrecks
+    // but below the live tanks.
+    const { wrecks, liveTanks } = players
+      ? partitionPlayersByLife(players)
+      : { wrecks: [], liveTanks: [] };
+    for (const [socketId, player] of wrecks) {
+      this._drawPlayer(player, socketId);
+    }
+    drawBetweenWrecksAndTanks?.();
+    for (const [socketId, player] of liveTanks) {
+      this._drawPlayer(player, socketId);
     }
   }
 
