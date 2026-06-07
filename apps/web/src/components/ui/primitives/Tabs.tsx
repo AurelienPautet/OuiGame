@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import * as RadixTabs from "@radix-ui/react-tabs";
 import { cn } from "../../../lib/cn";
+import { ui } from "../../../audio";
 
 // Radix Tabs — keyboard nav (arrows/Home/End) + ARIA roles for free, replacing
 // the hand-rolled components/ui/Tabs.tsx (which had neither).
@@ -21,7 +22,7 @@ TabsList.displayName = "TabsList";
 export const TabsTrigger = forwardRef<
   React.ComponentRef<typeof RadixTabs.Trigger>,
   React.ComponentPropsWithoutRef<typeof RadixTabs.Trigger>
->(({ className, ...props }, ref) => (
+>(({ className, onClick, ...props }, ref) => (
   <RadixTabs.Trigger
     ref={ref}
     className={cn(
@@ -32,6 +33,10 @@ export const TabsTrigger = forwardRef<
       className
     )}
     {...props}
+    onClick={(e) => {
+      ui.tab();
+      onClick?.(e);
+    }}
   />
 ));
 TabsTrigger.displayName = "TabsTrigger";

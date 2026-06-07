@@ -3,6 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { motion, type HTMLMotionProps } from "motion/react";
 import { cn } from "../../../lib/cn";
 import { pressable } from "../../../lib/motion";
+import { ui } from "../../../audio";
 
 // Chunky, flat, thick-outlined arcade button: 4px ink border, a hard drop
 // shadow it presses toward. Motion owns the transform (springy hover-lift +
@@ -34,13 +35,34 @@ export interface ButtonProps
   extends Omit<HTMLMotionProps<"button">, "ref">, VariantProps<typeof button> {}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, type = "button", ...props }, ref) => (
+  (
+    {
+      className,
+      variant,
+      size,
+      type = "button",
+      onClick,
+      onHoverStart,
+      ...props
+    },
+    ref
+  ) => (
     <motion.button
       ref={ref}
       type={type}
       className={cn(button({ variant, size }), className)}
       {...pressable}
       {...props}
+      // Procedural click/hover feedback, composed so callers' own handlers
+      // still run. Listed after the spread so they aren't clobbered by it.
+      onClick={(e) => {
+        ui.click();
+        onClick?.(e);
+      }}
+      onHoverStart={(e, info) => {
+        ui.hover();
+        onHoverStart?.(e, info);
+      }}
     />
   )
 );

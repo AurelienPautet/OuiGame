@@ -1,8 +1,12 @@
 /**
- * SoundManager - Handles audio playback for game sounds using Howler.js
- * Provides reliable cross-browser audio support
+ * SoundManager — plays the in-game sound effects.
+ *
+ * Sounds are synthesised on the fly (Web Audio oscillators + filtered noise via
+ * `../audio`), so there are no audio files to download or decode. Everything
+ * routes through the shared `audioBus`, the same one the menu/UI click layer
+ * uses, so one master gain mutes the whole app.
  */
-import { Howl, Howler } from "howler";
+import { audioBus, playSfx, setAudioEnabled } from "../audio";
 
 export interface SoundEvents {
   shoot?: boolean;
@@ -13,115 +17,36 @@ export interface SoundEvents {
 }
 
 export class SoundManager {
-  sounds: Record<string, Howl>;
-  contextResumed: boolean;
   // When false, all playback is suppressed (driven by the "sound" user setting).
   enabled = true;
 
-  constructor() {
-    // Preload all sounds
-    this.sounds = {
-      tir: new Howl({
-        src: ["ressources/sounds/tir.mp3"],
-        volume: 0.5,
-        pool: 10, // Allow 10 simultaneous instances
-      }),
-      kill: new Howl({
-        src: ["ressources/sounds/kill.mp3"],
-        volume: 0.6,
-        pool: 10,
-      }),
-      explose: new Howl({
-        src: ["ressources/sounds/eplose.mp3"],
-        volume: 0.7,
-        pool: 10,
-      }),
-      fuse: new Howl({
-        src: ["ressources/sounds/fuse.mp3"],
-        volume: 0.4,
-        pool: 10,
-      }),
-      plant: new Howl({
-        src: ["ressources/sounds/plant.mp3"],
-        volume: 0.5,
-        pool: 10,
-      }),
-      ricochet: new Howl({
-        src: ["ressources/sounds/ricochet.mp3"],
-        volume: 0.4,
-        pool: 10,
-      }),
-    };
-
-    this.contextResumed = false;
-  }
-
-  /** Enable/disable all sound playback. */
+  /** Enable/disable all sound playback (mutes the shared bus). */
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
+    setAudioEnabled(enabled);
   }
 
-  // Play a sound with optional rate variation for variety
-  _play(soundName: string) {
-    if (!this.enabled) return;
-    const sound = this.sounds[soundName];
-    if (sound) {
-      const id = sound.play();
-      // Add slight pitch variation for more natural sound
-      sound.rate(0.9 + Math.random() * 0.2, id);
-    }
-  }
-
-  // Play sounds based on game events
+  // Play sounds based on game events.
   playSounds(soundEvents?: SoundEvents | null) {
     if (!soundEvents) return;
-
-    if (soundEvents.shoot) {
-      this._play("tir");
-    }
-    if (soundEvents.kill) {
-      this._play("kill");
-    }
-    if (soundEvents.explose) {
-      this._play("explose");
-    }
-    if (soundEvents.plant) {
-      this._play("plant");
-    }
-    if (soundEvents.ricochet) {
-      this._play("ricochet");
-    }
+    if (soundEvents.shoot) playSfx("shoot");
+    if (soundEvents.kill) playSfx("kill");
+    if (soundEvents.explose) playSfx("explose");
+    if (soundEvents.plant) playSfx("plant");
+    if (soundEvents.ricochet) playSfx("ricochet");
   }
 
-  // Play fuse sound for mines about to explode
+  // Play the fuse tick for a mine about to explode.
   playFuse() {
-    this._play("fuse");
+    playSfx("fuse");
   }
 
-  // Resume AudioContext (required by browsers after user interaction)
+  // Resume the AudioContext (required by browsers after a user interaction).
   resume() {
-    if (!this.contextResumed) {
-      // Howler.ctx is the global AudioContext
-      if (Howler.ctx && Howler.ctx.state === "suspended") {
-        Howler.ctx.resume().then(() => {
-          console.log("AudioContext resumed");
-          this.contextResumed = true;
-        });
-      } else {
-        this.contextResumed = true;
-      }
-    }
+    audioBus.resume();
   }
 
-  // Stop all sounds and unload
-  clear() {
-    // All keys are populated in the constructor; optional chaining keeps this a
-    // no-op should any be absent (matching the prior always-defined access).
-    this.sounds.tir?.unload();
-    this.sounds.kill?.unload();
-    this.sounds.explose?.unload();
-    this.sounds.fuse?.unload();
-    this.sounds.plant?.unload();
-    this.sounds.ricochet?.unload();
-  }
+  // Procedural voices schedule short-lived nodes that stop themselves, so there
+  // is nothing to unload — kept for API parity with the old Howler manager.
+  clear() {}
 }
