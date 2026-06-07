@@ -11,6 +11,7 @@ import { EndGameScreen } from "./EndGameScreen";
 import type { SoloGameResult } from "./EndGameScreen";
 import { CountdownOverlay } from "./CountdownOverlay";
 import { LivesHud } from "./LivesHud";
+import { RunTimer } from "./RunTimer";
 import { CampaignEndScreen } from "./CampaignEndScreen";
 import { CampaignInterstitial } from "./CampaignInterstitial";
 import type { InterstitialData, LevelStats } from "./CampaignInterstitial";
@@ -142,6 +143,13 @@ export const GameCanvas = () => {
   const handleCountdownStart = useCallback(() => {
     setShowCountdown(true);
   }, []);
+
+  // Stable reader for the run timer HUD: polls the live engine's elapsed time.
+  // Identity is fixed so the RunTimer's rAF loop isn't restarted on re-renders.
+  const getElapsedMs = useCallback(
+    () => engineRef.current?.getElapsedMs() ?? 0,
+    []
+  );
 
   // Handle countdown complete - tell engine to start gameplay
   const handleCountdownComplete = useCallback(() => {
@@ -597,6 +605,12 @@ export const GameCanvas = () => {
             levelIndex={campaignIndex + 1}
             totalLevels={campaignLevelIds.length}
           />
+        )}
+
+        {/* Solo run timer HUD (hidden once the end screen is up — the final
+            time is shown there). */}
+        {mode === "solo" && !isEndGameVisible && (
+          <RunTimer getElapsedMs={getElapsedMs} />
         )}
 
         {/* Countdown overlay (freezes while paused) */}

@@ -1099,6 +1099,17 @@ export class GameEngine {
     this.simAccumulator = 0;
   }
 
+  // Wall-clock elapsed time (ms) of the current solo run. Mirrors the value the
+  // final result uses (`performance.now() - startTime`, with `startTime` reset
+  // when the countdown ends), so the live HUD timer and the end-screen time
+  // agree. Returns 0 before play begins — during the round-start countdown, or
+  // before any run has started — so the timer counts up from zero.
+  getElapsedMs(): number {
+    if (!this.running || this.startTime === 0) return 0;
+    if (this.mode === "solo" && this.inCountdown) return 0;
+    return performance.now() - this.startTime;
+  }
+
   quit() {
     this.running = false;
     this.paused = false;

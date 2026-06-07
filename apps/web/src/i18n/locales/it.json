@@ -277,6 +277,9 @@
   "livesHud": {
     "level": "Livello {{current}}/{{total}}"
   },
+  "runTimer": {
+    "aria": "Tempo trascorso"
+  },
   "rankings": {
     "title": "CLASSIFICHE",
     "topPlayers": "migliori giocatori",

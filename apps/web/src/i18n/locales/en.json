@@ -277,6 +277,9 @@
   "livesHud": {
     "level": "Level {{current}}/{{total}}"
   },
+  "runTimer": {
+    "aria": "Elapsed run time"
+  },
   "rankings": {
     "title": "RANKINGS",
     "topPlayers": "top players",
