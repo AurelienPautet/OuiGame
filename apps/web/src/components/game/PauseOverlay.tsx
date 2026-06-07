@@ -14,6 +14,11 @@ interface PauseOverlayProps {
   // Solo/campaign only; GameCanvas passes `undefined` for online, so this must
   // explicitly admit undefined under exactOptionalPropertyTypes.
   onRetry?: (() => void) | undefined;
+  // The Settings dialog opens from this overlay and stays layered on top while
+  // the game is still paused. When it's open we suspend the R/E shortcuts so a
+  // keypress meant for the dialog doesn't quit/retry out from under it — same
+  // gating GameCanvas applies to the Escape key.
+  settingsOpen?: boolean;
 }
 
 /** A single key / input cap, matching the flat arcade key style. */
@@ -49,6 +54,7 @@ export const PauseOverlay = ({
   onQuit,
   onSettings,
   onRetry,
+  settingsOpen = false,
 }: PauseOverlayProps) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
@@ -56,13 +62,18 @@ export const PauseOverlay = ({
   const { keybindings } = settings;
 
   useEffect(() => {
+    // Suspended while the Settings dialog is on top (see prop comment).
+    if (settingsOpen) return;
     const handleKey = (e: KeyboardEvent) => {
+      // Ignore key-repeat and modified combos so holding R doesn't spam retry
+      // and Ctrl/Cmd+R (reload) / Cmd+E aren't hijacked.
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if ((e.key === "r" || e.key === "R") && onRetry) onRetry();
       if (e.key === "e" || e.key === "E") onQuit();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onRetry, onQuit]);
+  }, [onRetry, onQuit, settingsOpen]);
 
   const c = (k: string) => t(`pause.controls.${k}`);
 
