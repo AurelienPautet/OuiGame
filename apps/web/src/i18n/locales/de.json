@@ -272,7 +272,23 @@
     "resume": "Weitermachen",
     "retry": "Erneut versuchen",
     "settings": "Einstellungen",
-    "quit": "Beenden"
+    "quit": "Beenden",
+    "controls": {
+      "title": "Steuerung",
+      "move": "Bewegen",
+      "aim": "Zielen",
+      "fire": "Feuern",
+      "plant": "Mine legen",
+      "pause": "Pause",
+      "mouse": "Maus",
+      "click": "Klick",
+      "esc": "Esc",
+      "moveStick": "Linker Stick",
+      "aimStick": "Rechter Stick",
+      "fireButton": "Feuertaste",
+      "holdAim": "Zum Zielen halten",
+      "mineButton": "Minen-Taste"
+    }
   },
   "livesHud": {
     "level": "Level {{current}}/{{total}}"

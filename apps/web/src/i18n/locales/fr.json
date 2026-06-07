@@ -272,7 +272,23 @@
     "resume": "Continuer",
     "retry": "Réessayer",
     "settings": "Paramètres",
-    "quit": "Quitter"
+    "quit": "Quitter",
+    "controls": {
+      "title": "Contrôles",
+      "move": "Se déplacer",
+      "aim": "Viser",
+      "fire": "Tirer",
+      "plant": "Planter une mine",
+      "pause": "Pause",
+      "mouse": "Souris",
+      "click": "Clic",
+      "esc": "Échap",
+      "moveStick": "Joystick gauche",
+      "aimStick": "Joystick droit",
+      "fireButton": "Bouton de tir",
+      "holdAim": "Maintenir pour viser",
+      "mineButton": "Bouton mine"
+    }
   },
   "livesHud": {
     "level": "Niveau {{current}}/{{total}}"
