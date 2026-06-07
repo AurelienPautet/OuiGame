@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../test/renderWithProviders";
 import { SettingsProvider } from "../../../contexts";
 import { PauseOverlay } from "../PauseOverlay";
@@ -23,6 +23,7 @@ const renderPause = (
         onQuit={props.onQuit ?? noop}
         onSettings={props.onSettings ?? noop}
         onRetry={props.onRetry}
+        settingsOpen={props.settingsOpen ?? false}
       />
     </SettingsProvider>
   );
@@ -64,5 +65,39 @@ describe("PauseOverlay controls reference", () => {
     renderPause({ touchControls: "on", autoFire: false });
     expect(screen.getByText("Fire button")).toBeTruthy();
     expect(screen.queryByText("Hold to aim")).toBeNull();
+  });
+});
+
+describe("PauseOverlay keyboard shortcuts", () => {
+  it("retries on R and quits on E", () => {
+    const onRetry = vi.fn();
+    const onQuit = vi.fn();
+    renderPause({}, { onRetry, onQuit });
+    fireEvent.keyDown(window, { key: "r" });
+    fireEvent.keyDown(window, { key: "E" });
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onQuit).toHaveBeenCalledTimes(1);
+  });
+
+  it("suspends the shortcuts while the settings dialog is open", () => {
+    const onRetry = vi.fn();
+    const onQuit = vi.fn();
+    renderPause({}, { onRetry, onQuit, settingsOpen: true });
+    fireEvent.keyDown(window, { key: "r" });
+    fireEvent.keyDown(window, { key: "e" });
+    expect(onRetry).not.toHaveBeenCalled();
+    expect(onQuit).not.toHaveBeenCalled();
+  });
+
+  it("ignores key-repeat and modified combos (e.g. Cmd/Ctrl+R)", () => {
+    const onRetry = vi.fn();
+    const onQuit = vi.fn();
+    renderPause({}, { onRetry, onQuit });
+    fireEvent.keyDown(window, { key: "r", repeat: true });
+    fireEvent.keyDown(window, { key: "r", metaKey: true });
+    fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+    fireEvent.keyDown(window, { key: "e", altKey: true });
+    expect(onRetry).not.toHaveBeenCalled();
+    expect(onQuit).not.toHaveBeenCalled();
   });
 });
