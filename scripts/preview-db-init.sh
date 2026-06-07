@@ -69,7 +69,13 @@ else
 fi
 
 echo "→ Reconciling schema to this PR (drizzle-kit push)…"
-pnpm exec drizzle-kit push --force
+# Best-effort. The restored prod snapshot already carries the correct schema, and
+# the shared prod DB holds other apps' tables that make drizzle's push prompt
+# interactively for rename/drop resolution — which throws without a TTY. Don't
+# let that crash the preview: the server runs fine on the restored schema. (A PR
+# that changes OuiTank's own schema is the only case this wouldn't cover.)
+pnpm exec drizzle-kit push --force </dev/null \
+  || echo "⚠️  drizzle push skipped — starting on the restored prod schema"
 
 echo "→ Starting server…"
 exec pnpm exec tsx apps/api/server.ts
