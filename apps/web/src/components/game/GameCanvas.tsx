@@ -629,6 +629,7 @@ export const GameCanvas = () => {
             onRetry={
               mode === "solo" || mode === "campaign" ? handleRetry : undefined
             }
+            settingsOpen={settingsOpen}
           />
         )}
 
