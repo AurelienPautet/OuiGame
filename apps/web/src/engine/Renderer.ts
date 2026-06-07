@@ -20,17 +20,21 @@ const GRID_CELL = 50;
 const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
 
 /**
- * Order players for drawing so corpses (alive=false) paint *beneath* living
- * tanks. Players arrive as a map whose iteration order is arbitrary, so without
- * this a wreck could be drawn after — and therefore on top of — a live player.
- * Array.prototype.sort is stable, so insertion order is preserved within the
- * dead and alive groups (only their relative ordering is forced: dead first).
+ * Order players for drawing so corpses paint *beneath* living tanks. Players
+ * arrive as a map whose iteration order is arbitrary, so without this a wreck
+ * could be drawn after — and therefore on top of — a live player.
+ *
+ * The predicate uses the same truthiness test as `_drawPlayer` (`if
+ * (player.alive)`), so anything that renders as a wreck also sorts to the back —
+ * even if `alive` arrives non-boolean through the wire/cast path (where
+ * `Number(undefined)` would be NaN and leave the corpse unmoved). Array.sort is
+ * stable, so insertion order is preserved within the dead and alive groups.
  */
 export function orderPlayersForDraw<T extends { alive: boolean }>(
   players: Record<string, T>
 ): [string, T][] {
   return Object.entries(players).sort(
-    ([, a], [, b]) => Number(a.alive) - Number(b.alive)
+    ([, a], [, b]) => (a.alive ? 1 : 0) - (b.alive ? 1 : 0)
   );
 }
 

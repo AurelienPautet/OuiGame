@@ -7,8 +7,8 @@ import { orderPlayersForDraw } from "../Renderer.js";
 // paints over a live player.
 describe("orderPlayersForDraw", () => {
   it("draws every corpse before any living tank", () => {
-    // Map deliberately interleaves dead/alive, with a dead entry last so the
-    // raw iteration order would paint it over the live tanks.
+    // Interleaved, with a dead entry (`d`) last — the case where the raw
+    // iteration order would paint a corpse over the live tanks.
     const players = {
       a: { alive: true },
       b: { alive: false },
@@ -18,14 +18,9 @@ describe("orderPlayersForDraw", () => {
 
     const order = orderPlayersForDraw(players).map(([id]) => id);
 
-    const lastDead = order.lastIndexOf("b") > order.indexOf("d") ? "b" : "d";
-    const firstAliveIdx = Math.min(order.indexOf("a"), order.indexOf("c"));
-    // Both dead tanks must come before the first alive tank.
-    expect(order.indexOf("b")).toBeLessThan(firstAliveIdx);
-    expect(order.indexOf("d")).toBeLessThan(firstAliveIdx);
-    // The very last drawn (top-most) must be a living tank, never a corpse.
-    expect(["a", "c"]).toContain(order[order.length - 1]);
-    expect(order[order.length - 1]).not.toBe(lastDead);
+    // Both corpses come first (in their original relative order), both living
+    // tanks last — so the top-most thing drawn is always a live tank.
+    expect(order).toEqual(["b", "d", "a", "c"]);
   });
 
   it("keeps insertion order within the dead and alive groups (stable sort)", () => {
@@ -47,5 +42,21 @@ describe("orderPlayersForDraw", () => {
 
     expect(orderPlayersForDraw(alive).map(([id]) => id)).toEqual(["x", "y"]);
     expect(orderPlayersForDraw(dead).map(([id]) => id)).toEqual(["x", "y"]);
+  });
+
+  it("treats a non-boolean alive value as a corpse (matches _drawPlayer's truthiness)", () => {
+    // draw() reaches orderPlayersForDraw via an `as unknown as` cast, so `alive`
+    // can in principle arrive non-boolean. _drawPlayer renders anything falsy as
+    // a wreck, so the ordering must push it to the back too — a plain numeric
+    // coercion (Number(undefined) === NaN) would wrongly leave it in place.
+    const players = {
+      x: { alive: true },
+      u: { alive: undefined },
+      y: { alive: true },
+    } as unknown as Record<string, { alive: boolean }>;
+
+    const order = orderPlayersForDraw(players).map(([id]) => id);
+
+    expect(order[0]).toBe("u");
   });
 });
