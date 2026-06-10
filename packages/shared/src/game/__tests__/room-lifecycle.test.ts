@@ -68,6 +68,24 @@ describe("Room.spawn_all_bots", () => {
     expect(room.nbliving).toBe(4);
     expect(room.human_players).toEqual([]); // bots are not human players
   });
+
+  it("skips bots in skipIds while keeping the others' socketids stable", () => {
+    const room = mkRoom();
+    room.bot1_spawns = [
+      { x: 0, y: 0 },
+      { x: 50, y: 0 },
+    ];
+    room.bot2_spawns = [{ x: 100, y: 0 }];
+
+    // Pretend bot0 and bot2 were defeated on a previous campaign attempt.
+    room.spawn_all_bots(new Set(["bot0", "bot2"]));
+
+    // Only the survivor spawns, and it keeps the id it had before (bot1) — the
+    // skipped slots still advance the counter, so numbering doesn't shift.
+    expect(Object.keys(room.players)).toEqual(["bot1"]);
+    expect(room.players.bot1).toBeInstanceOf(Bot);
+    expect(room.nbliving).toBe(1);
+  });
 });
 
 describe("Room.delete_player", () => {

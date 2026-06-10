@@ -44,6 +44,11 @@ export const GameCanvas = () => {
   // post-processed result on top. Falls back to the 2D canvases if WebGL fails.
   const glCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  // Enemies defeated on the current campaign level, carried across a lost life
+  // so retrying the level doesn't resurrect them. Reset when the level changes
+  // (advance) or a new run starts. A ref (not state) because only the imperative
+  // engine restart reads it; it must never trigger a React re-render.
+  const defeatedBotIdsRef = useRef<string[]>([]);
   // True once an engine reports a live WebGL post-processor (drives which
   // canvas is shown).
   const [postActive, setPostActive] = useState(false);
@@ -190,6 +195,15 @@ export const GameCanvas = () => {
       // --- Campaign run flow ---
       // In campaign mode the run always has an id (set by startCampaign).
       if (campaignId == null) return;
+
+      // Carry defeated enemies across a lost life: on a loss, remember which
+      // bots are already beaten so the level restart (further down, via
+      // runNonce) skips them; on a win we move to a fresh level, so clear it.
+      // The engine is still alive here (the restart happens on a later render).
+      defeatedBotIdsRef.current = isWin
+        ? []
+        : (engineRef.current?.getDefeatedBotIds() ?? defeatedBotIdsRef.current);
+
       const total = campaignLevelIds.length;
       const levelStats: LevelStats = result.stats || {};
       const timeMs = (result.timeElapsed || 0) * 1000;
@@ -381,6 +395,9 @@ export const GameCanvas = () => {
     setSoloResult(null);
     setIsEndGameVisible(false);
     setShowCountdown(false);
+    // A voluntary restart (pause → retry) replays the level fresh; it costs no
+    // life, so previously defeated enemies come back.
+    defeatedBotIdsRef.current = [];
 
     // Cleanup old engine completely
     if (engineRef.current) {
@@ -431,6 +448,7 @@ export const GameCanvas = () => {
     setIsEndGameVisible(false);
     setShowCountdown(false);
     setInterstitial(null);
+    defeatedBotIdsRef.current = [];
     startCampaign({ campaignId, levelIds: campaignLevelIds });
   }, [startCampaign, campaignId, campaignLevelIds]);
 
@@ -468,7 +486,10 @@ export const GameCanvas = () => {
           await engine.startSolo(
             levelId,
             playerNameRef.current,
-            tankColorsRef.current
+            tankColorsRef.current,
+            // Only campaigns carry defeated enemies across a retry; a solo
+            // replay always starts the level fresh.
+            mode === "campaign" ? defeatedBotIdsRef.current : []
           );
         } else if (mode === "online" && roomId) {
           await engine.startOnline(

@@ -177,7 +177,12 @@ export class Room {
     spawns.splice(spawnid, 1);
   }
 
-  spawn_all_bots(): void {
+  // `skipIds` lets a caller suppress specific bots by socketid while keeping the
+  // numbering of the rest intact. Campaign retries pass the enemies already
+  // defeated on the level so they stay dead across a lost life. bot_index is
+  // still advanced for skipped slots, so a surviving bot keeps the same id it
+  // had on the first attempt (ids are positional, not affected by who is gone).
+  spawn_all_bots(skipIds: Set<string> = new Set()): void {
     console.log(
       "Spawning bots in room:",
       this.bot1_spawns,
@@ -210,16 +215,20 @@ export class Room {
       // early. This matches the legacy `number_to_spawn_N` captured-length loops.
       const count = spawns.length;
       for (let i = 0; i < count; i++) {
+        const botId = `bot${bot_index}`;
+        bot_index++;
+        // Already defeated this run: don't respawn it (but a spawn slot is left
+        // unused, which is harmless — surviving bots still pick a random spawn).
+        if (skipIds.has(botId)) continue;
         const bot = new Bot(
           { x: 0, y: 0 },
-          `bot${bot_index}`,
+          botId,
           `${labels[kind]}_ ${i}`,
           colors[0],
           colors[1],
           kind
         );
-        this.spawn_new(bot, `bot${bot_index}`, spawns);
-        bot_index++;
+        this.spawn_new(bot, botId, spawns);
       }
     }
   }
