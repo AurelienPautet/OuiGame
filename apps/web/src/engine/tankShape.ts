@@ -5,7 +5,7 @@
 // Clean diep.io silhouette: a flat circular hull with a single barrel poking
 // out toward the aim direction, both with a thick dark outline. No treads, no
 // gear hub — that clutter is what made earlier versions read like a cog.
-import { palette, tankColors } from "../theme/palette";
+import { palette, tankColors, desaturateHex } from "../theme/palette";
 
 const INK = palette.ink;
 
@@ -23,6 +23,13 @@ export interface DrawTankOpts {
   angle: number;
   /** draw the AI marker dot */
   isBot?: boolean;
+  /**
+   * Loaded-ammo fraction (0..1) used as a hull ammo gauge: 1 → full team hue,
+   * 0 → washed-out grey (every shot in flight). Only the hull fill drains; the
+   * barrel and ink outline stay coloured so team identity survives at empty.
+   * Omitted (default 1) for menu avatars, which always show full colour.
+   */
+  ammoFraction?: number;
 }
 
 // How far the barrel tip reaches from the hull centre, in units of r. Callers
@@ -59,10 +66,11 @@ export function drawTank(c: CanvasRenderingContext2D, o: DrawTankOpts): void {
   c.stroke();
   c.restore();
 
-  // Hull.
+  // Hull — its fill drains toward grey as the tank empties its magazine.
+  const ammo = o.ammoFraction ?? 1;
   c.beginPath();
   c.arc(cx, cy, r, 0, Math.PI * 2);
-  c.fillStyle = body.fill;
+  c.fillStyle = ammo >= 1 ? body.fill : desaturateHex(body.fill, 1 - ammo);
   c.lineWidth = r * 0.22;
   c.fill();
   c.stroke();

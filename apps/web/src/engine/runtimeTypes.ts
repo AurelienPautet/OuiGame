@@ -13,6 +13,7 @@ export interface RoomPlayer {
   direction?: { x: number; y: number };
   aim?: { x: number; y: number };
   bulletcount?: number;
+  max_bulletcount?: number;
   round_stats?: {
     stats?: Record<string, number>;
     [key: string]: unknown;

@@ -103,6 +103,26 @@ export function mixHex(a: string, b: string, t: number): string {
   return `#${ch(ca.red, cb.red)}${ch(ca.green, cb.green)}${ch(ca.blue, cb.blue)}`;
 }
 
+/**
+ * Drain a #rrggbb colour toward grey: amount=0 → untouched, amount=1 → a fully
+ * desaturated grey of the same perceptual luminance (so the hull dims to grey
+ * without also going darker/lighter). Used as a tank's ammo gauge — a loaded
+ * hull keeps its team hue, an empty one washes out to grey. "transparent"
+ * (hidden tanks) passes through untouched.
+ */
+export function desaturateHex(hex: string, amount: number): string {
+  if (hex === "transparent") return hex;
+  const t = Math.min(1, Math.max(0, amount));
+  const { red, green, blue } = hexToRgb(hex);
+  // Rec. 601 luma — the grey that reads as "the same brightness" to the eye.
+  const luma = Math.round(0.299 * red + 0.587 * green + 0.114 * blue);
+  const ch = (v: number) =>
+    Math.round(v + (luma - v) * t)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(red)}${ch(green)}${ch(blue)}`;
+}
+
 // How far a destroyed tank's colours are charred toward ink. Shared by the
 // wreck hull (Renderer) and the flying cannon (Debris) so the body and the
 // barrel that flew off it read as the SAME burnt material — same darkness.
