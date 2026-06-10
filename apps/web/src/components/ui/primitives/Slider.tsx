@@ -1,12 +1,13 @@
 import { forwardRef } from "react";
 import * as RadixSlider from "@radix-ui/react-slider";
 import { cn } from "../../../lib/cn";
+import { ui } from "../../../audio";
 
 /** Chunky outlined arcade slider (Radix) — keyboard + a11y for free. */
 export const Slider = forwardRef<
   React.ComponentRef<typeof RadixSlider.Root>,
   React.ComponentPropsWithoutRef<typeof RadixSlider.Root>
->(({ className, ...props }, ref) => (
+>(({ className, onValueCommit, ...props }, ref) => (
   <RadixSlider.Root
     ref={ref}
     className={cn(
@@ -14,6 +15,13 @@ export const Slider = forwardRef<
       className
     )}
     {...props}
+    // Click on commit (pointer release / keyboard step), not on every change —
+    // a continuous drag would otherwise machine-gun the SFX. Composed after the
+    // spread so a caller's own onValueCommit still runs.
+    onValueCommit={(v) => {
+      ui.click();
+      onValueCommit?.(v);
+    }}
   >
     <RadixSlider.Track className="relative h-2.5 w-full grow rounded-full border-2 border-ink bg-ink-soft/30">
       <RadixSlider.Range className="absolute h-full rounded-full bg-blue" />

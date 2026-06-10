@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "../../../lib/cn";
+import { ui } from "../../../audio";
 
 export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
@@ -10,7 +11,15 @@ export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 /** Rounded, outlined filter chip (Level Select toolbar). */
 export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
   (
-    { className, active = false, featured = false, type = "button", ...props },
+    {
+      className,
+      active = false,
+      featured = false,
+      type = "button",
+      onClick,
+      onMouseEnter,
+      ...props
+    },
     ref
   ) => (
     <button
@@ -27,6 +36,16 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
         className
       )}
       {...props}
+      // Procedural click/hover feedback, composed so callers' handlers still run
+      // (matches Button/IconButton/SegmentedControl). Listed after the spread.
+      onClick={(e) => {
+        ui.click();
+        onClick?.(e);
+      }}
+      onMouseEnter={(e) => {
+        ui.hover();
+        onMouseEnter?.(e);
+      }}
     />
   )
 );
