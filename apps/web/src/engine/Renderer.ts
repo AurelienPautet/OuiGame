@@ -16,9 +16,7 @@ const INK = palette.ink;
 // Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
 // map = 1150×800), so grid lines fall exactly on block edges.
 const GRID_CELL = 50;
-// Bullet colour by bounces taken so far: 0 → red, 1 → orange, 2+ → yellow. A
-// freshly fired bullet (no bounces yet) is red and fades toward yellow as it
-// ricochets, so a direct shot reads as the most dangerous.
+// Bullet colour by bounces taken so far (see bulletFill below).
 const BULLET_COLOR_BY_BOUNCE = [palette.red, palette.orange, palette.yellow];
 
 /**
