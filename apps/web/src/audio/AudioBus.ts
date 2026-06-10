@@ -84,6 +84,29 @@ class AudioBus {
     if (ctx && ctx.state === "suspended") void ctx.resume();
   }
 
+  /**
+   * Resume the context on the first user gesture *anywhere* on the page, then
+   * stop listening. Browsers keep the context suspended until a gesture, and
+   * the menu music plays no sound of its own to trigger `resume()` — so without
+   * this, audio stays silent until the user happens to click something that
+   * emits a sound. A pointerdown/keydown/touchstart on empty space now unlocks
+   * everything. Returns a teardown that removes the listeners.
+   */
+  unlockOnGesture(): () => void {
+    if (typeof window === "undefined") return () => {};
+    const events = ["pointerdown", "keydown", "touchstart"] as const;
+    const unlock = (): void => {
+      this.resume();
+      teardown();
+    };
+    const teardown = (): void => {
+      for (const type of events) window.removeEventListener(type, unlock);
+    };
+    for (const type of events)
+      window.addEventListener(type, unlock, { passive: true });
+    return teardown;
+  }
+
   /** Set the SFX volume (0..1), ramped to avoid clicks. */
   setSfxVolume(v: number): void {
     this.sfxLevel = clamp01(v);
