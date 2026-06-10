@@ -1,12 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  useModal,
-  useSocket,
-  useGame,
-  useAuth,
-  useToast,
-} from "../../contexts";
+import { useModal, useSocket, useGame, useAuth } from "../../contexts";
+import { storage } from "../../lib/storage";
 import { LevelSelector } from "../ui";
 import {
   Dialog,
@@ -22,7 +17,6 @@ export const CreateRoomModal = () => {
   const { socket } = useSocket();
   const { startOnlineGame } = useGame();
   const { user } = useAuth();
-  const { addToast, TOAST_TYPES } = useToast();
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   const [roomName, setRoomName] = useState("");
   const [rounds, setRounds] = useState(10);
@@ -48,18 +42,12 @@ export const CreateRoomModal = () => {
 
   const handleCreateRoom = () => {
     if (!roomName || selectedLevels.length === 0) return;
-    if (!user) {
-      addToast(
-        TOAST_TYPES.ERROR,
-        t("createRoom.title"),
-        t("createRoom.mustLogin")
-      );
-      return;
-    }
     if (!socket) return;
     setIsCreating(true);
-    // Server expects signature: (name, rounds, list_id, creator)
-    socket.emit("new-room", roomName, rounds, selectedLevels, user.username);
+    // Guests can create rooms too; fall back to their chosen player name (or a
+    // default) when not logged in. Server expects (name, rounds, list_id, creator).
+    const creator = user?.username ?? storage.getPlayerName() ?? "Player";
+    socket.emit("new-room", roomName, rounds, selectedLevels, creator);
   };
 
   return (
