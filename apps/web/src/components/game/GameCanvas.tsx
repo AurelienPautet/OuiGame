@@ -524,6 +524,11 @@ export const GameCanvas = () => {
           );
         }
       } catch (err) {
+        // Ignore a late rejection from an engine the effect has already torn
+        // down and replaced (fast mode/level/room switch): the old start's
+        // `id`/`id-fail` listeners can still fire after quit(), and acting on
+        // them would yank the player out of the freshly started game.
+        if (engineRef.current !== engine) return;
         startErrorRef.current(mode, err);
       }
     };

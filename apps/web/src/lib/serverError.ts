@@ -14,19 +14,3 @@ export function serverErrorCode(error: unknown): string | undefined {
   }
   return undefined;
 }
-
-/**
- * Resolve a failed request to an i18n KEY — never the server's raw English text.
- * Looks the server error code up in `codeMap`; falls back to `fallbackKey` when
- * the code is unknown or absent. Callers translate the returned key with
- * `t()` / `i18n.t()` so the message stays localized and reactive to language
- * changes.
- */
-export function errorMessageKey(
-  error: unknown,
-  fallbackKey: string,
-  codeMap: Record<string, string> = {}
-): string {
-  const code = serverErrorCode(error);
-  return (code && codeMap[code]) || fallbackKey;
-}

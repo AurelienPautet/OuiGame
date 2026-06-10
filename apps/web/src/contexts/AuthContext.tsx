@@ -56,7 +56,9 @@ const mapAuthError = (
   table: Record<string, AuthFieldError>
 ): AuthFieldError => {
   const code = serverErrorCode(error);
-  return (code && table[code]) || GENERIC_ERROR;
+  // hasOwn guards against a server code like "constructor"/"__proto__" reaching
+  // through to a prototype member instead of a real table entry.
+  return (code && Object.hasOwn(table, code) && table[code]) || GENERIC_ERROR;
 };
 
 interface AuthContextValue {
