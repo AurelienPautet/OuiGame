@@ -28,9 +28,14 @@ const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
  */
 function ammoFraction(player: RenderPlayer): number {
   const max = player.max_bulletcount;
-  if (!max || max <= 0) return 1;
-  const inFlight = player.bulletcount ?? 0;
-  return Math.min(1, Math.max(0, (max - inFlight) / max));
+  if (!Number.isFinite(max) || (max as number) <= 0) return 1;
+  const inFlight = Number.isFinite(player.bulletcount)
+    ? (player.bulletcount as number)
+    : 0;
+  return Math.min(
+    1,
+    Math.max(0, ((max as number) - inFlight) / (max as number))
+  );
 }
 
 /**

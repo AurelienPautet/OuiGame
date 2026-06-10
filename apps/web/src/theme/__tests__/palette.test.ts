@@ -41,4 +41,8 @@ describe("desaturateHex", () => {
   it("passes transparent (hidden tanks) straight through", () => {
     expect(desaturateHex("transparent", 1)).toBe("transparent");
   });
+
+  it("treats a non-finite amount as a no-op (no '#NaNNaNNaN' fill)", () => {
+    expect(desaturateHex(palette.red, NaN)).toBe(palette.red);
+  });
 });

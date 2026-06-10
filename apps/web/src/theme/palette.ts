@@ -112,7 +112,9 @@ export function mixHex(a: string, b: string, t: number): string {
  */
 export function desaturateHex(hex: string, amount: number): string {
   if (hex === "transparent") return hex;
-  const t = Math.min(1, Math.max(0, amount));
+  // A non-finite amount (NaN from a garbage snapshot) means "leave it alone"
+  // rather than producing a "#NaNNaNNaN" fill.
+  const t = Number.isFinite(amount) ? Math.min(1, Math.max(0, amount)) : 0;
   const { red, green, blue } = hexToRgb(hex);
   // Rec. 601 luma — the grey that reads as "the same brightness" to the eye.
   const luma = Math.round(0.299 * red + 0.587 * green + 0.114 * blue);
