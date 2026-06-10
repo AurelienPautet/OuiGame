@@ -105,10 +105,9 @@ Socket.io's variadic `emit`/`on` — do not "fix" these names or collapse the ar
 ## Local database
 
 Local dev expects Docker Postgres on host port **5433** (user/pass/db all
-`ouigame`); copy `.env.example` → `.env`. Raw schema reference is in
-`database_setup.txt`, but the source of truth is the Drizzle schema in
-`packages/db/src/schema/`. Heroku injects `DATABASE_URL`; locally the discrete
-`DB_*` vars are used instead.
+`ouigame`); copy `.env.example` → `.env`. The source of truth for the schema is
+the Drizzle schema in `packages/db/src/schema/`. Heroku injects `DATABASE_URL`;
+locally the discrete `DB_*` vars are used instead.
 
 ## Deploy
 
