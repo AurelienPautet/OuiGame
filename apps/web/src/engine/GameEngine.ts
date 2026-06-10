@@ -798,21 +798,26 @@ export class GameEngine {
     const myPlayer = room.players[this.mysocketid!];
     if (!myPlayer) return;
 
-    // 1. Loss — our player died.
-    if (!myPlayer.alive) {
-      this.gameOverTriggered = true;
-      this.post?.flash(1);
-      this._triggerSoloGameOver(false);
-      return;
-    }
-
-    // 2. Win — every enemy (non-self entry) is dead.
+    // 1. Win — every enemy (non-self entry) is dead. Checked before the loss so
+    // that clearing the last enemy counts as a win even if our tank was
+    // destroyed on the same frame (a mutual kill). This also keeps the campaign
+    // retry logic sound: a loss can only register while an enemy is still alive,
+    // so the carried-forward "defeated" set can never cover every bot — a retry
+    // always respawns at least one enemy and stays winnable.
     const anyEnemyAlive = Object.entries(room.players).some(
       ([socketid, p]) => socketid !== this.mysocketid && p.alive
     );
     if (this.initialBotCount > 0 && !anyEnemyAlive) {
       this.gameOverTriggered = true;
       this._triggerSoloGameOver(true);
+      return;
+    }
+
+    // 2. Loss — our player died (with at least one enemy still standing).
+    if (!myPlayer.alive) {
+      this.gameOverTriggered = true;
+      this.post?.flash(1);
+      this._triggerSoloGameOver(false);
     }
   }
 
