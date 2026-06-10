@@ -145,10 +145,16 @@ export const AuthModal = () => {
   };
 
   const fieldError = (name: string) =>
-    authError && authError.field === name ? authError.message : null;
+    authError && authError.field === name ? t(authError.messageKey) : null;
 
   const fieldClass = (name: string) =>
     cn("mt-1", fieldError(name) && "border-red focus:ring-red/30");
+
+  // Errors not tied to a specific input (network failure, validation, Google
+  // sign-in problems) surface in a banner above the actions instead of silently
+  // vanishing.
+  const generalError =
+    authError && authError.field === "general" ? t(authError.messageKey) : null;
 
   const close = (o: boolean) => {
     if (!o) closeModal();
@@ -264,6 +270,15 @@ export const AuthModal = () => {
               <span className="text-red text-sm">{fieldError("password")}</span>
             )}
           </label>
+
+          {generalError && (
+            <p
+              role="alert"
+              className="rounded-lg border-2 border-red bg-red/10 px-3 py-2 text-sm font-semibold text-red"
+            >
+              {generalError}
+            </p>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={closeModal}>

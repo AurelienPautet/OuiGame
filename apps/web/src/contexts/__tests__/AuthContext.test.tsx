@@ -62,16 +62,18 @@ describe("authError field mapping", () => {
     const { result } = render();
     expect(result.current.authError).toEqual({
       field: "email",
-      message: "Email not found",
+      messageKey: "auth.errors.emailNotFound",
     });
   });
 
-  it("maps an unrecognised login error to the general field", () => {
+  it("maps an unrecognised login error to a localized general message", () => {
+    // The server's raw English message ("server exploded") must never leak; an
+    // unknown/absent code resolves to the generic localized key.
     login.error = apiError("server exploded");
     const { result } = render();
     expect(result.current.authError).toEqual({
       field: "general",
-      message: "server exploded",
+      messageKey: "auth.errors.generic",
     });
   });
 

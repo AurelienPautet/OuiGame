@@ -17,6 +17,7 @@
     "by": "por {{name}}",
     "unknown": "Desconocido",
     "unknownError": "Error desconocido",
+    "error": "Error",
     "guest": "Invitado"
   },
   "nav": {
@@ -71,7 +72,16 @@
     "enterPassword": "Ingresa tu contraseña",
     "loginButton": "Iniciar Sesión",
     "registerButton": "Registrarse",
-    "or": "O"
+    "or": "O",
+    "errors": {
+      "emailNotFound": "No encontramos ninguna cuenta con ese correo.",
+      "invalidPassword": "Contraseña incorrecta. Inténtalo de nuevo.",
+      "usernameTaken": "Ese nombre de usuario ya está en uso.",
+      "emailRegistered": "Ya existe una cuenta con ese correo.",
+      "validation": "Comprueba tus datos e inténtalo de nuevo.",
+      "googleNoEmail": "Tu cuenta de Google no tiene un correo verificado.",
+      "generic": "Algo salió mal. Inténtalo de nuevo."
+    }
   },
   "profile": {
     "noEmail": "Sin correo",
@@ -118,7 +128,8 @@
     "rounds": "Rondas",
     "creating": "Creando…",
     "createWithCount": "Crear Sala ({{count}} niveles)",
-    "mustLogin": "Debes estar conectado para crear una sala."
+    "mustLogin": "Debes estar conectado para crear una sala.",
+    "failedCreate": "No se pudo crear la sala. Inténtalo de nuevo."
   },
   "levelSelector": {
     "searchPlaceholder": "Buscar nivel…",
@@ -168,12 +179,14 @@
   "myLevels": {
     "title": "Mis Niveles",
     "loginToView": "Por favor inicia sesión para ver tus niveles.",
-    "confirmDelete": "¿Estás seguro de que quieres borrar este nivel? Esto no se puede deshacer."
+    "confirmDelete": "¿Estás seguro de que quieres borrar este nivel? Esto no se puede deshacer.",
+    "failedDelete": "No se pudo eliminar el nivel. Inténtalo de nuevo."
   },
   "myCampaigns": {
     "title": "Mis Campañas",
     "loginToManage": "Por favor inicia sesión para crear y gestionar campañas.",
-    "confirmDelete": "¿Estás seguro de que quieres borrar esta campaña? Esto no se puede deshacer."
+    "confirmDelete": "¿Estás seguro de que quieres borrar esta campaña? Esto no se puede deshacer.",
+    "failedDelete": "No se pudo eliminar la campaña. Inténtalo de nuevo."
   },
   "tankSelect": {
     "title": "Tu Tanque",
@@ -226,6 +239,10 @@
     "bombs": "Bombas",
     "blocks": "Bloques"
   },
+  "game": {
+    "failedStart": "No se pudo iniciar la partida. Inténtalo de nuevo.",
+    "failedJoin": "No se pudo unir a la sala: puede estar llena o ya no existir."
+  },
   "endGame": {
     "youWon": "¡Ganaste!",
     "youLost": "Perdiste :(",
@@ -237,7 +254,7 @@
     "ratedToast": "Calificaste el nivel con {{count}} estrellas",
     "success": "Éxito",
     "error": "Error",
-    "cantRate": "No se puede calificar: {{error}}",
+    "cantRate": "No se pudo enviar tu valoración. Inténtalo de nuevo.",
     "needLoginRate": "Debes estar conectado para calificar un nivel",
     "noLevelRate": "Sin nivel para calificar",
     "playAgain": "Jugar de Nuevo",
@@ -338,7 +355,7 @@
     },
     "toast": {
       "title": "Nivel",
-      "failedSave": "Error al guardar nivel: {{error}}",
+      "failedSave": "No se pudo guardar el nivel. Inténtalo de nuevo.",
       "loginToSave": "Por favor inicia sesión para guardar niveles.",
       "needSpawn": "¡Necesitas al menos un punto de salida (bandera) para los jugadores!",
       "tooManySpawns": "¡No puedes tener más de 8 puntos de salida!",

@@ -265,13 +265,8 @@ export const EndGameScreen = ({
       );
     }
     if (rateLevelMutation.isError) {
-      addToast(
-        TOAST_TYPES.ERROR,
-        t("endGame.error"),
-        t("endGame.cantRate", {
-          error: rateLevelMutation.error?.message || t("common.unknownError"),
-        })
-      );
+      // Show a localized message instead of the server's raw English error text.
+      addToast(TOAST_TYPES.ERROR, t("endGame.error"), t("endGame.cantRate"));
     }
   }, [rateLevelMutation.isSuccess, rateLevelMutation.isError, addToast, t]);
 

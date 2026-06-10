@@ -162,12 +162,14 @@ export const CampaignEditor = () => {
         },
         onError: (err: Error) => {
           setSaving(false);
+          // A 409 is the one case worth calling out specifically (duplicate
+          // name); everything else gets a generic localized message — never the
+          // server's raw English `error` text.
           const apiErr = err as ApiRequestError;
-          const data = apiErr.data as { error?: string } | undefined;
           const msg =
             apiErr.status === 409
               ? t("campaignEditor.toast.nameTaken")
-              : data?.error || t("campaignEditor.toast.failedSave");
+              : t("campaignEditor.toast.failedSave");
           addToast(TOAST_TYPES.ERROR, t("campaignEditor.toast.title"), msg);
         },
       }
