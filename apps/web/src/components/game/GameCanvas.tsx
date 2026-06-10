@@ -83,7 +83,7 @@ export const GameCanvas = () => {
     campaignAdvance,
     campaignLoseLife,
   } = useGame();
-  const { socket } = useSocket()!;
+  const { socket, serverId } = useSocket()!;
   const { openModal } = useModal();
   const { settings } = useSettings();
   const touchEnabled = useTouchControlsEnabled();
@@ -99,6 +99,7 @@ export const GameCanvas = () => {
   // Refs for stable access in effect
   const playerNameRef = useRef(playerName);
   const tankColorsRef = useRef(tankColors);
+  const serverIdRef = useRef(serverId);
   // Latest settings, read when an engine is created without retriggering the
   // creation effect on every settings change (live changes flow through the
   // dedicated effect below).
@@ -108,7 +109,8 @@ export const GameCanvas = () => {
     playerNameRef.current = playerName;
     tankColorsRef.current = tankColors;
     settingsRef.current = settings;
-  }, [playerName, tankColors, settings]);
+    serverIdRef.current = serverId;
+  }, [playerName, tankColors, settings, serverId]);
 
   // Push effect toggles to the running engine whenever they change (live).
   useEffect(() => {
@@ -495,7 +497,8 @@ export const GameCanvas = () => {
           await engine.startOnline(
             roomId,
             playerNameRef.current,
-            tankColorsRef.current
+            tankColorsRef.current,
+            serverIdRef.current
           );
         }
       } catch (err) {

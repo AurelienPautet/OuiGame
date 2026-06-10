@@ -28,6 +28,9 @@ interface SocketContextValue {
   socket: GameSocket | null;
   isConnected: boolean;
   onlineCount: number;
+  // The per-process server id, sent once on connect. The game engine must echo
+  // it back in every "tock" or the server rejects the input as "wrongserver".
+  serverId: string | null;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
@@ -42,6 +45,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<GameSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [serverId, setServerId] = useState<string | null>(null);
 
   useEffect(() => {
     // The auth callback is re-read on every (re)connect, so a fresh token is
@@ -65,6 +69,13 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       setOnlineCount(count);
     });
 
+    // Capture the server id (emitted once on connect) so the engine can echo it
+    // back in every "tock"; without it the server rejects all input as
+    // "wrongserver". Re-set on every (re)connect since each carries its own id.
+    sock.on("serverid", (id) => {
+      setServerId(id);
+    });
+
     // Re-authenticate the live socket when the user logs in or out without a
     // full reconnect.
     const unsubscribe = onAuthChange(() => {
@@ -85,7 +96,9 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, onlineCount }}>
+    <SocketContext.Provider
+      value={{ socket, isConnected, onlineCount, serverId }}
+    >
       {children}
     </SocketContext.Provider>
   );

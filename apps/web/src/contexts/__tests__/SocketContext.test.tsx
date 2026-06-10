@@ -52,6 +52,15 @@ describe("SocketContext", () => {
     expect(result.current.onlineCount).toBe(7);
   });
 
+  it("captures the server id from the serverid event", () => {
+    const { result } = render();
+    const sock = ioMock.mock.results[0]!.value;
+
+    expect(result.current.serverId).toBe(null);
+    act(() => handlerFor(sock, "serverid")("srv-abc123"));
+    expect(result.current.serverId).toBe("srv-abc123");
+  });
+
   it("re-auths the live socket on auth change and cleans up on unmount", () => {
     const { unmount } = render();
     const sock = ioMock.mock.results[0]!.value;
