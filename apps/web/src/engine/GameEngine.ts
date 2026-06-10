@@ -253,6 +253,9 @@ export class GameEngine {
   gameOverTriggered: boolean;
   startTime: number;
   initialBotCount: number;
+  // Bots already defeated on this level earlier in a campaign run, seeded at
+  // startSolo so they aren't respawned and are still reported as defeated.
+  seededDefeatedBotIds: Set<string>;
   onGameOver: ((result: SoloGameOverResult) => void) | null;
   levelMetadata?: ReceiveJsonFromId;
 
@@ -346,6 +349,7 @@ export class GameEngine {
     this.gameOverTriggered = false;
     this.startTime = 0;
     this.initialBotCount = 0;
+    this.seededDefeatedBotIds = new Set();
     this.onGameOver = null;
 
     // Online mode state
@@ -418,11 +422,15 @@ export class GameEngine {
   async startSolo(
     levelId: number,
     playerName: string,
-    tankColors: TankColors
+    tankColors: TankColors,
+    // Enemies already beaten on this level earlier in the run (campaign retry).
+    // They are skipped at spawn so a lost life never resurrects them.
+    defeatedBotIds: string[] = []
   ): Promise<void> {
     this.mode = "solo";
     this.running = true;
     this.paused = false;
+    this.seededDefeatedBotIds = new Set(defeatedBotIds);
 
     // Generate a fake socket ID for solo mode
     this.mysocketid = "solo_player_" + Math.random().toString(36).substr(2, 9);
@@ -473,8 +481,8 @@ export class GameEngine {
             this.mysocketid!
           );
 
-          // Spawn bots
-          this.localRoom.spawn_all_bots();
+          // Spawn bots, skipping any already defeated earlier in the run.
+          this.localRoom.spawn_all_bots(this.seededDefeatedBotIds);
 
           // Count initial bots/enemies to determine win condition
           // Players object uses socketid as key
@@ -491,6 +499,22 @@ export class GameEngine {
         }
       });
     });
+  }
+
+  // Socketids of every enemy defeated on this level so far, cumulative across
+  // retries: the bots seeded as already-defeated at startSolo, plus any that
+  // died in the current room. A campaign retry feeds this back in so previously
+  // defeated enemies stay defeated. Safe to call after the room is gone (returns
+  // just the seeded set).
+  getDefeatedBotIds(): string[] {
+    const ids = new Set(this.seededDefeatedBotIds);
+    const room = this.localRoom;
+    if (room) {
+      for (const [socketid, player] of Object.entries(room.players)) {
+        if (socketid !== this.mysocketid && !player.alive) ids.add(socketid);
+      }
+    }
+    return Array.from(ids);
   }
 
   startOnline(
@@ -774,21 +798,26 @@ export class GameEngine {
     const myPlayer = room.players[this.mysocketid!];
     if (!myPlayer) return;
 
-    // 1. Loss — our player died.
-    if (!myPlayer.alive) {
-      this.gameOverTriggered = true;
-      this.post?.flash(1);
-      this._triggerSoloGameOver(false);
-      return;
-    }
-
-    // 2. Win — every enemy (non-self entry) is dead.
+    // 1. Win — every enemy (non-self entry) is dead. Checked before the loss so
+    // that clearing the last enemy counts as a win even if our tank was
+    // destroyed on the same frame (a mutual kill). This also keeps the campaign
+    // retry logic sound: a loss can only register while an enemy is still alive,
+    // so the carried-forward "defeated" set can never cover every bot — a retry
+    // always respawns at least one enemy and stays winnable.
     const anyEnemyAlive = Object.entries(room.players).some(
       ([socketid, p]) => socketid !== this.mysocketid && p.alive
     );
     if (this.initialBotCount > 0 && !anyEnemyAlive) {
       this.gameOverTriggered = true;
       this._triggerSoloGameOver(true);
+      return;
+    }
+
+    // 2. Loss — our player died (with at least one enemy still standing).
+    if (!myPlayer.alive) {
+      this.gameOverTriggered = true;
+      this.post?.flash(1);
+      this._triggerSoloGameOver(false);
     }
   }
 
