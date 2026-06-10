@@ -23,6 +23,7 @@
     }
   },
   "scripts": {
+    "all": "pnpm install && pnpm dev",
     "dev": "sh scripts/ensure-postgres.sh && turbo run dev",
     "dev:api": "sh scripts/ensure-postgres.sh && pnpm --filter @ouigame/api dev",
     "dev:web": "pnpm --filter @ouigame/web dev",
