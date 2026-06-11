@@ -8,11 +8,17 @@ jest.mock("../../services/levels.service", () => ({
 }));
 jest.mock("../../repositories/ratings.repo", () => ({ getRating: jest.fn() }));
 jest.mock("../../repositories/stats.repo", () => ({ insertRound: jest.fn() }));
+// Achievement evaluation is exercised in achievements.service.test.ts; here it's
+// a no-op so the loop's round-recording mechanics stay the unit under test.
+jest.mock("../../services/achievements.service", () => ({
+  evaluateOnlineRound: jest.fn().mockResolvedValue([]),
+}));
 
 import { createTickLoop } from "../../game/tickLoop";
 import * as levelsService from "../../services/levels.service";
 import * as ratingsRepo from "../../repositories/ratings.repo";
 import * as statsRepo from "../../repositories/stats.repo";
+import * as achievementsService from "../../services/achievements.service";
 import { users } from "../../shared_state";
 import { makeIo } from "../helpers/socketDoubles";
 
@@ -141,6 +147,38 @@ test("records a null playerId for a socket with no logged-in user", async () => 
     null,
     101,
     player.round_stats.stats
+  );
+  // Anonymous round → achievements are never evaluated.
+  expect(achievementsService.evaluateOnlineRound).not.toHaveBeenCalled();
+});
+
+test("evaluates achievements for a logged-in player's round with a pre-reset snapshot", async () => {
+  users["p1"] = { playerId: 42, username: "p1", email: "p1@e.com" };
+  const player = mkPlayer();
+  // Capture the round's final values, then make reset() actually zero the live
+  // stats object. This proves the loop passes a SNAPSHOT, not the live
+  // reference — if it passed the live object, the assertion below would see
+  // zeros and fail.
+  const expected = { ...player.round_stats.stats };
+  player.round_stats.reset = jest.fn(() => {
+    const live = player.round_stats.stats as Record<string, number>;
+    for (const k of Object.keys(live)) live[k] = 0;
+  });
+  const room = makeRoom(7, true);
+  room.players = { p1: player };
+  const loop = createTickLoop({
+    io: makeIo() as never,
+    rooms: { 7: room } as never,
+    roomTimers: new Map(),
+  });
+
+  perfSpy.mockReturnValue(1100);
+  loop.start();
+  await jest.advanceTimersByTimeAsync(20);
+
+  expect(achievementsService.evaluateOnlineRound).toHaveBeenCalledWith(
+    42,
+    expected
   );
 });
 

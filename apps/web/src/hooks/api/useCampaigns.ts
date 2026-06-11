@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { campaignsApi } from "../../api";
 import { storage } from "../../lib/storage";
+import { useNotifyAchievementUnlocks } from "./useAchievements";
 import type {
   SaveCampaignRequest,
   SubmitCampaignRunRequest,
@@ -72,6 +73,7 @@ export const useDeleteCampaign = () => {
  */
 export const useSubmitCampaignRun = () => {
   const queryClient = useQueryClient();
+  const notifyUnlocks = useNotifyAchievementUnlocks();
 
   return useMutation({
     mutationFn: ({
@@ -79,7 +81,7 @@ export const useSubmitCampaignRun = () => {
       ...data
     }: SubmitCampaignRunRequest & { campaignId: number | string }) =>
       campaignsApi.submitRun(campaignId, data),
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["campaigns"],
         refetchType: "active",
@@ -87,6 +89,9 @@ export const useSubmitCampaignRun = () => {
       queryClient.invalidateQueries({
         queryKey: ["campaigns", variables.campaignId],
       });
+
+      // Toast any achievements this run unlocked (logged-in only).
+      notifyUnlocks(data.unlockedAchievements);
     },
   });
 };

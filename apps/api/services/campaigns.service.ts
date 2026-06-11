@@ -2,6 +2,7 @@
 // and composing the repo + format helpers into the wire shapes the client
 // expects. No req/res here — the route maps results/errors to HTTP.
 import * as repo from "../repositories/campaigns.repo";
+import * as achievementsService from "./achievements.service";
 import {
   badRequest,
   forbidden,
@@ -221,7 +222,16 @@ async function submitRun({
     completed,
     timeMs,
   });
-  return { success: true };
+
+  // Achievements are logged-in only; anonymous runs unlock nothing.
+  const unlockedAchievements =
+    playerId === null
+      ? []
+      : await achievementsService.evaluateCampaign(playerId, {
+          completed,
+          levelsCleared,
+        });
+  return { success: true as const, unlockedAchievements };
 }
 
 export {

@@ -13,8 +13,10 @@ import type { Room } from "@ouigame/shared/game";
 import * as levelsService from "../services/levels.service";
 import * as ratingsRepo from "../repositories/ratings.repo";
 import * as statsRepo from "../repositories/stats.repo";
+import * as achievementsService from "../services/achievements.service";
 import { users } from "../shared_state";
 import type { AppServer } from "../socket/types";
+import type { RoundStats } from "@ouigame/shared/api";
 
 const waitingtime = 5000; // delay before the room respawns after a round ends
 
@@ -106,6 +108,27 @@ function createTickLoop({
   // its backlog instead of fast-forwarding — the "spiral of death" guard.
   let accumulator = 0;
 
+  // Persist one online round, then (for logged-in players) evaluate achievements
+  // and push any new unlocks to that player's socket. Internally sequential
+  // (insert → aggregate-includes-this-round → unlock) but fired WITHOUT awaiting
+  // so it never blocks the tick. `stats` is a snapshot taken before reset().
+  async function recordOnlineRound(
+    socketid: string,
+    playerId: number | null,
+    levelId: number,
+    stats: RoundStats
+  ) {
+    await statsRepo.insertRound(playerId, levelId, stats);
+    if (playerId === null) return;
+    const unlocked = await achievementsService.evaluateOnlineRound(
+      playerId,
+      stats
+    );
+    if (unlocked.length > 0) {
+      io.to(socketid).emit("achievements_unlocked", unlocked);
+    }
+  }
+
   function stepAllRooms() {
     for (const room of Object.values(rooms)) {
       if (room.update(SIM_STEP_S)) {
@@ -117,8 +140,16 @@ function createTickLoop({
           if (player === undefined || levelId === undefined) continue;
           const user = users[socketid];
           const playerId = user ? user.playerId : null;
-          statsRepo.insertRound(playerId, levelId, player.round_stats.stats);
+          // Snapshot the stats before reset so the async recorder reads the
+          // round's final values, not a freshly-zeroed object.
+          const stats: RoundStats = { ...player.round_stats.stats };
           player.round_stats.reset();
+          // Fire-and-forget so the tick never blocks; the .catch keeps a
+          // transient DB error (during insert or achievement eval) from
+          // surfacing as an unhandled rejection.
+          void recordOnlineRound(socketid, playerId, levelId, stats).catch(
+            (err) => console.error("recordOnlineRound failed:", err)
+          );
         }
 
         scheduleRespawn(room);

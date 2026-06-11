@@ -8,6 +8,7 @@ import rankingsRoutes from "./rankings.routes";
 import roomsRoutes from "./rooms.routes";
 import soloRoutes from "./solo.routes";
 import campaignsRoutes from "./campaigns.routes";
+import achievementsRoutes from "./achievements.routes";
 
 router.use("/auth", authRoutes);
 router.use("/levels", levelsRoutes);
@@ -16,5 +17,6 @@ router.use("/rankings", rankingsRoutes);
 router.use("/rooms", roomsRoutes);
 router.use("/solo", soloRoutes);
 router.use("/campaigns", campaignsRoutes);
+router.use("/achievements", achievementsRoutes);
 
 export default router;

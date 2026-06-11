@@ -63,3 +63,13 @@ export type CreateCampaignResponse = z.infer<
 // Generic { success: true } envelope (delete, submit-run, etc.).
 export const SuccessResponseSchema = z.object({ success: z.literal(true) });
 export type SuccessResponse = z.infer<typeof SuccessResponseSchema>;
+
+// POST /campaigns/:id/runs response — success envelope plus any achievement keys
+// this run just unlocked (empty for anonymous players or no new unlocks).
+export const SubmitCampaignRunResponseSchema = z.object({
+  success: z.literal(true),
+  unlockedAchievements: z.array(z.string()),
+});
+export type SubmitCampaignRunResponse = z.infer<
+  typeof SubmitCampaignRunResponseSchema
+>;

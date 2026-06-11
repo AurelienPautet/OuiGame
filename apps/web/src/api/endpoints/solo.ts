@@ -1,18 +1,18 @@
 import { apiClient } from "../client";
 import type {
   SubmitSoloRoundRequest,
+  SubmitSoloRoundResponse,
   SoloLevelStats,
   SoloLevelLeaderboard,
   SoloGlobalType,
   SoloGlobalLeaderboard,
   MySoloStats,
-  SuccessResponse,
 } from "@ouigame/shared/api";
 
 export const soloApi = {
-  // Submit a solo round
+  // Submit a solo round. The response carries any achievement keys it unlocked.
   submitRound: (data: SubmitSoloRoundRequest) =>
-    apiClient.post<SuccessResponse>("/solo/rounds", data),
+    apiClient.post<SubmitSoloRoundResponse>("/solo/rounds", data),
 
   // Get stats for a specific level
   getLevelStats: (levelId: number | string) =>

@@ -2,16 +2,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soloApi } from "../../api";
 import { storage } from "../../lib/storage";
 import type { SoloGlobalType } from "@ouigame/shared/api";
+import { useNotifyAchievementUnlocks } from "./useAchievements";
 
 /**
  * Submit a solo round - works for both logged-in and anonymous users
  */
 export const useSubmitSoloRound = () => {
   const queryClient = useQueryClient();
+  const notifyUnlocks = useNotifyAchievementUnlocks();
 
   return useMutation({
     mutationFn: soloApi.submitRound,
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       // Invalidate level stats for the played level
       queryClient.invalidateQueries({
         queryKey: ["solo", "levelStats", variables.levelId],
@@ -35,6 +37,10 @@ export const useSubmitSoloRound = () => {
         queryKey: ["levels"],
         refetchType: "active",
       });
+
+      // Toast any achievements this round unlocked (logged-in only; empty array
+      // otherwise).
+      notifyUnlocks(data.unlockedAchievements);
     },
   });
 };

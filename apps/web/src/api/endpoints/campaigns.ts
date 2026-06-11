@@ -4,6 +4,7 @@ import type {
   CampaignDetail,
   SaveCampaignRequest,
   SubmitCampaignRunRequest,
+  SubmitCampaignRunResponse,
   CreateCampaignResponse,
   SuccessResponse,
 } from "@ouigame/shared/api";
@@ -30,5 +31,5 @@ export const campaignsApi = {
     apiClient.delete<SuccessResponse>(`/campaigns/${id}`),
 
   submitRun: (id: number | string, data: SubmitCampaignRunRequest) =>
-    apiClient.post<SuccessResponse>(`/campaigns/${id}/runs`, data),
+    apiClient.post<SubmitCampaignRunResponse>(`/campaigns/${id}/runs`, data),
 };

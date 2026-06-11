@@ -9,6 +9,7 @@ import {
   Info,
   XCircle,
   CheckCircle,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ const TOAST_ICONS: Record<string, LucideIcon> = {
   [TOAST_TYPES.INFO]: Info,
   [TOAST_TYPES.ERROR]: XCircle,
   [TOAST_TYPES.SUCCESS]: CheckCircle,
+  [TOAST_TYPES.ACHIEVEMENT]: Trophy,
 };
 
 // Arcade colour per toast type — solid team colour + ink outline.
@@ -32,6 +34,7 @@ const TOAST_COLORS: Record<string, string> = {
   [TOAST_TYPES.INFO]: "bg-blue text-white",
   [TOAST_TYPES.ERROR]: "bg-red text-white",
   [TOAST_TYPES.SUCCESS]: "bg-green text-white",
+  [TOAST_TYPES.ACHIEVEMENT]: "bg-yellow text-ink",
 };
 
 interface ToastProps {
