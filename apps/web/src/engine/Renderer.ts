@@ -16,8 +16,28 @@ const INK = palette.ink;
 // Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
 // map = 1150×800), so grid lines fall exactly on block edges.
 const GRID_CELL = 50;
-// Bullet colour by remaining bounces: 0 → red, 1 → orange, 2+ → yellow.
+// Bullet colour by bounces remaining (see bulletFill below).
 const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
+
+/**
+ * Pick a bullet's fill colour from how many bounces it has left, clamped to the
+ * palette: 1 remaining → red (about to expire), 2 → orange, 3+ → yellow (a fresh
+ * bullet with its full bounce budget). `max_bounce` defaults to 3 (the standard
+ * shot budget) when absent.
+ *
+ * A bullet is destroyed the moment `bounce` reaches `max_bounce` (see Room's
+ * update_bullets), so it is never rendered with 0 bounces remaining — the lowest
+ * count that ever reaches the screen is 1. The index is therefore `remaining - 1`
+ * so that last live bounce reads red and the full red→yellow ramp is visible.
+ */
+export function bulletFill(
+  bounce: number | undefined,
+  max_bounce: number | undefined
+): string {
+  const remaining = (max_bounce ?? 3) - (bounce ?? 0);
+  const idx = Math.min(remaining - 1, BULLET_COLOR_BY_REMAINING.length - 1);
+  return BULLET_COLOR_BY_REMAINING[Math.max(0, idx)] ?? palette.red;
+}
 
 /**
  * Loaded-ammo fraction (0..1) for a tank's hull gauge: 1 when the full magazine
@@ -334,13 +354,10 @@ export class Renderer {
   }
 
   _drawBullet(bullet: Bullet) {
-    const remaining = (bullet.max_bounce ?? 3) - (bullet.bounce ?? 0);
     const cx = bullet.position.x + bullet.size.w / 2;
     const cy = bullet.position.y + bullet.size.h / 2;
     const r = Math.min(bullet.size.w, bullet.size.h) / 2;
-    const colorIdx = Math.min(remaining, BULLET_COLOR_BY_REMAINING.length - 1);
-    const fill =
-      BULLET_COLOR_BY_REMAINING[Math.max(0, colorIdx)] ?? palette.yellow;
+    const fill = bulletFill(bullet.bounce, bullet.max_bounce);
 
     this.c.beginPath();
     this.c.arc(cx, cy, r, 0, Math.PI * 2);
