@@ -20,6 +20,25 @@ const GRID_CELL = 50;
 const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
 
 /**
+ * Loaded-ammo fraction (0..1) for a tank's hull gauge: 1 when the full magazine
+ * is available, 0 when every shot is in flight. `bulletcount` is shots currently
+ * airborne, `max_bulletcount` the magazine size; the player can fire while
+ * `bulletcount < max_bulletcount`. Defaults to full (1) when either field is
+ * missing or non-positive, so older/loose snapshots render at full colour.
+ */
+function ammoFraction(player: RenderPlayer): number {
+  const max = player.max_bulletcount;
+  if (!Number.isFinite(max) || (max as number) <= 0) return 1;
+  const inFlight = Number.isFinite(player.bulletcount)
+    ? (player.bulletcount as number)
+    : 0;
+  return Math.min(
+    1,
+    Math.max(0, ((max as number) - inFlight) / (max as number))
+  );
+}
+
+/**
  * Split players into wrecks (dead tanks) and live tanks for drawing. A dead tank
  * stays in the map as a wreck, and the map's iteration order is arbitrary, so
  * without this a wreck could be drawn after — and therefore on top of — a live
@@ -93,6 +112,11 @@ interface RenderPlayer {
   bodyc: string;
   turretc: string;
   turretsize: Size;
+  // Ammo gauge inputs: bullets currently in flight vs. the magazine size. The
+  // hull desaturates as (max - count) shrinks toward 0. Both are serialized on
+  // the tick snapshot; absent for older shapes, so the renderer defaults full.
+  bulletcount?: number;
+  max_bulletcount?: number;
 }
 
 interface GameState {
@@ -383,6 +407,7 @@ export class Renderer {
       turretColor: player.turretc,
       angle: player.angle + Math.PI,
       isBot,
+      ammoFraction: ammoFraction(player),
     });
   }
 
