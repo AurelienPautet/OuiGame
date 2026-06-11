@@ -215,6 +215,12 @@ export const AuthModal = () => {
           </TabsList>
         </Tabs>
 
+        {authError?.field === "general" && (
+          <div className="mb-4 rounded-lg border-2 border-red bg-red/10 px-3 py-2 text-sm font-semibold text-red">
+            {authError.message}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <label className="block">

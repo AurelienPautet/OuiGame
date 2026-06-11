@@ -38,10 +38,36 @@ describe("verifyToken", () => {
     );
   });
 
-  test("throws 'Invalid ID token' when verification rejects", async () => {
+  test("throws a 401 HttpError when verification rejects", async () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     mockVerifyIdToken.mockRejectedValue(new Error("signature mismatch"));
 
-    await expect(verifyToken("bad-token")).rejects.toThrow("Invalid ID token");
+    await expect(verifyToken("bad-token")).rejects.toMatchObject({
+      status: 401,
+      body: { error: "invalid_token" },
+    });
+  });
+
+  test("throws a 400 HttpError when no token is provided", async () => {
+    await expect(verifyToken("")).rejects.toMatchObject({
+      status: 400,
+      body: { error: "id_token_required" },
+    });
+    expect(mockVerifyIdToken).not.toHaveBeenCalled();
+  });
+
+  test("fails closed (500) when GOOGLE_CLIENT_ID is unset", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    const saved = process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_ID;
+    try {
+      await expect(verifyToken("any-token")).rejects.toMatchObject({
+        status: 500,
+        body: { error: "auth_unconfigured" },
+      });
+      expect(mockVerifyIdToken).not.toHaveBeenCalled();
+    } finally {
+      process.env.GOOGLE_CLIENT_ID = saved;
+    }
   });
 });

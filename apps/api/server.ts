@@ -86,7 +86,11 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "https://accounts.google.com"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        // Google Identity Services injects a <link> to its own stylesheet
+        // (accounts.google.com/gsi/style) into this page; 'unsafe-inline' only
+        // covers inline styles, not that external sheet, so the origin must be
+        // listed explicitly or the Sign-In button renders unstyled/empty.
+        styleSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
         imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: [
           "'self'",
