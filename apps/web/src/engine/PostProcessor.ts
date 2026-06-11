@@ -568,10 +568,11 @@ export class PostProcessor {
    * upload them. Returns the vertex counts. Cheap enough to run every frame
    * (a few hundred floats), and always correct as walls get destroyed.
    *
-   * Layouts: holes = [clipX, clipY, boardU, boardV]; wall fills = [clipX,
-   * clipY, boardU, boardV, type, rectX, rectY, rectW, rectH, expT, expR, expB,
-   * expL] (13 floats — the rect + exposed-edge mask drive the per-block rounded
-   * SDF + ink in the wall shader).
+   * Layouts: holes = [clipX, clipY, boardU, boardV]; wall fills = [clipX, clipY,
+   * type, rectX, rectY, rectW, rectH, openT, openR, openB, openL, diagTR, diagBR,
+   * diagBL, diagTL] (15 floats — the rect + open-edge + diagonal masks drive the
+   * per-block rounded SDF, fillets and ink in the wall shader; board px come from
+   * gl_FragCoord, so no UV is stored).
    */
   private _buildEnv(
     blocks: EnvBlock[],

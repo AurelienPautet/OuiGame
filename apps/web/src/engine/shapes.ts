@@ -18,8 +18,8 @@ const PLATFORM_FILL = "#cbb287";
 export const BLOCK_RADIUS = 10;
 
 // Lighter floor than the raw palette field, so the in-game board reads whiter.
-// Mirrors the WebGL field shader's WHITEN toward white.
-const FIELD_WHITEN = 0.6;
+// Matches the WebGL field shader's WHITEN (postfx/shaders.ts) toward white.
+const FIELD_WHITEN = 0.7;
 
 export interface BlockShape {
   position: { x: number; y: number };
