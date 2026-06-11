@@ -12,6 +12,12 @@ import { drawTank, paintField, drawBlocks, drawHole } from "./shapes";
 import { drawSpawnTank } from "./spawnAnim";
 
 const INK = palette.ink;
+// Tank hull radius as a fraction of its box side. The shared game runtime
+// collides the tank as this exact disc (TANK_HULL_RADIUS_FACTOR in
+// @ouigame/shared/game check_collision), so the drawn hull and the hitbox match.
+// Kept as a local literal here (not imported) so the web unit tests stay
+// hermetic and don't depend on the shared package being built first.
+const HULL_RADIUS_FACTOR = 0.46;
 
 // Matches the game's tile size (TILE = 50 in shared/game/loadlevel.js: a 23×16
 // map = 1150×800), so grid lines fall exactly on block edges.
@@ -419,7 +425,9 @@ export class Renderer {
     drawTank(this.c, {
       cx: player.position.x + player.size.w / 2,
       cy: player.position.y + player.size.h / 2,
-      r: Math.min(player.size.w, player.size.h) * 0.46,
+      // Same disc the runtime collides against, so the drawn hull and the
+      // hitbox are one and the same.
+      r: Math.min(player.size.w, player.size.h) * HULL_RADIUS_FACTOR,
       bodyColor: player.bodyc,
       turretColor: player.turretc,
       angle: player.angle + Math.PI,
@@ -434,7 +442,7 @@ export class Renderer {
     drawSpawnTank(this.c, {
       cx: player.position.x + player.size.w / 2,
       cy: player.position.y + player.size.h / 2,
-      r: Math.min(player.size.w, player.size.h) * 0.46,
+      r: Math.min(player.size.w, player.size.h) * HULL_RADIUS_FACTOR,
       bodyColor: player.bodyc,
       turretColor: player.turretc,
       angle: player.angle + Math.PI,

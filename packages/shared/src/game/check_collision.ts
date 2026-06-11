@@ -189,3 +189,100 @@ export function rectanglesSeTouchent(
 
   return horizontale && verticale;
 }
+
+// ---------------------------------------------------------------------------
+// Circle-based collision
+//
+// Tanks and bullets are *drawn* as circles, so they now *collide* as circles
+// too — the hitbox matches exactly what the player sees, with no invisible box
+// corners sticking out past the round hull. Tanks collide as the hull disc the
+// renderer draws (min(side) * TANK_HULL_RADIUS_FACTOR); bullets collide as their
+// on-screen disc (min(side) / 2). Centres are taken from the box centre
+// (position + size/2), so the rest of the runtime can keep storing a top-left
+// `position` + `size` unchanged.
+// ---------------------------------------------------------------------------
+
+// The tank hull radius as a fraction of its box side. This is the disc the tank
+// collides as (Player.collisionRadius). It deliberately equals the renderer's
+// hull radius factor (HULL_RADIUS_FACTOR in apps/web Renderer/GameEngine) so the
+// hitbox matches the drawn hull; keep the two in sync if either changes. (The
+// web keeps its own literal rather than importing this, so the web unit tests
+// stay hermetic and don't require the shared package to be built first.)
+export const TANK_HULL_RADIUS_FACTOR = 0.46;
+
+// Do two circles overlap (touching counts, matching the old inclusive rectRect)?
+export function circlesOverlap(
+  c1x: number,
+  c1y: number,
+  r1: number,
+  c2x: number,
+  c2y: number,
+  r2: number
+): boolean {
+  const dx = c1x - c2x;
+  const dy = c1y - c2y;
+  const rr = r1 + r2;
+  return dx * dx + dy * dy <= rr * rr;
+}
+
+// Minimum-translation ejection of a circle out of an axis-aligned rect. Returns
+// the circle's corrected centre when it overlaps, or null when it is clear. The
+// closest point on the rect gives the contact normal; when the centre is *inside*
+// the rect (no closest-point direction), it ejects along the shallowest face.
+export function resolveCircleRect(
+  cx: number,
+  cy: number,
+  r: number,
+  rx: number,
+  ry: number,
+  rw: number,
+  rh: number
+): Vec2 | null {
+  const qx = Math.max(rx, Math.min(cx, rx + rw));
+  const qy = Math.max(ry, Math.min(cy, ry + rh));
+  const dx = cx - qx;
+  const dy = cy - qy;
+  const d2 = dx * dx + dy * dy;
+  if (d2 > r * r) return null; // not touching
+  if (d2 > 1e-12) {
+    const d = Math.sqrt(d2);
+    const push = r - d;
+    return { x: cx + (dx / d) * push, y: cy + (dy / d) * push };
+  }
+  // Centre lies inside the rect: eject to the nearest face plus the radius.
+  const left = cx - rx;
+  const right = rx + rw - cx;
+  const top = cy - ry;
+  const bottom = ry + rh - cy;
+  const m = Math.min(left, right, top, bottom);
+  if (m === left) return { x: rx - r, y: cy };
+  if (m === right) return { x: rx + rw + r, y: cy };
+  if (m === top) return { x: cx, y: ry - r };
+  return { x: cx, y: ry + rh + r };
+}
+
+// Minimum-translation ejection of circle 1 out of circle 2. Returns circle 1's
+// corrected centre when they overlap, or null when clear. Only circle 1 is
+// moved: each tank resolves against the others in its own update tick, so both
+// bodies separate symmetrically over the pair of updates.
+export function resolveCircleCircle(
+  c1x: number,
+  c1y: number,
+  r1: number,
+  c2x: number,
+  c2y: number,
+  r2: number
+): Vec2 | null {
+  const dx = c1x - c2x;
+  const dy = c1y - c2y;
+  const rr = r1 + r2;
+  const d2 = dx * dx + dy * dy;
+  if (d2 > rr * rr) return null;
+  if (d2 > 1e-12) {
+    const d = Math.sqrt(d2);
+    const push = rr - d;
+    return { x: c1x + (dx / d) * push, y: c1y + (dy / d) * push };
+  }
+  // Exactly concentric: eject along +x by the full sum so they fully separate.
+  return { x: c1x + rr, y: c1y };
+}

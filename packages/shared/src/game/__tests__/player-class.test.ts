@@ -196,31 +196,39 @@ describe("Player.update — movement + boundary clamps", () => {
   });
 });
 
-describe("Player.BodyCollision — zeroes velocity into the obstacle", () => {
-  const block = { position: { x: 500, y: 500 }, size: { w: 50, h: 50 } };
+describe("Player.update — circle ejection out of walls and tanks", () => {
+  const STEP = 1 / 60;
+  // Tank hull radius = min(size) * TANK_HULL_RADIUS_FACTOR = 45 * 0.46.
+  const R = 45 * 0.46;
 
-  it("zeroes upward velocity on an up-side collision", () => {
-    const p = mkPlayer({ x: 510, y: 540 });
-    p.velocity = { x: 0, y: -3 };
-    p.BodyCollision(block);
-    expect(p.side).toBe("up");
-    expect(p.velocity.y).toBe(0);
+  it("ejects a tank overlapping a wall so its hull rests tangent to the face", () => {
+    const wall = { position: { x: 500, y: 500 }, size: { w: 50, h: 50 } };
+    // Centre at (490, 525): 10 px inside the wall's left face (hull radius 20.7).
+    const p = mkPlayer({ x: 490 - 22.5, y: 525 - 22.5 });
+    p.update(makeFakeRoom({ Bcollision: [wall] }), STEP);
+    const cx = p.position.x + p.size.w / 2;
+    const cy = p.position.y + p.size.h / 2;
+    expect(cx).toBeCloseTo(500 - R, 6); // pushed out to tangent on the left face
+    expect(cy).toBeCloseTo(525, 6); // untouched on the tangential axis (slides)
   });
 
-  it("leaves downward velocity untouched on an up-side collision", () => {
-    const p = mkPlayer({ x: 510, y: 540 });
-    p.velocity = { x: 0, y: 3 };
-    p.BodyCollision(block);
-    expect(p.side).toBe("up");
-    expect(p.velocity.y).toBe(3);
+  it("pushes a tank out of another tank it overlaps, moving only itself", () => {
+    const other = mkPlayer({ x: 200, y: 200 }); // centre (222.5, 222.5)
+    const p = mkPlayer({ x: 210, y: 200 }); // centre (232.5, 222.5): 10 px apart
+    p.update(makeFakeRoom({ players: { sock2: other } }), STEP);
+    const dx = p.position.x + 22.5 - (other.position.x + 22.5);
+    const dy = p.position.y + 22.5 - (other.position.y + 22.5);
+    expect(Math.hypot(dx, dy)).toBeCloseTo(2 * R, 6); // hulls just touching
+    expect(other.position).toEqual({ x: 200, y: 200 }); // the other tank stays put
   });
 
-  it("zeroes downward velocity on a down-side collision", () => {
-    const p = mkPlayer({ x: 510, y: 470 });
-    p.velocity = { x: 0, y: 3 };
-    p.BodyCollision(block);
-    expect(p.side).toBe("down");
-    expect(p.velocity.y).toBe(0);
+  it("leaves a tank that only grazes a wall untouched (no overlap, no eject)", () => {
+    // Centre (470, 525): 30 px from the wall's left face, hull radius 20.7 < 30.
+    const wall = { position: { x: 500, y: 500 }, size: { w: 50, h: 50 } };
+    const p = mkPlayer({ x: 470 - 22.5, y: 525 - 22.5 });
+    p.update(makeFakeRoom({ Bcollision: [wall] }), STEP);
+    expect(p.position.x + p.size.w / 2).toBeCloseTo(470, 6);
+    expect(p.position.y + p.size.h / 2).toBeCloseTo(525, 6);
   });
 });
 

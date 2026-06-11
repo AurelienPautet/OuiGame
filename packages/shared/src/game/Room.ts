@@ -1,4 +1,4 @@
-import { rectRect, distance, rectanglesSeTouchent } from "./check_collision.js";
+import { distance, circlesOverlap } from "./check_collision.js";
 import { SIM_STEP_S } from "./loop.js";
 import { generateBcollision } from "./level_loader.js";
 import { Player } from "./Player.js";
@@ -377,16 +377,16 @@ export class Room {
         continue bulleting;
       }
       for (let e = 0; e < this.mines.length; e++) {
+        // mine.position is the mine's centre; the bullet's circle is taken about
+        // its box centre (position + size/2) with its inscribed radius.
         if (
-          rectanglesSeTouchent(
-            this.mines[e]!.position.x - this.mines[e]!.radius,
-            this.mines[e]!.position.y - this.mines[e]!.radius,
-            this.mines[e]!.radius * 2,
-            this.mines[e]!.radius * 2,
-            this.bullets[i]!.position.x,
-            this.bullets[i]!.position.y,
-            this.bullets[i]!.size.w,
-            this.bullets[i]!.size.h
+          circlesOverlap(
+            this.mines[e]!.position.x,
+            this.mines[e]!.position.y,
+            this.mines[e]!.radius,
+            this.bullets[i]!.position.x + this.bullets[i]!.size.w / 2,
+            this.bullets[i]!.position.y + this.bullets[i]!.size.h / 2,
+            Math.min(this.bullets[i]!.size.w, this.bullets[i]!.size.h) / 2
           )
         ) {
           this.mines[e]!.timealive = this.timetoeplode;
@@ -398,18 +398,18 @@ export class Room {
         }
       }
       for (let e = 0; e < this.bullets.length; e++) {
+        // Two bullets collide as their on-screen discs (centre = box centre,
+        // radius = inscribed half-size).
         if (
-          rectRect(
-            this.bullets[i]!.position.x,
-            this.bullets[i]!.position.y,
-            this.bullets[i]!.size.w,
-            this.bullets[i]!.size.h,
-            this.bullets[e]!.position.x,
-            this.bullets[e]!.position.y,
-            this.bullets[e]!.size.w,
-            this.bullets[e]!.size.h
-          ) &&
-          i != e
+          i != e &&
+          circlesOverlap(
+            this.bullets[i]!.position.x + this.bullets[i]!.size.w / 2,
+            this.bullets[i]!.position.y + this.bullets[i]!.size.h / 2,
+            Math.min(this.bullets[i]!.size.w, this.bullets[i]!.size.h) / 2,
+            this.bullets[e]!.position.x + this.bullets[e]!.size.w / 2,
+            this.bullets[e]!.position.y + this.bullets[e]!.size.h / 2,
+            Math.min(this.bullets[e]!.size.w, this.bullets[e]!.size.h) / 2
+          )
         ) {
           this.bullets[i]!.emitter.bulletcount--;
           this.bullets[i]!.emitter.round_stats.stats.hits++;
