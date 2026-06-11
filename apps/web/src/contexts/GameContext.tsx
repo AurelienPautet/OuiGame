@@ -169,6 +169,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       tankColors: localColors(),
       campaignId: null,
       campaignRunResult: null,
+      testLayout: null,
     }));
   }, []);
 

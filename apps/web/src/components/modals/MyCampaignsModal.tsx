@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useModal, useAuth, useGame, useToast } from "../../contexts";
+import { useModal, useAuth } from "../../contexts";
 import { CampaignSelector } from "../ui";
-import { campaignsApi } from "../../api";
 import { useDeleteCampaign } from "../../hooks/api";
+import { useStartCampaign } from "../../hooks/useStartCampaign";
 import { Dialog, DialogContent, DialogTitle, Button } from "../ui/primitives";
 
 export const MyCampaignsModal = () => {
@@ -12,39 +11,11 @@ export const MyCampaignsModal = () => {
   const navigate = useNavigate();
   const { closeModal } = useModal();
   const { user } = useAuth();
-  const { startCampaign } = useGame();
-  const { addToast, TOAST_TYPES } = useToast();
+  const { start: startCampaignById } = useStartCampaign();
   const deleteCampaign = useDeleteCampaign();
-  const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  // Mirrors CampaignSelectorModal: a campaign has no playable grid of its own,
-  // so we fetch its level ids before kicking off the run.
-  const handlePlay = async (campaignId: number) => {
-    if (loadingId) return;
-    setLoadingId(campaignId);
-    try {
-      const campaign = await campaignsApi.getCampaign(campaignId);
-      const levelIds = (campaign.levels || []).map((l) => l.level_id);
-      if (levelIds.length === 0) {
-        addToast(
-          TOAST_TYPES.ERROR,
-          t("campaignEditor.toast.title"),
-          t("campaignSelectorModal.noPlayableLevels")
-        );
-        setLoadingId(null);
-        return;
-      }
-      startCampaign({ campaignId, levelIds });
-      closeModal();
-    } catch (err) {
-      console.error("Failed to start campaign:", err);
-      addToast(
-        TOAST_TYPES.ERROR,
-        t("campaignEditor.toast.title"),
-        t("campaignSelectorModal.failedStart")
-      );
-      setLoadingId(null);
-    }
+  const handlePlay = (campaignId: number) => {
+    startCampaignById(campaignId, closeModal);
   };
 
   const handleEdit = (campaignId: number) => {

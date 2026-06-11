@@ -321,6 +321,9 @@ export const LevelEditor = () => {
   // animated field/walls/holes and composites the overlay over them — the exact
   // same rendering path as the live game.
   useEffect(() => {
+    // While a test run is overlaid (isPlaying), the editor preview is fully
+    // occluded — don't burn a second GL render loop behind it.
+    if (isPlaying) return;
     const overlay = overlayRef.current;
     if (!overlay) return;
     const ctx = overlay.getContext("2d");
@@ -365,7 +368,7 @@ export const LevelEditor = () => {
     return () => {
       if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [layout, onCanvas, mouseGridPos, selectedBlock, postActive]);
+  }, [layout, onCanvas, mouseGridPos, selectedBlock, postActive, isPlaying]);
 
   // Handle mouse actions
   const handleMouseAction = useCallback(
