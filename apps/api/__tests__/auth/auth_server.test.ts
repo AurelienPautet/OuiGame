@@ -55,4 +55,19 @@ describe("verifyToken", () => {
     });
     expect(mockVerifyIdToken).not.toHaveBeenCalled();
   });
+
+  test("fails closed (500) when GOOGLE_CLIENT_ID is unset", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    const saved = process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_ID;
+    try {
+      await expect(verifyToken("any-token")).rejects.toMatchObject({
+        status: 500,
+        body: { error: "auth_unconfigured" },
+      });
+      expect(mockVerifyIdToken).not.toHaveBeenCalled();
+    } finally {
+      process.env.GOOGLE_CLIENT_ID = saved;
+    }
+  });
 });

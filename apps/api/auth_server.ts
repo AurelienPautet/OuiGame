@@ -13,17 +13,22 @@ async function verifyToken(idToken: string) {
     });
   }
 
-  // Pin the audience to our client ID so a token minted for any other app is
-  // rejected. If GOOGLE_CLIENT_ID is unset (misconfigured server) the check is
-  // skipped — verifyIdToken would otherwise throw on a missing audience.
+  // Pin the audience to our client ID so a token minted for any other Google
+  // app is rejected. Fail CLOSED if it's unset: verifying without an audience
+  // would accept any validly-signed Google token (confused-deputy auth bypass),
+  // so a misconfigured server must refuse sign-in rather than trust everything.
   const audience = process.env.GOOGLE_CLIENT_ID;
+  if (audience === undefined || audience === "") {
+    console.error("GOOGLE_CLIENT_ID is not set — refusing Google sign-in.");
+    throw new HttpError(500, {
+      error: "auth_unconfigured",
+      message: "Google sign-in is not configured",
+    });
+  }
 
   let ticket;
   try {
-    ticket = await client.verifyIdToken({
-      idToken,
-      ...(audience !== undefined ? { audience } : {}),
-    });
+    ticket = await client.verifyIdToken({ idToken, audience });
   } catch (error) {
     // A malformed/expired token or an audience mismatch is a client error, not
     // a server fault — map it to 401 instead of letting it bubble to a generic
