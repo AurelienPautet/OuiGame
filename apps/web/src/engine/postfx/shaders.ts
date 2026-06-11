@@ -11,6 +11,21 @@
  *   final composite   ─▶ screen        (warped + bloom + vignette)
  */
 
+// Fragment-shader precision preamble. We want highp: mediump's ~2^-10 relative
+// resolution quantises the tiny UV offsets the chromatic-aberration and
+// shockwave passes apply (a fraction of a texel), which on real mediump mobile
+// GPUs turns a subtle ~1px edge fringe into a thick coloured band — the bright
+// pink/red "border" that appears around the arena's top/bottom boundary walls
+// on phones. Desktop GPUs already evaluate mediump at high precision, so this is
+// a no-op there. The #ifdef falls back to mediump on the rare GPU without highp
+// fragment support, keeping those devices working (just with the old fringe).
+const FRAG_PRECISION = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif`;
+
 // One attribute (clip-space position); UV is derived in the vertex shader so a
 // single fullscreen-quad buffer feeds every program.
 export const VERT_SRC = `
@@ -24,7 +39,7 @@ void main() {
 
 // Straight blit — used to composite the entity layer over the field.
 export const COPY_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying vec2 vUv;
 uniform sampler2D uTex;
 void main() {
@@ -40,7 +55,7 @@ void main() {
  * with the team colours. Tune SCALE, LEVELS (number of flat tones), and CONTRAST.
  */
 export const FIELD_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying vec2 vUv;
 uniform vec2 uRes;     // board pixels (1150 x 800)
 uniform float uTime;   // seconds
@@ -105,7 +120,7 @@ void main() {
 `;
 
 export const HOLE_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying vec2 vBoard;
 uniform sampler2D uDepth;  // 0 at the rim → 1 deep (continuous, linear-filtered)
 uniform vec2 uTexel;       // unused (kept for the shared geometry layout)
@@ -165,7 +180,7 @@ void main() {
 `;
 
 export const WALL_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying float vType;
 varying vec4 vRect;     // (minX, minY, w, h) board px
 varying vec4 vExp;      // (top, right, bottom, left) open edges
@@ -273,7 +288,7 @@ export const MAX_SHOCKWAVES = 8;
  */
 export function shockwaveFrag(max: number): string {
   return `
-precision mediump float;
+${FRAG_PRECISION}
 #define MAX ${max}
 varying vec2 vUv;
 uniform sampler2D uTex;
@@ -313,7 +328,7 @@ void main() {
  * debris). The low-saturation grey field and stone/sand blocks score ~0.
  */
 export const BRIGHT_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying vec2 vUv;
 uniform sampler2D uTex;
 void main() {
@@ -330,7 +345,7 @@ void main() {
 
 // Separable 9-tap gaussian using linear-sampled tap pairs (5 fetches).
 export const BLUR_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying vec2 vUv;
 uniform sampler2D uTex;
 uniform vec2 uTexel;   // 1 / target size
@@ -352,7 +367,7 @@ void main() {
 //   - additive bloom + dark vignette
 //   - death flash    (uDamage: a red vignette pulse, clear in the centre)
 export const FINAL_FRAG = `
-precision mediump float;
+${FRAG_PRECISION}
 varying vec2 vUv;
 uniform sampler2D uScene;
 uniform sampler2D uBloom;
