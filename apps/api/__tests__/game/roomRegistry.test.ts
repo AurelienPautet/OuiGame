@@ -90,9 +90,26 @@ describe("deleteRoomIfEmpty / clearRoomTimers", () => {
 
     reg.deleteRoomIfEmpty(room);
 
+    // Deletion is deferred by a grace period — nothing happens immediately.
+    expect(reg.rooms[id]).toBeDefined();
+
+    jest.advanceTimersByTime(3000);
+
     expect(clearSpy).toHaveBeenCalledTimes(2);
     expect(reg.roomTimers.has(id)).toBe(false);
     expect(reg.rooms[id]).toBeUndefined();
+  });
+
+  test("keeps a room if a player re-joins during the grace period", async () => {
+    const { reg } = mkReg();
+    const id = await reg.create_room("A", 10, [1], "alice");
+    const room = reg.rooms[id]!;
+
+    reg.deleteRoomIfEmpty(room); // last player left → schedule deletion
+    room.players = { back: {} as never }; // someone re-joins before grace elapses
+    jest.advanceTimersByTime(3000);
+
+    expect(reg.rooms[id]).toBeDefined();
   });
 
   test("keeps a room that still has players", async () => {
