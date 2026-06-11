@@ -136,17 +136,45 @@ export const AuthModal = () => {
   useEffect(() => {
     if (!gsiReady || !gsiInitialized.current || !googleButtonRef.current)
       return;
-    // Clear any previously rendered button so GSI never stacks duplicates.
-    googleButtonRef.current.innerHTML = "";
-    google.accounts.id.renderButton(googleButtonRef.current, {
-      theme: "outline",
-      size: "large",
-      text: isLogin ? "signin_with" : "signup_with",
-      locale: i18n.language,
-      // GSI wants a pixel width (max 400), not "100%", which it rejects with
-      // "Provided button width is invalid" and then fails to render.
-      width: "360",
-    });
+    const node = googleButtonRef.current;
+    let cancelled = false;
+    let timer = 0;
+    let attempts = 0;
+
+    // On the modal's first open — while it's still animating in and GSI is
+    // freshly initialized — renderButton() often injects only an empty
+    // placeholder that never fills on its own. That's why the button used to
+    // appear only after the user toggled the Login/Register tab, which forces a
+    // fresh render once GSI is ready. We reproduce that automatically with a
+    // few GENTLE re-renders: the interval is much longer than GSI's own async
+    // render (~0.5s) so we never clear one mid-flight, the empty-check runs
+    // BEFORE re-rendering so a painted button is never wiped, and we stop as
+    // soon as the real [role=button] appears.
+    const render = () => {
+      if (cancelled || !node.isConnected) return;
+      node.innerHTML = "";
+      google.accounts.id.renderButton(node, {
+        theme: "outline",
+        size: "large",
+        text: isLogin ? "signin_with" : "signup_with",
+        locale: i18n.language,
+        // GSI wants a pixel width (max 400), not "100%", which it rejects with
+        // "Provided button width is invalid" and then fails to render.
+        width: "360",
+      });
+      attempts += 1;
+      if (attempts < 6) {
+        timer = window.setTimeout(() => {
+          if (!cancelled && !node.querySelector('[role="button"]')) render();
+        }, 1800);
+      }
+    };
+    render();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [gsiReady, isLogin, i18n.language]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
