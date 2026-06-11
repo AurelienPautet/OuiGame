@@ -4,7 +4,13 @@ import { useWindowScale } from "./useWindowScale";
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from "../constants/canvas";
 
 // Drive the hook by faking the window dimensions + devicePixelRatio it reads,
-// then firing a resize so it recomputes.
+// then firing a resize so it recomputes. Originals are captured so afterEach can
+// restore them — these are global mutations that would otherwise leak into other
+// test files sharing the worker.
+const ORIGINALS = ["innerWidth", "innerHeight", "devicePixelRatio"].map(
+  (prop) => [prop, Object.getOwnPropertyDescriptor(window, prop)] as const
+);
+
 function setWindow(width: number, height: number, dpr: number) {
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -23,6 +29,12 @@ function setWindow(width: number, height: number, dpr: number) {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  // Restore the real window descriptors (setWindow used defineProperty, which
+  // restoreAllMocks does not undo).
+  for (const [prop, desc] of ORIGINALS) {
+    if (desc) Object.defineProperty(window, prop, desc);
+    else delete (window as unknown as Record<string, unknown>)[prop];
+  }
 });
 
 describe("useWindowScale", () => {
@@ -42,20 +54,22 @@ describe("useWindowScale", () => {
     expect(result.current).toBeCloseTo(0.6, 5);
   });
 
-  it("snaps up-scaling to whole device pixels to stay crisp", () => {
-    // Window 1.4× the stage on both axes at dpr 1 → snap 1.4 down to 1.
+  it("snaps an integer up-scale to whole device pixels (dpr 1)", () => {
+    // Window 2× the stage on both axes at dpr 1 → scale 2 exactly.
     setWindow(CANVAS_WIDTH * 2, CANVAS_HEIGHT * 2, 1);
     const { result } = renderHook(() => useWindowScale());
     expect(result.current).toBe(2);
+  });
 
-    // dpr 2: 1.4 snaps to the nearest 1/2 below → 1.0 (not 1.4).
+  it("snaps a fractional up-scale down to the nearest 1/dpr step (dpr 2)", () => {
+    // raw 1.4 at dpr 2 → floor(2.8)/2 = 1.0 (not 1.4), keeping device-pixel snap.
     setWindow(
       Math.round(CANVAS_WIDTH * 1.4),
       Math.round(CANVAS_HEIGHT * 1.4),
       2
     );
-    const { result: r2 } = renderHook(() => useWindowScale());
-    expect(r2.current).toBe(1);
+    const { result } = renderHook(() => useWindowScale());
+    expect(result.current).toBe(1);
   });
 
   it("recomputes on window resize", () => {
