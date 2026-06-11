@@ -4,6 +4,10 @@ import {
   colliderect,
   distance,
   detectCollision,
+  circlesOverlap,
+  resolveCircleRect,
+  resolveCircleCircle,
+  TANK_HULL_RADIUS_FACTOR,
 } from "../check_collision.js";
 import { rectRect2 } from "../possible_shots_balls.js";
 import { intersectRaySegment, getEdges } from "../check_intersect.js";
@@ -135,6 +139,84 @@ describe("intersectRaySegment", () => {
         { x: 10, y: 5 }
       )
     ).toBeNull();
+  });
+});
+
+describe("circlesOverlap — inclusive (touching counts)", () => {
+  it("reports overlapping circles", () => {
+    expect(circlesOverlap(0, 0, 10, 5, 0, 10)).toBe(true);
+  });
+  it("reports a gap as no collision", () => {
+    expect(circlesOverlap(0, 0, 10, 30, 0, 10)).toBe(false);
+  });
+  it("treats an exact tangent touch as a collision", () => {
+    expect(circlesOverlap(0, 0, 10, 20, 0, 10)).toBe(true); // centres 20 = r1+r2
+  });
+});
+
+describe("resolveCircleRect — minimum-translation ejection", () => {
+  const rect = { x: 100, y: 100, w: 50, h: 50 };
+
+  it("returns null when the circle is clear of the rect", () => {
+    expect(resolveCircleRect(50, 125, 10, rect.x, rect.y, rect.w, rect.h)).toBe(
+      null
+    );
+  });
+
+  it("ejects out of the nearest face along the contact normal", () => {
+    // Centre 5 px left-inside the left face, radius 10 -> push out to x = 100 - 10.
+    const fixed = resolveCircleRect(
+      95,
+      125,
+      10,
+      rect.x,
+      rect.y,
+      rect.w,
+      rect.h
+    );
+    expect(fixed).not.toBeNull();
+    expect(fixed.x).toBeCloseTo(90, 6);
+    expect(fixed.y).toBeCloseTo(125, 6); // tangential axis untouched
+  });
+
+  it("ejects a centre that lies inside the rect along the shallowest face", () => {
+    // Centre at (110,125): 10 px from the left face, the closest of the four.
+    const fixed = resolveCircleRect(
+      110,
+      125,
+      8,
+      rect.x,
+      rect.y,
+      rect.w,
+      rect.h
+    );
+    expect(fixed.x).toBeCloseTo(100 - 8, 6); // out the left face + radius
+    expect(fixed.y).toBeCloseTo(125, 6);
+  });
+});
+
+describe("resolveCircleCircle — minimum-translation ejection", () => {
+  it("returns null when the circles are clear", () => {
+    expect(resolveCircleCircle(0, 0, 10, 30, 0, 10)).toBe(null);
+  });
+
+  it("pushes circle 1 out so the pair is exactly tangent", () => {
+    // 10 px apart on x, radii 10 + 10 -> push circle 1 to centre distance 20.
+    const fixed = resolveCircleCircle(10, 0, 10, 0, 0, 10);
+    expect(fixed.x).toBeCloseTo(20, 6);
+    expect(fixed.y).toBeCloseTo(0, 6);
+  });
+
+  it("ejects concentric circles along +x by the full radius sum", () => {
+    const fixed = resolveCircleCircle(0, 0, 10, 0, 0, 10);
+    expect(fixed.x).toBeCloseTo(20, 6);
+    expect(fixed.y).toBeCloseTo(0, 6);
+  });
+});
+
+describe("TANK_HULL_RADIUS_FACTOR", () => {
+  it("matches the hull fraction the renderer draws", () => {
+    expect(TANK_HULL_RADIUS_FACTOR).toBe(0.46);
   });
 });
 

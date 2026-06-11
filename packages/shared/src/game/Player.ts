@@ -1,4 +1,9 @@
-import { rectRect, colliderect } from "./check_collision.js";
+import {
+  circlesOverlap,
+  resolveCircleRect,
+  resolveCircleCircle,
+  TANK_HULL_RADIUS_FACTOR,
+} from "./check_collision.js";
 import { Bullet } from "./Bullet.js";
 import { Mine } from "./Mine.js";
 import { Stats } from "./Stats.js";
@@ -171,19 +176,6 @@ export class Player {
         this.velocity.y = 0;
       }
     }
-    for (let i = 0; i < room.Bcollision.length; i++) {
-      this.BodyCollision(room.Bcollision[i]!);
-    }
-    for (const socket_id in room.players) {
-      const other = room.players[socket_id];
-      if (other && other.alive && this != other) {
-        this.BodyCollision(other);
-      }
-    }
-    for (let i = 0; i < room.holes.length; i++) {
-      this.BodyCollision(room.holes[i]!);
-    }
-
     if (this.velocity.x > 0) {
       this.rotation = 0;
     } else if (this.velocity.x < 0) {
@@ -224,11 +216,12 @@ export class Player {
       if (this.position.y + this.size.h > 50 * 16) {
         this.position.y = 50 * 16 - this.size.h;
       }
-      // Safety net: the velocity gate above stops a tank moving *into* a wall,
-      // but a tank shoved by other bodies can still end up overlapping geometry.
-      // Resolve any residual penetration against the walls along the shallowest
-      // axis so nothing ever rests inside a wall.
-      this.resolveWallPenetration(room.Bcollision);
+      // The tank is a circle: after moving, eject it out of anything its hull
+      // overlaps. Other tanks (circle vs circle) first, then holes and walls
+      // (circle vs rect) — walls last so a tank shoved by another body can never
+      // come to rest inside geometry. Movement that grazes a wall keeps its
+      // tangential component, so the tank slides smoothly along it.
+      this.resolveCollisions(room);
     }
   }
   endofbarrel(): void {
@@ -256,69 +249,75 @@ export class Player {
       this.angle = 0; // Fallback to a default value
     }
   }
-  BulletCollision(obj: Collidable): string | boolean {
+  // The tank's collision radius: the circular hull the renderer draws, so the
+  // hitbox matches the on-screen tank exactly (no invisible box corners).
+  collisionRadius(): number {
+    return Math.min(this.size.w, this.size.h) * TANK_HULL_RADIUS_FACTOR;
+  }
+
+  // Does an incoming bullet's disc touch this tank's hull? `obj` is the bullet's
+  // box (top-left position + size); both are reduced to circles about their box
+  // centres. `side` is kept as a plain boolean hit flag for the tick snapshot.
+  BulletCollision(obj: Collidable): boolean {
     if (this.position == undefined) {
       //console.error("Player position is undefined, cannot check bullet collision.");
       return false;
     }
-    return (this.side = rectRect(
-      this.position.y,
-      this.position.x,
-      this.size.w,
-      this.size.h,
-      obj.position.y,
-      obj.position.x,
-      obj.size.w,
-      obj.size.h
+    const bulletRadius = Math.min(obj.size.w, obj.size.h) / 2;
+    return (this.side = circlesOverlap(
+      this.position.x + this.size.w / 2,
+      this.position.y + this.size.h / 2,
+      this.collisionRadius(),
+      obj.position.x + obj.size.w / 2,
+      obj.position.y + obj.size.h / 2,
+      bulletRadius
     ));
   }
-  BodyCollision(obj: Collidable): void {
-    this.side = colliderect(
-      this.position.y,
-      this.position.x,
-      this.size.w,
-      this.size.h,
-      obj.position.y,
-      obj.position.x,
-      obj.size.w,
-      obj.size.h,
-      3
-    );
-    if (this.side == "right") {
-      if (this.velocity.x > 0) this.velocity.x = 0;
+
+  // Eject the tank's hull out of every body it overlaps after moving: other
+  // tanks (circle vs circle), then holes and walls (circle vs rect, resolved
+  // last so a shoved tank never rests inside geometry).
+  resolveCollisions(room: Room): void {
+    const r = this.collisionRadius();
+    for (const socket_id in room.players) {
+      const other = room.players[socket_id];
+      if (!other || other === this || !other.alive) continue;
+      const fixed = resolveCircleCircle(
+        this.position.x + this.size.w / 2,
+        this.position.y + this.size.h / 2,
+        r,
+        other.position.x + other.size.w / 2,
+        other.position.y + other.size.h / 2,
+        other.collisionRadius()
+      );
+      if (fixed) {
+        this.position.x = fixed.x - this.size.w / 2;
+        this.position.y = fixed.y - this.size.h / 2;
+      }
     }
-    if (this.side == "left") {
-      if (this.velocity.x < 0) this.velocity.x = 0;
-    }
-    if (this.side == "up") {
-      if (this.velocity.y < 0) this.velocity.y = 0;
-    }
-    if (this.side == "down") {
-      if (this.velocity.y > 0) this.velocity.y = 0;
-    }
+    this.resolveRectObstacles(room.holes);
+    this.resolveRectObstacles(room.Bcollision);
   }
 
-  // Push the tank out of any wall it overlaps, along the axis of least
-  // penetration (standard AABB minimum-translation resolution). With the fixed
-  // timestep keeping each step's displacement well under a wall's thickness,
-  // this guarantees a tank can never settle inside or tunnel through geometry.
-  resolveWallPenetration(walls: Collidable[]): void {
-    for (const wall of walls) {
-      const overlapX =
-        Math.min(this.position.x + this.size.w, wall.position.x + wall.size.w) -
-        Math.max(this.position.x, wall.position.x);
-      const overlapY =
-        Math.min(this.position.y + this.size.h, wall.position.y + wall.size.h) -
-        Math.max(this.position.y, wall.position.y);
-      if (overlapX <= 0 || overlapY <= 0) continue; // not penetrating
-      if (overlapX < overlapY) {
-        const wallCx = wall.position.x + wall.size.w / 2;
-        const selfCx = this.position.x + this.size.w / 2;
-        this.position.x += selfCx < wallCx ? -overlapX : overlapX;
-      } else {
-        const wallCy = wall.position.y + wall.size.h / 2;
-        const selfCy = this.position.y + this.size.h / 2;
-        this.position.y += selfCy < wallCy ? -overlapY : overlapY;
+  // Push the tank's hull out of any axis-aligned obstacle (wall tile or hole) it
+  // overlaps, along the minimum-translation contact normal. With the fixed
+  // timestep keeping each step's displacement well under a tile, this guarantees
+  // a tank can never settle inside or tunnel through geometry.
+  private resolveRectObstacles(obstacles: Collidable[]): void {
+    const r = this.collisionRadius();
+    for (const o of obstacles) {
+      const fixed = resolveCircleRect(
+        this.position.x + this.size.w / 2,
+        this.position.y + this.size.h / 2,
+        r,
+        o.position.x,
+        o.position.y,
+        o.size.w,
+        o.size.h
+      );
+      if (fixed) {
+        this.position.x = fixed.x - this.size.w / 2;
+        this.position.y = fixed.y - this.size.h / 2;
       }
     }
   }
