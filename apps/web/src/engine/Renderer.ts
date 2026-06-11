@@ -21,16 +21,21 @@ const BULLET_COLOR_BY_REMAINING = [palette.red, palette.orange, palette.yellow];
 
 /**
  * Pick a bullet's fill colour from how many bounces it has left, clamped to the
- * palette: 0 remaining → red (about to expire), 1 → orange, 2+ → yellow (a fresh
+ * palette: 1 remaining → red (about to expire), 2 → orange, 3+ → yellow (a fresh
  * bullet with its full bounce budget). `max_bounce` defaults to 3 (the standard
  * shot budget) when absent.
+ *
+ * A bullet is destroyed the moment `bounce` reaches `max_bounce` (see Room's
+ * update_bullets), so it is never rendered with 0 bounces remaining — the lowest
+ * count that ever reaches the screen is 1. The index is therefore `remaining - 1`
+ * so that last live bounce reads red and the full red→yellow ramp is visible.
  */
 export function bulletFill(
   bounce: number | undefined,
   max_bounce: number | undefined
 ): string {
   const remaining = (max_bounce ?? 3) - (bounce ?? 0);
-  const idx = Math.min(remaining, BULLET_COLOR_BY_REMAINING.length - 1);
+  const idx = Math.min(remaining - 1, BULLET_COLOR_BY_REMAINING.length - 1);
   return BULLET_COLOR_BY_REMAINING[Math.max(0, idx)] ?? palette.red;
 }
 
