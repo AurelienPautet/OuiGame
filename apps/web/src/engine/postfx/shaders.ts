@@ -241,6 +241,28 @@ void main() {
   float ht = uOutline * 0.5;
   float ink = 1.0 - smoothstep(ht - 1.0, ht + 1.0, abs(d));  // straddles the silhouette
 
+  // An open edge runs unbounded into its covered neighbour, which is right for a
+  // straight corridor — but at a junction that overshoots past the perpendicular
+  // covered edge into the merged *interior* (e.g. a cross arm's side ink crossing
+  // the centre), leaving a stray nub the neighbour can't always overdraw. Kill the
+  // ink there: an open edge that has crossed a covered edge into a cell whose
+  // diagonal is filled is interior, not silhouette. Gated on the diagonal, so a
+  // real corridor (diagonal empty) is never touched — no seam returns.
+  float pastL = 1.0 - smoothstep(-b.x - 1.0, -b.x + 1.0, c.x);
+  float pastR = smoothstep(b.x - 1.0, b.x + 1.0, c.x);
+  float pastT = 1.0 - smoothstep(-b.y - 1.0, -b.y + 1.0, c.y);
+  float pastB = smoothstep(b.y - 1.0, b.y + 1.0, c.y);
+  float sup = 0.0;
+  sup = max(sup, eT * cL * vDiag.w * pastL);  // top edge, past covered left, TL filled
+  sup = max(sup, eT * cR * vDiag.x * pastR);  // top edge, past covered right, TR filled
+  sup = max(sup, eB * cL * vDiag.z * pastL);  // bottom, BL
+  sup = max(sup, eB * cR * vDiag.y * pastR);  // bottom, BR
+  sup = max(sup, eL * cT * vDiag.w * pastT);  // left edge, past covered top, TL
+  sup = max(sup, eL * cB * vDiag.z * pastB);  // left, BL
+  sup = max(sup, eR * cT * vDiag.x * pastT);  // right, TR
+  sup = max(sup, eR * cB * vDiag.y * pastB);  // right, BR
+  ink *= 1.0 - sup;
+
   col = mix(col, uInk, ink);
   float a = max(fillA, ink);
   if (a <= 0.004) discard;
