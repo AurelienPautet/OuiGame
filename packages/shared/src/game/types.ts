@@ -51,7 +51,10 @@ export interface RoomEmitter {
   ): void;
 }
 export interface RoomIo {
-  to(target?: number): RoomEmitter;
+  // Socket.io rooms are string-keyed and players join via
+  // `socket.join(String(room.id))`, so the Room broadcasts to `String(id)`.
+  // Accept both forms (Socket.io's own `Room` is `string | number`).
+  to(target?: number | string): RoomEmitter;
 }
 
 // A drawing surface for the optional debug overlays. In the browser this is a
