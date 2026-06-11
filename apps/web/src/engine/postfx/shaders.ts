@@ -74,7 +74,7 @@ void main() {
   // colour pushed toward white for a lighter floor (WHITEN).
   float LEVELS = 4.0;
   float step = floor(clamp(n, 0.0, 0.999) * LEVELS) / (LEVELS - 1.0); // 0,.33,.67,1
-  vec3 base = mix(uField, vec3(1.0), 0.5);          // WHITEN
+  vec3 base = mix(uField, vec3(1.0), 0.7);          // WHITEN
   vec3 col = base + (step - 0.5) * 0.03;            // CONTRAST
 
   // Thin darker contour line at each tone boundary — a cartoon "ink" outline
@@ -127,35 +127,61 @@ void main() {
 `;
 
 /**
- * Walls — block fills, with the animation keyed off the block type so the two
- * read very differently (board-space UV keeps both seamless across merged
- * blocks). Type 1 = STRONG / indestructible: solid steel, mostly static, a fine
- * brushed grain + a slow glint. Type 2 = DESTRUCTIBLE: scrolling diagonal hazard
- * stripes, signalling "this can be broken". Ink outlines are a separate pass.
+ * Walls — block fills + ink outline in a single pass, with the animation keyed
+ * off the block type so the two read very differently (board-space UV keeps both
+ * seamless across merged blocks). Type 1 = STRONG / indestructible: solid steel,
+ * mostly static, a fine brushed grain + a slow glint. Type 2 = DESTRUCTIBLE:
+ * scrolling diagonal hazard stripes, signalling "this can be broken".
+ *
+ * Each tile is drawn as its quad expanded by a margin, and the fragment shader
+ * builds the *local* rounded silhouette of the merged wall region analytically
+ * from the tile's neighbour flags (no per-region distance field needed):
+ *  - covered sides (a same-type neighbour abuts) are extended out by the radius,
+ *    so the silhouette/ink sits on the outer edges only and merged runs are flush
+ *    with no interior seam;
+ *  - convex corners (both edges open) are rounded *outward*;
+ *  - concave corners (both edges covered but the diagonal is open) are carved
+ *    *inward* into the open diagonal as a fillet, so inner corners round too.
+ * Because each tile only ever paints its own cell plus the unclaimed open space
+ * at its own corners, neighbouring expanded quads never fight over a pixel.
  */
 export const WALL_VERT = `
 attribute vec2 aPos;
-attribute vec2 aBoard;
 attribute float aType;
-varying vec2 vBoard;
+attribute vec4 aRect;   // (minX, minY, w, h) board px
+attribute vec4 aExp;    // (top, right, bottom, left) 1 = edge open (no same-type neighbour)
+attribute vec4 aDiag;   // (TR, BR, BL, TL) 1 = same-type diagonal neighbour present
 varying float vType;
+varying vec4 vRect;
+varying vec4 vExp;
+varying vec4 vDiag;
 void main() {
-  vBoard = aBoard;
   vType = aType;
+  vRect = aRect;
+  vExp = aExp;
+  vDiag = aDiag;
   gl_Position = vec4(aPos, 0.0, 1.0);
 }
 `;
 
 export const WALL_FRAG = `
 precision mediump float;
-varying vec2 vBoard;
 varying float vType;
+varying vec4 vRect;     // (minX, minY, w, h) board px
+varying vec4 vExp;      // (top, right, bottom, left) open edges
+varying vec4 vDiag;     // (TR, BR, BL, TL) diagonal present
 uniform float uTime;
 uniform vec2 uRes;
 uniform vec3 uStone;
 uniform vec3 uSand;
+uniform vec3 uInk;
+uniform float uRadius;   // corner radius, board px
+uniform float uOutline;  // ink thickness, board px
 void main() {
-  vec2 px = vBoard * uRes;
+  // Board px straight from the fragment position (the wall pass renders into the
+  // full-board target; gl_FragCoord origin is bottom-left, board y runs down).
+  vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+
   vec3 col;
   if (vType < 1.5) {
     // STRONG: solid steel — fine brushed grain + a slow broad glint.
@@ -168,23 +194,72 @@ void main() {
     col = mix(uSand * 0.80, uSand, smoothstep(-0.2, 0.5, stripe));
     col += 0.06 * smoothstep(0.82, 1.0, stripe);  // bright crest on each stripe
   }
-  gl_FragColor = vec4(col, 1.0);
-}
-`;
 
-// Flat solid colour, for the wall ink outlines (thin edge quads).
-export const OUTLINE_VERT = `
-attribute vec2 aPos;
-void main() {
-  gl_Position = vec4(aPos, 0.0, 1.0);
-}
-`;
+  vec2 sz = vRect.zw;
+  vec2 c = (px - vRect.xy) - sz * 0.5;   // centred in the tile (x right, y down)
+  vec2 b = sz * 0.5;
+  float r = min(uRadius, 0.5 * min(sz.x, sz.y));
 
-export const OUTLINE_FRAG = `
-precision mediump float;
-uniform vec3 uColor;
-void main() {
-  gl_FragColor = vec4(uColor, 1.0);
+  // Open (silhouette) vs covered (neighbour abuts) per edge.
+  float eT = vExp.x, eR = vExp.y, eB = vExp.z, eL = vExp.w;
+  float cT = 1.0 - eT, cR = 1.0 - eR, cB = 1.0 - eB, cL = 1.0 - eL;
+
+  // Extend covered sides out by r so the silhouette only lives on open edges
+  // (extension lands inside a present neighbour, except at concave corners where
+  // it pokes into the open diagonal and is carved back below).
+  float minX = -b.x - cL * r, maxX = b.x + cR * r;
+  float minY = -b.y - cT * r, maxY = b.y + cB * r;
+  vec2 ctr = vec2(minX + maxX, minY + maxY) * 0.5;
+  vec2 he  = vec2(maxX - minX, maxY - minY) * 0.5;
+  vec2 pc  = c - ctr;
+
+  // Convex corners (both edges open) round outward; pick by quadrant of pc.
+  float radTR = eT * eR * r, radBR = eB * eR * r;
+  float radBL = eB * eL * r, radTL = eT * eL * r;
+  float rad = (pc.x > 0.0) ? (pc.y > 0.0 ? radBR : radTR)
+                           : (pc.y > 0.0 ? radBL : radTL);
+  vec2 q = abs(pc) - he + rad;
+  float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - rad;
+
+  // Concave corners (both edges covered, diagonal open) carve a fillet into the
+  // open diagonal, centred on the extended corner.
+  if (cT * cR * (1.0 - vDiag.x) > 0.5) d = max(d, r - distance(c, vec2(maxX, minY)));
+  if (cB * cR * (1.0 - vDiag.y) > 0.5) d = max(d, r - distance(c, vec2(maxX, maxY)));
+  if (cB * cL * (1.0 - vDiag.z) > 0.5) d = max(d, r - distance(c, vec2(minX, maxY)));
+  if (cT * cL * (1.0 - vDiag.w) > 0.5) d = max(d, r - distance(c, vec2(minX, minY)));
+
+  float fillA = 1.0 - smoothstep(-1.0, 1.0, d);
+  float ht = uOutline * 0.5;
+  float ink = 1.0 - smoothstep(ht - 1.0, ht + 1.0, abs(d));  // straddles the silhouette
+
+  // A covered side's box face sits a radius *inside* the neighbour — real fill,
+  // but not a silhouette, so it must carry no ink (else merged runs show a seam
+  // grid). Suppress ink on those straight extended faces only; corners and the
+  // concave fillets (which live past two edges) are left untouched.
+  float inX = step(abs(c.x), b.x);     // within the tile horizontally
+  float inY = step(abs(c.y), b.y);     // within the tile vertically
+  float pX = step(b.x, c.x);           // past the right edge
+  float nX = step(c.x, -b.x);          // past the left edge
+  float pY = step(b.y, c.y);           // past the bottom edge
+  float nY = step(c.y, -b.y);          // past the top edge
+  float sup = 0.0;
+  sup = max(sup, cR * pX * inY);   // straight extended right face
+  sup = max(sup, cL * nX * inY);   // straight extended left face
+  sup = max(sup, cB * pY * inX);   // straight extended bottom face
+  sup = max(sup, cT * nY * inX);   // straight extended top face
+  // Interior corners (both edges covered AND the diagonal present) are fully
+  // inside the region — no ink. A missing diagonal instead means a concave
+  // fillet, whose ink must survive, so it is gated on the diagonal flag.
+  sup = max(sup, cT * cR * vDiag.x * nY * pX); // TR
+  sup = max(sup, cB * cR * vDiag.y * pY * pX); // BR
+  sup = max(sup, cB * cL * vDiag.z * pY * nX); // BL
+  sup = max(sup, cT * cL * vDiag.w * nY * nX); // TL
+  ink *= 1.0 - sup;
+
+  col = mix(col, uInk, ink);
+  float a = max(fillA, ink);
+  if (a <= 0.004) discard;
+  gl_FragColor = vec4(col, a);
 }
 `;
 

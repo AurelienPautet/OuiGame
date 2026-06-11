@@ -30,13 +30,12 @@ import {
   HOLE_FRAG,
   HOLE_VERT,
   MAX_SHOCKWAVES,
-  OUTLINE_FRAG,
-  OUTLINE_VERT,
   shockwaveFrag,
   VERT_SRC,
   WALL_FRAG,
   WALL_VERT,
 } from "./postfx/shaders";
+import { BLOCK_RADIUS } from "./shapes";
 
 interface Vec2 {
   x: number;
@@ -80,6 +79,11 @@ const INK = hexToRgb(palette.ink);
 // Outline thickness (board px), matching the 2D block stroke (lineWidth 4).
 const OUTLINE_PX = 4;
 
+// Margin (board px) each wall quad is expanded by, so the shader has room for
+// the concave fillet (pokes up to a radius into the open diagonal) and the ink
+// straddling the silhouette. One radius plus the outline clears both.
+const WALL_MARGIN = BLOCK_RADIUS + OUTLINE_PX;
+
 // Hole depth field: a distance-from-the-shore transform over the hole region,
 // sampled (linearly) by the hole shader to merge tiles into one pit with depth.
 // Resolution is a quarter-tile (12.5px) so the rim follows the hole shape, and
@@ -114,7 +118,6 @@ export class PostProcessor {
   private field!: Program;
   private holeP!: Program;
   private wallP!: Program;
-  private outlineP!: Program;
   private copy!: Program;
   private shock!: Program;
   private bright!: Program;
@@ -124,7 +127,6 @@ export class PostProcessor {
   // and holes (block geometry changes as walls are destroyed).
   private holeBuf: WebGLBuffer | null = null;
   private wallFillBuf: WebGLBuffer | null = null;
-  private wallOutlineBuf: WebGLBuffer | null = null;
   // Hole depth-field texture + the signature of the holes it was built from
   // (rebuilt only when the hole set changes — holes are static within a level).
   private holeDepthTex: WebGLTexture | null = null;
@@ -240,14 +242,14 @@ export class PostProcessor {
     this.holeP = new Program(gl, HOLE_VERT, HOLE_FRAG, ["aPos", "aBoard"]);
     this.wallP = new Program(gl, WALL_VERT, WALL_FRAG, [
       "aPos",
-      "aBoard",
       "aType",
+      "aRect",
+      "aExp",
+      "aDiag",
     ]);
-    this.outlineP = new Program(gl, OUTLINE_VERT, OUTLINE_FRAG, ["aPos"]);
 
     this.holeBuf = gl.createBuffer();
     this.wallFillBuf = gl.createBuffer();
-    this.wallOutlineBuf = gl.createBuffer();
     // Depth-field texture: linear-filtered so the per-cell distances smooth into
     // a continuous pit. Data is uploaded lazily by _ensureHoleDepth; reset the
     // signature so a fresh (or context-restored) texture re-uploads.
@@ -365,6 +367,8 @@ export class PostProcessor {
       this.wallP.use();
       gl.uniform1f(this.wallP.loc("uTime"), animT);
       gl.uniform2f(this.wallP.loc("uRes"), this.W, this.H);
+      gl.uniform1f(this.wallP.loc("uRadius"), BLOCK_RADIUS);
+      gl.uniform1f(this.wallP.loc("uOutline"), OUTLINE_PX);
       gl.uniform3f(
         this.wallP.loc("uStone"),
         WALL_STONE.red / 255,
@@ -377,16 +381,18 @@ export class PostProcessor {
         WALL_SAND.green / 255,
         WALL_SAND.blue / 255
       );
-      this._drawWallFills(env.wallVerts);
-
-      this.outlineP.use();
       gl.uniform3f(
-        this.outlineP.loc("uColor"),
+        this.wallP.loc("uInk"),
         INK.red / 255,
         INK.green / 255,
         INK.blue / 255
       );
-      this._drawOutlines(env.outlineVerts);
+      // Straight-alpha "over" the field so the rounded corners and the outer
+      // half of the ink show the floor through.
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      this._drawWallFills(env.wallVerts);
+      gl.disable(gl.BLEND);
     }
 
     // 1b. Composite the entity layer over the field. The 2D canvas is straight
@@ -481,12 +487,10 @@ export class PostProcessor {
     if (this.quad) gl.deleteBuffer(this.quad);
     if (this.holeBuf) gl.deleteBuffer(this.holeBuf);
     if (this.wallFillBuf) gl.deleteBuffer(this.wallFillBuf);
-    if (this.wallOutlineBuf) gl.deleteBuffer(this.wallOutlineBuf);
     if (this.holeDepthTex) gl.deleteTexture(this.holeDepthTex);
     this.field?.dispose();
     this.holeP?.dispose();
     this.wallP?.dispose();
-    this.outlineP?.dispose();
     this.copy?.dispose();
     this.shock?.dispose();
     this.bright?.dispose();
@@ -564,13 +568,16 @@ export class PostProcessor {
    * upload them. Returns the vertex counts. Cheap enough to run every frame
    * (a few hundred floats), and always correct as walls get destroyed.
    *
-   * Layouts: holes = [clipX, clipY, boardU, boardV]; wall fills = [clipX,
-   * clipY, boardU, boardV, type]; outlines = [clipX, clipY].
+   * Layouts: holes = [clipX, clipY, boardU, boardV]; wall fills = [clipX, clipY,
+   * type, rectX, rectY, rectW, rectH, openT, openR, openB, openL, diagTR, diagBR,
+   * diagBL, diagTL] (15 floats — the rect + open-edge + diagonal masks drive the
+   * per-block rounded SDF, fillets and ink in the wall shader; board px come from
+   * gl_FragCoord, so no UV is stored).
    */
   private _buildEnv(
     blocks: EnvBlock[],
     holes: EnvHole[]
-  ): { holeVerts: number; wallVerts: number; outlineVerts: number } {
+  ): { holeVerts: number; wallVerts: number } {
     const gl = this.gl;
     const W = this.W;
     const H = this.H;
@@ -601,80 +608,53 @@ export class PostProcessor {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.holeBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(hole), gl.DYNAMIC_DRAW);
 
-    // Walls: a fill quad per block + ink outline quads on edges with no
-    // same-type neighbour (matching the 2D renderer's merge behaviour).
+    // Walls: one quad per block, expanded by WALL_MARGIN so the shader has room
+    // for the rounded corners + ink. Each vertex carries the block's rect, the
+    // open-edge mask (no same-type neighbour on that side) and the same-type
+    // diagonal-neighbour mask; the shader derives the convex rounding, concave
+    // fillets and the connected ink from those (see WALL_FRAG). Board px come
+    // from gl_FragCoord in the shader, so no per-vertex UV is needed.
     const fill: number[] = [];
-    const line: number[] = [];
     const key = (x: number, y: number) => `${Math.round(x)},${Math.round(y)}`;
     const occ = new Map<string, number>();
     for (const b of blocks) occ.set(key(b.position.x, b.position.y), b.type);
-    const has = (x: number, y: number, t: number) => occ.get(key(x, y)) === t;
-    const O = OUTLINE_PX / 2;
-    const pushLine = (x: number, y: number, w: number, h: number) => {
-      const ax = cx(x);
-      const bx = cx(x + w);
-      const ay = cy(y);
-      const by = cy(y + h);
-      line.push(ax, ay, bx, ay, ax, by, ax, by, bx, ay, bx, by);
-    };
+    const has = (x: number, y: number, t: number) =>
+      occ.get(key(x, y)) === t ? 1 : 0;
+    const M = WALL_MARGIN;
     for (const b of blocks) {
       const { x, y } = b.position;
       const { w, h } = b.size;
       const t = b.type;
-      const ax = cx(x);
-      const bx = cx(x + w);
-      const ay = cy(y);
-      const by = cy(y + h);
-      const u0 = x / W;
-      const u1 = (x + w) / W;
-      const v0 = y / H;
-      const v1 = (y + h) / H;
-      fill.push(
-        ax,
-        ay,
-        u0,
-        v0,
-        t,
-        bx,
-        ay,
-        u1,
-        v0,
-        t,
-        ax,
-        by,
-        u0,
-        v1,
-        t,
-        ax,
-        by,
-        u0,
-        v1,
-        t,
-        bx,
-        ay,
-        u1,
-        v0,
-        t,
-        bx,
-        by,
-        u1,
-        v1,
-        t
-      );
-      if (!has(x, y - h, t)) pushLine(x, y - O, w, OUTLINE_PX);
-      if (!has(x + w, y, t)) pushLine(x + w - O, y, OUTLINE_PX, h);
-      if (!has(x, y + h, t)) pushLine(x, y + h - O, w, OUTLINE_PX);
-      if (!has(x - w, y, t)) pushLine(x - O, y, OUTLINE_PX, h);
+      const ax = cx(x - M);
+      const bx = cx(x + w + M);
+      const ay = cy(y - M);
+      const by = cy(y + h + M);
+      // Open edges (top, right, bottom, left): no same-type neighbour abuts.
+      const eT = 1 - has(x, y - h, t);
+      const eR = 1 - has(x + w, y, t);
+      const eB = 1 - has(x, y + h, t);
+      const eL = 1 - has(x - w, y, t);
+      // Same-type diagonal neighbours (TR, BR, BL, TL).
+      const dTR = has(x + w, y - h, t);
+      const dBR = has(x + w, y + h, t);
+      const dBL = has(x - w, y + h, t);
+      const dTL = has(x - w, y - h, t);
+      // prettier-ignore
+      const vert = (cxv: number, cyv: number) =>
+        fill.push(cxv, cyv, t, x, y, w, h, eT, eR, eB, eL, dTR, dBR, dBL, dTL);
+      vert(ax, ay);
+      vert(bx, ay);
+      vert(ax, by);
+      vert(ax, by);
+      vert(bx, ay);
+      vert(bx, by);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.wallFillBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fill), gl.DYNAMIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.wallOutlineBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(line), gl.DYNAMIC_DRAW);
 
     return {
       holeVerts: hole.length / 4,
-      wallVerts: fill.length / 5,
-      outlineVerts: line.length / 2,
+      wallVerts: fill.length / 15,
     };
   }
 
@@ -782,25 +762,21 @@ export class PostProcessor {
   private _drawWallFills(verts: number): void {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.wallFillBuf);
-    const stride = 5 * 4;
+    const stride = 15 * 4;
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stride, 0); // aPos
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, stride, 8);
+    gl.vertexAttribPointer(1, 1, gl.FLOAT, false, stride, 8); // aType
     gl.enableVertexAttribArray(2);
-    gl.vertexAttribPointer(2, 1, gl.FLOAT, false, stride, 16);
+    gl.vertexAttribPointer(2, 4, gl.FLOAT, false, stride, 12); // aRect
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 4, gl.FLOAT, false, stride, 28); // aExp
+    gl.enableVertexAttribArray(4);
+    gl.vertexAttribPointer(4, 4, gl.FLOAT, false, stride, 44); // aDiag
     gl.drawArrays(gl.TRIANGLES, 0, verts);
-  }
-
-  private _drawOutlines(verts: number): void {
-    if (verts === 0) return;
-    const gl = this.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.wallOutlineBuf);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.disableVertexAttribArray(1);
-    gl.disableVertexAttribArray(2);
-    gl.drawArrays(gl.TRIANGLES, 0, verts);
+    // Leave attributes 3/4 disabled for the single/dual-attribute passes.
+    gl.disableVertexAttribArray(3);
+    gl.disableVertexAttribArray(4);
   }
 }
 
