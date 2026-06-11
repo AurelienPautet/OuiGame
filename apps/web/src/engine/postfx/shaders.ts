@@ -192,6 +192,18 @@ uniform vec3 uSand;
 uniform vec3 uInk;
 uniform float uRadius;   // corner radius, board px
 uniform float uOutline;  // ink thickness, board px
+
+// Subtract an open diagonal cell from the wall SDF, giving a rounded inner corner.
+// g>0 points into the diagonal cell; we subtract the cell with its corner (at the
+// tile corner) pre-rounded by k, so the result is a plain max() of real SDFs — the
+// fillet stays correct no matter how deep inside the tile the base distance is
+// (a smooth-min degrades on all-covered tiles, where the base is hugely negative).
+float fillet(float d, vec2 g, float k) {
+  vec2 q = vec2(k) - g;                       // rounded-quadrant (cell) SDF, <0 inside
+  float cell = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - k;
+  return max(d, -cell);
+}
+
 void main() {
   // Board px straight from the fragment position (the wall pass renders into the
   // full-board target; gl_FragCoord origin is bottom-left, board y runs down).
@@ -219,56 +231,51 @@ void main() {
   float eT = vExp.x, eR = vExp.y, eB = vExp.z, eL = vExp.w;
   float cT = 1.0 - eT, cR = 1.0 - eR, cB = 1.0 - eB, cL = 1.0 - eL;
 
-  // Extend covered sides out by r so the silhouette only lives on open edges
-  // (extension lands inside a present neighbour, except at concave corners where
-  // it pokes into the open diagonal and is carved back below).
-  float minX = -b.x - cL * r, maxX = b.x + cR * r;
-  float minY = -b.y - cT * r, maxY = b.y + cB * r;
-  vec2 ctr = vec2(minX + maxX, minY + maxY) * 0.5;
-  vec2 he  = vec2(maxX - minX, maxY - minY) * 0.5;
-  vec2 pc  = c - ctr;
+  // SDF of the local merged wall. Only OPEN edges constrain the region; a covered
+  // edge is left unbounded so the wall flows seamlessly into its neighbour — the
+  // silhouette and ink then live purely on open edges, identical for every tile
+  // along a straight run (no per-tile seam/notch). qx/qy are the signed outside-
+  // distance in each axis (negative = unconstrained on that side).
+  float OUT = -1e4;
+  float qx = max((eL > 0.5) ? (-b.x - c.x) : OUT, (eR > 0.5) ? (c.x - b.x) : OUT);
+  float qy = max((eT > 0.5) ? (-b.y - c.y) : OUT, (eB > 0.5) ? (c.y - b.y) : OUT);
+  // Rounded-box combine: convex corners (both axes constrained) round by r.
+  vec2 aa = vec2(qx, qy) + r;
+  float d = min(max(aa.x, aa.y), 0.0) + length(max(aa, 0.0)) - r;
 
-  // Convex corners (both edges open) round outward; pick by quadrant of pc.
-  float radTR = eT * eR * r, radBR = eB * eR * r;
-  float radBL = eB * eL * r, radTL = eT * eL * r;
-  float rad = (pc.x > 0.0) ? (pc.y > 0.0 ? radBR : radTR)
-                           : (pc.y > 0.0 ? radBL : radTL);
-  vec2 q = abs(pc) - he + rad;
-  float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - rad;
-
-  // Concave corners (both edges covered, diagonal open) carve a fillet into the
-  // open diagonal, centred on the extended corner.
-  if (cT * cR * (1.0 - vDiag.x) > 0.5) d = max(d, r - distance(c, vec2(maxX, minY)));
-  if (cB * cR * (1.0 - vDiag.y) > 0.5) d = max(d, r - distance(c, vec2(maxX, maxY)));
-  if (cB * cL * (1.0 - vDiag.z) > 0.5) d = max(d, r - distance(c, vec2(minX, maxY)));
-  if (cT * cL * (1.0 - vDiag.w) > 0.5) d = max(d, r - distance(c, vec2(minX, minY)));
+  // Concave corners: where two covered edges meet an OPEN diagonal, the region
+  // would overrun into that empty diagonal cell, so subtract the cell with its
+  // corner rounded by r — that rounded subtraction is the inner-corner fillet.
+  // g>0 points into the diagonal cell.
+  if (cT * cR * (1.0 - vDiag.x) > 0.5) d = fillet(d, vec2(c.x - b.x, -b.y - c.y), r); // TR
+  if (cB * cR * (1.0 - vDiag.y) > 0.5) d = fillet(d, vec2(c.x - b.x,  c.y - b.y), r); // BR
+  if (cB * cL * (1.0 - vDiag.z) > 0.5) d = fillet(d, vec2(-b.x - c.x, c.y - b.y), r); // BL
+  if (cT * cL * (1.0 - vDiag.w) > 0.5) d = fillet(d, vec2(-b.x - c.x, -b.y - c.y), r); // TL
 
   float fillA = 1.0 - smoothstep(-1.0, 1.0, d);
   float ht = uOutline * 0.5;
   float ink = 1.0 - smoothstep(ht - 1.0, ht + 1.0, abs(d));  // straddles the silhouette
 
-  // A covered side's box face sits a radius *inside* the neighbour — real fill,
-  // but not a silhouette, so it must carry no ink (else merged runs show a seam
-  // grid). Suppress ink on those straight extended faces only; corners and the
-  // concave fillets (which live past two edges) are left untouched.
-  float inX = step(abs(c.x), b.x);     // within the tile horizontally
-  float inY = step(abs(c.y), b.y);     // within the tile vertically
-  float pX = step(b.x, c.x);           // past the right edge
-  float nX = step(c.x, -b.x);          // past the left edge
-  float pY = step(b.y, c.y);           // past the bottom edge
-  float nY = step(c.y, -b.y);          // past the top edge
+  // An open edge runs unbounded into its covered neighbour, which is right for a
+  // straight corridor — but at a junction that overshoots past the perpendicular
+  // covered edge into the merged *interior* (e.g. a cross arm's side ink crossing
+  // the centre), leaving a stray nub the neighbour can't always overdraw. Kill the
+  // ink there: an open edge that has crossed a covered edge into a cell whose
+  // diagonal is filled is interior, not silhouette. Gated on the diagonal, so a
+  // real corridor (diagonal empty) is never touched — no seam returns.
+  float pastL = 1.0 - smoothstep(-b.x - 1.0, -b.x + 1.0, c.x);
+  float pastR = smoothstep(b.x - 1.0, b.x + 1.0, c.x);
+  float pastT = 1.0 - smoothstep(-b.y - 1.0, -b.y + 1.0, c.y);
+  float pastB = smoothstep(b.y - 1.0, b.y + 1.0, c.y);
   float sup = 0.0;
-  sup = max(sup, cR * pX * inY);   // straight extended right face
-  sup = max(sup, cL * nX * inY);   // straight extended left face
-  sup = max(sup, cB * pY * inX);   // straight extended bottom face
-  sup = max(sup, cT * nY * inX);   // straight extended top face
-  // Interior corners (both edges covered AND the diagonal present) are fully
-  // inside the region — no ink. A missing diagonal instead means a concave
-  // fillet, whose ink must survive, so it is gated on the diagonal flag.
-  sup = max(sup, cT * cR * vDiag.x * nY * pX); // TR
-  sup = max(sup, cB * cR * vDiag.y * pY * pX); // BR
-  sup = max(sup, cB * cL * vDiag.z * pY * nX); // BL
-  sup = max(sup, cT * cL * vDiag.w * nY * nX); // TL
+  sup = max(sup, eT * cL * vDiag.w * pastL);  // top edge, past covered left, TL filled
+  sup = max(sup, eT * cR * vDiag.x * pastR);  // top edge, past covered right, TR filled
+  sup = max(sup, eB * cL * vDiag.z * pastL);  // bottom, BL
+  sup = max(sup, eB * cR * vDiag.y * pastR);  // bottom, BR
+  sup = max(sup, eL * cT * vDiag.w * pastT);  // left edge, past covered top, TL
+  sup = max(sup, eL * cB * vDiag.z * pastB);  // left, BL
+  sup = max(sup, eR * cT * vDiag.x * pastT);  // right, TR
+  sup = max(sup, eR * cB * vDiag.y * pastB);  // right, BR
   ink *= 1.0 - sup;
 
   col = mix(col, uInk, ink);
