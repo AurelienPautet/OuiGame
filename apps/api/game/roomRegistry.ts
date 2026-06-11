@@ -8,6 +8,9 @@ import * as levelsRepo from "../repositories/levels.repo";
 import { setRoomsRef } from "../routes/rooms.routes";
 import type { AppServer, AppSocket } from "../socket/types";
 
+// Grace period before an emptied room is actually removed (see deleteRoomIfEmpty).
+const EMPTY_ROOM_GRACE_MS = 3000;
+
 function createRoomRegistry({
   io,
   serverid,
@@ -103,11 +106,23 @@ function createRoomRegistry({
   // empty rooms used to linger forever and the tick loop kept iterating them).
   // Only ever called from the leave/disconnect path — NEVER right after
   // create_room — so a freshly created (still empty) room is not deleted.
+  //
+  // Deletion is deferred by a short grace period and re-checks emptiness when it
+  // fires, so a player who re-joins in the meantime keeps the room. This covers
+  // React StrictMode double-mounting the game view in dev (mount → quit →
+  // re-mount would otherwise delete the freshly-created room mid-join, making
+  // the re-join id-fail and leaving online play unjoinable) and brief reconnects
+  // in prod.
   function deleteRoomIfEmpty(room: Room) {
-    if (Object.keys(room.players).length === 0) {
-      clearRoomTimers(room.id);
-      delete rooms[room.id];
-    }
+    if (Object.keys(room.players).length !== 0) return;
+    setTimeout(() => {
+      // Same room object (id not reused) and still empty when the timer fires?
+      if (rooms[room.id] === room && Object.keys(room.players).length === 0) {
+        clearRoomTimers(room.id);
+        delete rooms[room.id];
+        room_list(0);
+      }
+    }, EMPTY_ROOM_GRACE_MS);
   }
 
   return {
