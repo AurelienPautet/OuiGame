@@ -274,7 +274,11 @@ export class Room {
     ...args: Parameters<ServerToClientEvents[E]>
   ): void {
     if (this.io != null) {
-      this.io.to(this.id).emit(event, ...args);
+      // Socket.io rooms are string-keyed and players join via
+      // `socket.join(String(room.id))`, so broadcast to the string id too —
+      // `io.to(<number>)` would target a different (empty) room and silently
+      // drop every tick / explosion / sound, leaving clients with no tanks.
+      this.io.to(String(this.id)).emit(event, ...args);
     } else {
       //console.error("No io instance available to emit to this:", this.name);
     }
