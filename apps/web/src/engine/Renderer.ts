@@ -374,15 +374,12 @@ export class Renderer {
     this.c.stroke();
 
     if (this.debugVisual) {
+      // Draw the actual hitbox: a bullet collides as its inscribed disc, so the
+      // debug overlay is a circle (centre + radius), not the old bounding box.
       this.c.beginPath();
       this.c.fillStyle = "rgba(255,0,0,0.4)";
       this.c.strokeStyle = "red";
-      this.c.rect(
-        bullet.position.x,
-        bullet.position.y,
-        bullet.size.w,
-        bullet.size.h
-      );
+      this.c.arc(cx, cy, r, 0, Math.PI * 2);
       this.c.fill();
       this.c.stroke();
     }
@@ -403,15 +400,16 @@ export class Renderer {
     }
 
     if (this.debugVisual) {
+      // Draw the actual hitbox: a tank collides as its circular hull, so the
+      // debug overlay is the collision disc (same centre + radius the runtime
+      // uses, HULL_RADIUS_FACTOR), not the old bounding box.
+      const cx = player.position.x + player.size.w / 2;
+      const cy = player.position.y + player.size.h / 2;
+      const r = Math.min(player.size.w, player.size.h) * HULL_RADIUS_FACTOR;
       this.c.beginPath();
       this.c.fillStyle = "rgba(255,0,0,0.4)";
       this.c.strokeStyle = "red";
-      this.c.rect(
-        player.position.x,
-        player.position.y,
-        player.size.w,
-        player.size.h
-      );
+      this.c.arc(cx, cy, r, 0, Math.PI * 2);
       this.c.fill();
       this.c.stroke();
     }
