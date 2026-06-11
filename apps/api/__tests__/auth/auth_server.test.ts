@@ -38,10 +38,21 @@ describe("verifyToken", () => {
     );
   });
 
-  test("throws 'Invalid ID token' when verification rejects", async () => {
+  test("throws a 401 HttpError when verification rejects", async () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     mockVerifyIdToken.mockRejectedValue(new Error("signature mismatch"));
 
-    await expect(verifyToken("bad-token")).rejects.toThrow("Invalid ID token");
+    await expect(verifyToken("bad-token")).rejects.toMatchObject({
+      status: 401,
+      body: { error: "invalid_token" },
+    });
+  });
+
+  test("throws a 400 HttpError when no token is provided", async () => {
+    await expect(verifyToken("")).rejects.toMatchObject({
+      status: 400,
+      body: { error: "id_token_required" },
+    });
+    expect(mockVerifyIdToken).not.toHaveBeenCalled();
   });
 });
