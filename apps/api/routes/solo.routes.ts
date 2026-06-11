@@ -11,11 +11,11 @@ router.post("/rounds", optionalAuth, async (req: Request, res: Response) => {
   // playerId is null for anonymous players
   const playerId = req.user?.playerId || null;
 
-  const ok = await soloService.submitRound(playerId, req.body);
-  if (!ok) {
+  const result = await soloService.submitRound(playerId, req.body);
+  if (result === false) {
     throw badRequest("Missing required fields");
   }
-  res.json({ success: true });
+  res.json({ success: true, unlockedAchievements: result });
 });
 
 // GET /api/solo/levels/:id/stats - Get stats for a specific level

@@ -96,7 +96,9 @@
     "hits": "Hits",
     "accuracy": "Accuracy",
     "minesPlanted": "Mines Planted",
-    "blocksBroken": "Blocks Broken"
+    "blocksBroken": "Blocks Broken",
+    "achievements": "Achievements",
+    "achievementsProgress": "{{unlocked}} of {{total}} unlocked"
   },
   "rooms": {
     "playOnline": "Play Online",
@@ -378,7 +380,86 @@
     "connected": "{{name}} connected",
     "disconnected": "{{name}} disconnected",
     "killedBullet": "{{killer}} killed {{victim}}",
-    "killedMine": "{{killer}} blew up {{victim}}"
+    "killedMine": "{{killer}} blew up {{victim}}",
+    "achievementUnlocked": "Achievement Unlocked!"
+  },
+  "achievements": {
+    "categories": {
+      "online": "Multiplayer",
+      "mines": "Mines & Demolition",
+      "solo": "Solo",
+      "campaign": "Campaign"
+    },
+    "items": {
+      "triple_threat": {
+        "name": "Triple Threat",
+        "desc": "Get 3 kills in a single online round."
+      },
+      "rampage": {
+        "name": "Rampage",
+        "desc": "Get 5 kills in a single online round."
+      },
+      "untouchable": {
+        "name": "Untouchable",
+        "desc": "Win an online round without dying."
+      },
+      "pacifist": {
+        "name": "Pacifist",
+        "desc": "Win an online round without firing a shot."
+      },
+      "dead_eye": {
+        "name": "Dead Eye",
+        "desc": "Finish an online round with 90%+ accuracy."
+      },
+      "first_blood": {
+        "name": "First Blood",
+        "desc": "Get your first kill."
+      },
+      "sharpshooter": {
+        "name": "Sharpshooter",
+        "desc": "Reach 100 total kills."
+      },
+      "warlord": {
+        "name": "Warlord",
+        "desc": "Reach 500 total kills."
+      },
+      "champion": {
+        "name": "Champion",
+        "desc": "Win 25 online rounds."
+      },
+      "veteran": {
+        "name": "Veteran",
+        "desc": "Play 50 online rounds."
+      },
+      "sapper": {
+        "name": "Sapper",
+        "desc": "Plant your first mine."
+      },
+      "demolition_expert": {
+        "name": "Demolition Expert",
+        "desc": "Destroy 50 blocks with mines."
+      },
+      "first_steps": {
+        "name": "First Steps",
+        "desc": "Complete your first solo level."
+      },
+      "level_master": {
+        "name": "Level Master",
+        "desc": "Complete 25 different solo levels."
+      },
+      "flawless_solo": {
+        "name": "Flawless",
+        "desc": "Complete a solo level without dying."
+      },
+      "campaigner": {
+        "name": "Campaigner",
+        "desc": "Complete a campaign."
+      },
+      "campaign_marathoner": {
+        "name": "Marathoner",
+        "desc": "Clear 5 levels in a single campaign run."
+      }
+    }
   },
   "errorBoundary": {
     "title": "Something went wrong",

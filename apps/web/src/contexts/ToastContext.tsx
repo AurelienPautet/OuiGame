@@ -8,9 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import type { PlayerKillPayload } from "@ouigame/shared/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "./SocketContext";
 import i18n from "../i18n";
 import { playSfx, type VoiceName } from "../audio";
+import { achievementName } from "../constants/achievements";
 
 // Toast types with their colors and icons
 export const TOAST_TYPES = {
@@ -21,6 +23,7 @@ export const TOAST_TYPES = {
   INFO: "info",
   ERROR: "error",
   SUCCESS: "success",
+  ACHIEVEMENT: "achievement",
 } as const;
 
 export type ToastType = (typeof TOAST_TYPES)[keyof typeof TOAST_TYPES];
@@ -34,6 +37,7 @@ const TOAST_SOUNDS: Record<ToastType, VoiceName> = {
   [TOAST_TYPES.INFO]: "notify",
   [TOAST_TYPES.ERROR]: "uiError",
   [TOAST_TYPES.SUCCESS]: "uiSuccess",
+  [TOAST_TYPES.ACHIEVEMENT]: "uiSuccess",
 };
 
 export interface Toast {
@@ -71,6 +75,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   // useSocket() may return null when no SocketProvider is mounted; the effect
   // below already no-ops on a null socket, so default to null here.
   const socket = useSocket()?.socket ?? null;
+  const queryClient = useQueryClient();
   const timeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   // Add a new toast
@@ -155,19 +160,37 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    // Online achievements unlock server-side and arrive over the socket (the
+    // online round is recorded in the tick loop, not via an HTTP response).
+    const handleAchievements = (keys: string[]) => {
+      keys.forEach((key) => {
+        addToast(
+          TOAST_TYPES.ACHIEVEMENT,
+          i18n.t("toasts.achievementUnlocked"),
+          achievementName(key),
+          3500
+        );
+      });
+      if (keys.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ["achievements", "me"] });
+      }
+    };
+
     socket.on("player-connection", handlePlayerConnection);
     socket.on("player-disconnection", handlePlayerDisconnection);
     socket.on("player-kill", handlePlayerKill);
+    socket.on("achievements_unlocked", handleAchievements);
 
     return () => {
       socket.off("player-connection", handlePlayerConnection);
       socket.off("player-disconnection", handlePlayerDisconnection);
       socket.off("player-kill", handlePlayerKill);
+      socket.off("achievements_unlocked", handleAchievements);
 
       // Clear all timeouts on unmount
       Object.values(timeoutsRef.current).forEach(clearTimeout);
     };
-  }, [socket, addToast]);
+  }, [socket, addToast, queryClient]);
 
   return (
     <ToastContext.Provider

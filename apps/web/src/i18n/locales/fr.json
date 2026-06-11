@@ -96,7 +96,9 @@
     "hits": "Coups au but",
     "accuracy": "Précision",
     "minesPlanted": "Mines plantées",
-    "blocksBroken": "Blocs cassés"
+    "blocksBroken": "Blocs cassés",
+    "achievements": "Succès",
+    "achievementsProgress": "{{unlocked}} sur {{total}} débloqués"
   },
   "rooms": {
     "playOnline": "Multijoueur",
@@ -378,7 +380,86 @@
     "connected": "{{name}} s'est connecté",
     "disconnected": "{{name}} s'est déconnecté",
     "killedBullet": "{{killer}} a éliminé {{victim}}",
-    "killedMine": "{{killer}} a explosé {{victim}}"
+    "killedMine": "{{killer}} a explosé {{victim}}",
+    "achievementUnlocked": "Succès débloqué !"
+  },
+  "achievements": {
+    "categories": {
+      "online": "Multijoueur",
+      "mines": "Mines & démolition",
+      "solo": "Solo",
+      "campaign": "Campagne"
+    },
+    "items": {
+      "triple_threat": {
+        "name": "Triplé",
+        "desc": "Réalise 3 éliminations dans une partie en ligne."
+      },
+      "rampage": {
+        "name": "Carnage",
+        "desc": "Réalise 5 éliminations dans une partie en ligne."
+      },
+      "untouchable": {
+        "name": "Intouchable",
+        "desc": "Gagne une partie en ligne sans mourir."
+      },
+      "pacifist": {
+        "name": "Pacifiste",
+        "desc": "Gagne une partie en ligne sans tirer."
+      },
+      "dead_eye": {
+        "name": "Œil de lynx",
+        "desc": "Termine une partie en ligne avec 90 % de précision."
+      },
+      "first_blood": {
+        "name": "Premier sang",
+        "desc": "Réalise ta première élimination."
+      },
+      "sharpshooter": {
+        "name": "Tireur d'élite",
+        "desc": "Atteins 100 éliminations au total."
+      },
+      "warlord": {
+        "name": "Seigneur de guerre",
+        "desc": "Atteins 500 éliminations au total."
+      },
+      "champion": {
+        "name": "Champion",
+        "desc": "Gagne 25 parties en ligne."
+      },
+      "veteran": {
+        "name": "Vétéran",
+        "desc": "Joue 50 parties en ligne."
+      },
+      "sapper": {
+        "name": "Sapeur",
+        "desc": "Pose ta première mine."
+      },
+      "demolition_expert": {
+        "name": "Expert en démolition",
+        "desc": "Détruis 50 blocs avec des mines."
+      },
+      "first_steps": {
+        "name": "Premiers pas",
+        "desc": "Termine ton premier niveau solo."
+      },
+      "level_master": {
+        "name": "Maître des niveaux",
+        "desc": "Termine 25 niveaux solo différents."
+      },
+      "flawless_solo": {
+        "name": "Sans faute",
+        "desc": "Termine un niveau solo sans mourir."
+      },
+      "campaigner": {
+        "name": "Aventurier",
+        "desc": "Termine une campagne."
+      },
+      "campaign_marathoner": {
+        "name": "Marathonien",
+        "desc": "Franchis 5 niveaux dans une seule campagne."
+      }
+    }
   },
   "errorBoundary": {
     "title": "Quelque chose s'est mal passé",

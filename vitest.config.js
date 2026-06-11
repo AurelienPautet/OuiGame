@@ -43,7 +43,7 @@ export default defineConfig({
           root: "packages/shared",
           environment: "node",
           globals: true,
-          include: ["src/game/__tests__/**/*.{test,spec}.ts"],
+          include: ["src/{game,api}/__tests__/**/*.{test,spec}.ts"],
         },
       },
     ],

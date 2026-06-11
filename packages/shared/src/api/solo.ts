@@ -16,6 +16,16 @@ export type SubmitSoloRoundRequest = z.infer<
   typeof SubmitSoloRoundRequestSchema
 >;
 
+// POST /solo/rounds response — the generic success envelope plus any achievement
+// keys this round just unlocked (empty for anonymous players or no new unlocks).
+export const SubmitSoloRoundResponseSchema = z.object({
+  success: z.literal(true),
+  unlockedAchievements: z.array(z.string()),
+});
+export type SubmitSoloRoundResponse = z.infer<
+  typeof SubmitSoloRoundResponseSchema
+>;
+
 // GET /solo/levels/:id/stats — camelCase response (Number()/Math.round coerced).
 export const SoloLevelStatsSchema = z.object({
   timesPlayed: z.number(),

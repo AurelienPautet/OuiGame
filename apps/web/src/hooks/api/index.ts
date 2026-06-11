@@ -5,3 +5,4 @@ export * from "./useRankings";
 export * from "./useRooms";
 export * from "./useSolo";
 export * from "./useCampaigns";
+export * from "./useAchievements";

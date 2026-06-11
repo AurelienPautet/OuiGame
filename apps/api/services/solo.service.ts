@@ -6,6 +6,7 @@ import type { SQL } from "drizzle-orm";
 import { schema } from "@ouigame/db";
 const { soloRounds } = schema;
 import * as repo from "../repositories/solo.repo";
+import * as achievementsService from "./achievements.service";
 
 interface SoloRoundBody {
   levelId?: number;
@@ -19,10 +20,14 @@ interface SoloRoundBody {
   blocksDestroyed?: number;
 }
 
-// Submit a solo round. playerId is null for anonymous players. Returns true if
-// the body has the required fields and the round was recorded, false otherwise
-// (the route maps a false result to the 400 "Missing required fields").
-async function submitRound(playerId: number | null, body: SoloRoundBody) {
+// Submit a solo round. playerId is null for anonymous players. Returns `false`
+// if the body is missing required fields (the route maps that to a 400), else
+// the list of achievement keys this round just unlocked (empty for anonymous
+// players or when nothing new was earned).
+async function submitRound(
+  playerId: number | null,
+  body: SoloRoundBody
+): Promise<false | string[]> {
   const {
     levelId,
     success,
@@ -39,20 +44,28 @@ async function submitRound(playerId: number | null, body: SoloRoundBody) {
     return false;
   }
 
+  const deathsValue = deaths || 0;
+
   await repo.insertRound({
     playerId,
     levelId,
     success,
     timeMs,
     kills: kills || 0,
-    deaths: deaths || 0,
+    deaths: deathsValue,
     shots: shots || 0,
     hits: hits || 0,
     plants: plants || 0,
     blocksDestroyed: blocksDestroyed || 0,
   });
 
-  return true;
+  // Achievements are logged-in only; the aggregate query inside runs after the
+  // insert above, so cumulative criteria see this round.
+  if (playerId === null) return [];
+  return achievementsService.evaluateSolo(playerId, {
+    success,
+    deaths: deathsValue,
+  });
 }
 
 async function getLevelStats(levelId: number) {

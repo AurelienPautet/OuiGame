@@ -8,11 +8,17 @@ jest.mock("../../services/levels.service", () => ({
 }));
 jest.mock("../../repositories/ratings.repo", () => ({ getRating: jest.fn() }));
 jest.mock("../../repositories/stats.repo", () => ({ insertRound: jest.fn() }));
+// Achievement evaluation is exercised in achievements.service.test.ts; here it's
+// a no-op so the loop's round-recording mechanics stay the unit under test.
+jest.mock("../../services/achievements.service", () => ({
+  evaluateOnlineRound: jest.fn().mockResolvedValue([]),
+}));
 
 import { createTickLoop } from "../../game/tickLoop";
 import * as levelsService from "../../services/levels.service";
 import * as ratingsRepo from "../../repositories/ratings.repo";
 import * as statsRepo from "../../repositories/stats.repo";
+import * as achievementsService from "../../services/achievements.service";
 import { users } from "../../shared_state";
 import { makeIo } from "../helpers/socketDoubles";
 
@@ -140,6 +146,30 @@ test("records a null playerId for a socket with no logged-in user", async () => 
   expect(statsRepo.insertRound).toHaveBeenCalledWith(
     null,
     101,
+    player.round_stats.stats
+  );
+  // Anonymous round → achievements are never evaluated.
+  expect(achievementsService.evaluateOnlineRound).not.toHaveBeenCalled();
+});
+
+test("evaluates achievements for a logged-in player's round", async () => {
+  users["p1"] = { playerId: 42, username: "p1", email: "p1@e.com" };
+  const player = mkPlayer();
+  const room = makeRoom(7, true);
+  room.players = { p1: player };
+  const loop = createTickLoop({
+    io: makeIo() as never,
+    rooms: { 7: room } as never,
+    roomTimers: new Map(),
+  });
+
+  perfSpy.mockReturnValue(1100);
+  loop.start();
+  await jest.advanceTimersByTimeAsync(20);
+
+  // Evaluated with the round-stats snapshot (same values as the player's stats).
+  expect(achievementsService.evaluateOnlineRound).toHaveBeenCalledWith(
+    42,
     player.round_stats.stats
   );
 });

@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import type { ReactNode } from "react";
 import { act, renderHook, cleanup } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // useSocket is mocked so the toast-logic tests don't need a real SocketProvider;
 // it's reconfigured per test (null for pure logic, a fake socket for the
@@ -11,6 +13,14 @@ import { ToastProvider, useToast, TOAST_TYPES } from "../ToastContext";
 
 const mockUseSocket = useSocket as ReturnType<typeof vi.fn>;
 
+// ToastProvider reads useQueryClient() (to refresh achievements on unlock), so it
+// must mount under a QueryClientProvider.
+const Wrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={new QueryClient()}>
+    <ToastProvider>{children}</ToastProvider>
+  </QueryClientProvider>
+);
+
 beforeEach(() => {
   vi.useFakeTimers();
   mockUseSocket.mockReturnValue(null);
@@ -21,7 +31,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const render = () => renderHook(() => useToast(), { wrapper: ToastProvider });
+const render = () => renderHook(() => useToast(), { wrapper: Wrapper });
 
 describe("toast lifecycle", () => {
   it("adds a toast, then drops it from state after the duration", () => {

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -14,12 +15,25 @@ import {
   Hammer,
   Gamepad2,
   CheckCircle,
+  Medal,
+  Lock,
 } from "lucide-react";
 import { useModal, useAuth } from "../../contexts";
-import { usePlayerStats, useMySoloStats } from "../../hooks/api";
+import {
+  usePlayerStats,
+  useMySoloStats,
+  useMyAchievements,
+} from "../../hooks/api";
 import type { MyStats, MySoloStats } from "@ouigame/shared/api";
+import { ACHIEVEMENTS, type AchievementCategory } from "@ouigame/shared/api";
 import { storage } from "../../lib/storage";
 import { colorFromIndex } from "../../constants/tankColors";
+import {
+  ACHIEVEMENT_ICONS,
+  ACHIEVEMENT_ICON_FALLBACK,
+  achievementName,
+  achievementDesc,
+} from "../../constants/achievements";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +53,14 @@ export const ProfileModal = () => {
   const { user, logout } = useAuth();
   const { data: stats, isLoading } = usePlayerStats();
   const { data: soloStats, isLoading: soloLoading } = useMySoloStats();
+  const { data: achievementsData, isLoading: achLoading } = useMyAchievements();
+
+  // key -> unlockedAt for O(1) lookup while rendering the catalog.
+  const unlockedAt = useMemo(() => {
+    const map = new Map<string, string>();
+    (achievementsData ?? []).forEach((a) => map.set(a.key, a.unlockedAt));
+    return map;
+  }, [achievementsData]);
 
   const handleLogout = () => {
     logout();
@@ -114,6 +136,10 @@ export const ProfileModal = () => {
             <TabsTrigger value="online">
               <Swords size={16} className="mr-1.5 inline" />{" "}
               {t("profile.multiplayer")}
+            </TabsTrigger>
+            <TabsTrigger value="achievements">
+              <Medal size={16} className="mr-1.5 inline" />{" "}
+              {t("profile.achievements")}
             </TabsTrigger>
           </TabsList>
 
@@ -247,6 +273,14 @@ export const ProfileModal = () => {
                 <Empty text={t("profile.noMultiplayer")} />
               )}
             </TabsContent>
+
+            <TabsContent value="achievements">
+              {achLoading ? (
+                <Loading />
+              ) : (
+                <AchievementsView unlockedAt={unlockedAt} />
+              )}
+            </TabsContent>
           </div>
         </Tabs>
       </DialogContent>
@@ -293,3 +327,103 @@ const StatCard = ({ title, value, icon: Icon, color }: StatCardProps) => (
     </div>
   </div>
 );
+
+// Catalog display order: onboarding/combat first, then mines, solo, campaign.
+const ACHIEVEMENT_CATEGORIES: AchievementCategory[] = [
+  "online",
+  "mines",
+  "solo",
+  "campaign",
+];
+
+const AchievementsView = ({
+  unlockedAt,
+}: {
+  unlockedAt: Map<string, string>;
+}) => {
+  const { t } = useTranslation();
+  const unlockedCount = ACHIEVEMENTS.filter((a) =>
+    unlockedAt.has(a.key)
+  ).length;
+
+  return (
+    <div className="space-y-5">
+      <div className="text-sm font-bold text-ink-soft">
+        {t("profile.achievementsProgress", {
+          unlocked: unlockedCount,
+          total: ACHIEVEMENTS.length,
+        })}
+      </div>
+      {ACHIEVEMENT_CATEGORIES.map((category) => {
+        const items = ACHIEVEMENTS.filter((a) => a.category === category);
+        if (items.length === 0) return null;
+        return (
+          <div key={category}>
+            <h3 className="text-xs font-bold uppercase text-ink-soft mb-2">
+              {t(`achievements.categories.${category}`)}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {items.map((a) => (
+                <AchievementCard
+                  key={a.key}
+                  achievementKey={a.key}
+                  icon={a.icon}
+                  unlockedAt={unlockedAt.get(a.key)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+interface AchievementCardProps {
+  achievementKey: string;
+  icon: string;
+  unlockedAt: string | undefined;
+}
+
+const AchievementCard = ({
+  achievementKey,
+  icon,
+  unlockedAt,
+}: AchievementCardProps) => {
+  const isUnlocked = unlockedAt != null;
+  // Record lookup (not a call) so the react-hooks rule is happy; Lock when locked.
+  const Icon = isUnlocked
+    ? (ACHIEVEMENT_ICONS[icon] ?? ACHIEVEMENT_ICON_FALLBACK)
+    : Lock;
+
+  return (
+    <div
+      className={cn(
+        "border-[3px] border-ink rounded-xl p-3 flex items-center gap-3",
+        isUnlocked ? "bg-field" : "bg-field/40 opacity-60"
+      )}
+    >
+      <div
+        className={cn(
+          "p-2 rounded-lg border-2 border-ink shrink-0",
+          isUnlocked ? "bg-yellow" : "bg-white"
+        )}
+      >
+        <Icon size={22} className={isUnlocked ? "text-ink" : "text-ink-soft"} />
+      </div>
+      <div className="min-w-0">
+        <div className="text-sm font-bold text-ink truncate">
+          {achievementName(achievementKey)}
+        </div>
+        <div className="text-[11px] text-ink-soft leading-tight">
+          {achievementDesc(achievementKey)}
+        </div>
+        {isUnlocked && (
+          <div className="text-[10px] font-bold text-green mt-0.5">
+            {new Date(unlockedAt).toLocaleDateString()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

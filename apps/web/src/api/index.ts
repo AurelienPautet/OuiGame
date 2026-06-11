@@ -6,3 +6,4 @@ export { rankingsApi } from "./endpoints/rankings";
 export { roomsApi } from "./endpoints/rooms";
 export { soloApi } from "./endpoints/solo";
 export { campaignsApi } from "./endpoints/campaigns";
+export { achievementsApi } from "./endpoints/achievements";

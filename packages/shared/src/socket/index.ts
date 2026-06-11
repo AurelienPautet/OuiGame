@@ -106,6 +106,10 @@ export interface ServerToClientEvents {
   "player-disconnection": (name: string) => void;
   winner: (data: WinnerPayload) => void;
   countdown_start: (data: CountdownStartPayload) => void;
+  // Achievement keys the authenticated player just unlocked from the online
+  // round that ended this tick (catalog keys; the client resolves names via
+  // i18n). Emitted only to that player's socket — see apps/api/game/tickLoop.ts.
+  achievements_unlocked: (keys: string[]) => void;
   wrongserver: () => void;
   // POSITIONAL parallel arrays: (room_ids, room_names, room_creator_name,
   // room_players, room_players_max)
