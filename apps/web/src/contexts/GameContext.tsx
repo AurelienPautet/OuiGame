@@ -12,6 +12,10 @@ import { storage } from "../lib/storage";
 
 export type GameMode = "solo" | "online" | "campaign";
 
+// Sentinel level id used by the editor "test" flow: the level isn't saved, so
+// there's no real id. The in-memory grid travels in `testLayout` instead.
+export const TEST_LEVEL_ID = -1;
+
 export interface TankColors {
   body: string;
   turret: string;
@@ -41,6 +45,9 @@ export interface GameState {
   runStartTime: number;
   runNonce: number; // bumped to force the engine to (re)start the current level
   campaignRunResult: CampaignRunResult | null;
+  // Editor "test" run: the in-memory grid to play (levelId === TEST_LEVEL_ID).
+  // null for every normal play, so the engine fetches by id as usual.
+  testLayout: number[] | null;
 }
 
 // The outcome returned by the campaign run-state callbacks to their caller.
@@ -52,6 +59,7 @@ export type CampaignOutcome =
 
 interface GameContextValue extends GameState {
   startSoloGame: (levelId: number) => void;
+  startTestGame: (layout: number[]) => void;
   startOnlineGame: (roomId: number | string) => void;
   startCampaign: (args: { campaignId: number; levelIds: number[] }) => void;
   campaignAdvance: () => CampaignOutcome;
@@ -90,6 +98,7 @@ const initialState: GameState = {
   runStartTime: 0,
   runNonce: 0, // bumped to force the engine to (re)start the current level
   campaignRunResult: null, // null | { completed, levelsCleared, livesLeft, timeMs }
+  testLayout: null,
 };
 
 const localColors = (): TankColors => ({
@@ -117,6 +126,31 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       campaignIndex: 0,
       lives: 0,
       campaignRunResult: null,
+      testLayout: null,
+      runNonce: prev.runNonce + 1,
+    }));
+  }, []);
+
+  // Start a level-editor "test" run: play the in-memory grid directly (no save,
+  // no server fetch). Mirrors startSoloGame but carries the layout instead of a
+  // real level id, so the engine builds the room from it.
+  const startTestGame = useCallback((layout: number[]) => {
+    const playerName = storage.getPlayerName() || "Player";
+    setGameState((prev) => ({
+      ...prev,
+      isPlaying: true,
+      isPaused: false,
+      mode: "solo",
+      levelId: TEST_LEVEL_ID,
+      roomId: null,
+      playerName,
+      tankColors: localColors(),
+      campaignId: null,
+      campaignLevelIds: [],
+      campaignIndex: 0,
+      lives: 0,
+      campaignRunResult: null,
+      testLayout: layout,
       runNonce: prev.runNonce + 1,
     }));
   }, []);
@@ -135,6 +169,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       tankColors: localColors(),
       campaignId: null,
       campaignRunResult: null,
+      testLayout: null,
     }));
   }, []);
 
@@ -160,6 +195,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         runStartTime: Date.now(),
         runNonce: prev.runNonce + 1,
         campaignRunResult: null,
+        testLayout: null,
       }));
     },
     []
@@ -259,6 +295,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       ...gameState,
       startSoloGame,
+      startTestGame,
       startOnlineGame,
       startCampaign,
       campaignAdvance,
@@ -271,6 +308,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     [
       gameState,
       startSoloGame,
+      startTestGame,
       startOnlineGame,
       startCampaign,
       campaignAdvance,

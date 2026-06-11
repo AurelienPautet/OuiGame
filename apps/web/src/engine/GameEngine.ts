@@ -425,7 +425,10 @@ export class GameEngine {
     tankColors: TankColors,
     // Enemies already beaten on this level earlier in the run (campaign retry).
     // They are skipped at spawn so a lost life never resurrects them.
-    defeatedBotIds: string[] = []
+    defeatedBotIds: string[] = [],
+    // Level-editor "test" mode: an in-memory grid to play directly, skipping the
+    // server fetch. The level isn't saved, so there's no id to request.
+    localLayout?: number[]
   ): Promise<void> {
     this.mode = "solo";
     this.running = true;
@@ -436,6 +439,20 @@ export class GameEngine {
     this.mysocketid = "solo_player_" + Math.random().toString(36).substr(2, 9);
     this.startTime = performance.now();
     this.gameOverTriggered = false;
+
+    // Editor test: build the room straight from the in-memory layout. Synthesize
+    // the metadata the end screen reads (the level has no persisted name/owner).
+    if (localLayout) {
+      this.levelMetadata = {
+        data: localLayout,
+        level_name: "Test Level",
+        level_creator_name: playerName,
+        level_img: null,
+      };
+      await this._loadSoloRoom(levelId, localLayout, playerName, tankColors);
+      this._startLoops();
+      return;
+    }
 
     // Request level data from server
     return new Promise<void>((resolve, reject) => {
@@ -459,36 +476,12 @@ export class GameEngine {
           // Extract the actual level data array for loading
           const levelData = levelJson.data ?? levelJson; // Fallback for backward compat
 
-          // Create local room with LocalIO for particle/sound events
-          this.localRoom = new Room(
-            "Solo Room",
-            999,
-            [levelId],
+          await this._loadSoloRoom(
+            levelId,
+            levelData as number[],
             playerName,
-            new LocalIO(this.particles, this.sounds, this.post)
+            tankColors
           );
-          this.localRoom.maxplayernb = 100;
-
-          // Load level into the room. levelData is the flat number[] grid
-          // (pulled from the fetched level JSON, loosely typed here).
-          await loadlevel(levelData as number[], this.localRoom);
-
-          // Spawn player
-          this.localRoom.spawn_new_player(
-            playerName,
-            tankColors.turret,
-            tankColors.body,
-            this.mysocketid!
-          );
-
-          // Spawn bots, skipping any already defeated earlier in the run.
-          this.localRoom.spawn_all_bots(this.seededDefeatedBotIds);
-
-          // Count initial bots/enemies to determine win condition
-          // Players object uses socketid as key
-          this.initialBotCount = Object.entries(this.localRoom.players).filter(
-            ([socketid, _player]) => socketid !== this.mysocketid
-          ).length;
 
           // Start loops
           this._startLoops();
@@ -499,6 +492,46 @@ export class GameEngine {
         }
       });
     });
+  }
+
+  // Build the local authoritative room for solo/test play: load the grid, spawn
+  // the player and bots, and record the initial enemy count (the win condition).
+  // Shared by the server-fetched path and the editor's in-memory test path.
+  async _loadSoloRoom(
+    levelId: number,
+    levelData: number[],
+    playerName: string,
+    tankColors: TankColors
+  ): Promise<void> {
+    // Create local room with LocalIO for particle/sound events
+    this.localRoom = new Room(
+      "Solo Room",
+      999,
+      [levelId],
+      playerName,
+      new LocalIO(this.particles, this.sounds, this.post)
+    );
+    this.localRoom.maxplayernb = 100;
+
+    // Load level into the room. levelData is the flat number[] grid.
+    await loadlevel(levelData, this.localRoom);
+
+    // Spawn player
+    this.localRoom.spawn_new_player(
+      playerName,
+      tankColors.turret,
+      tankColors.body,
+      this.mysocketid!
+    );
+
+    // Spawn bots, skipping any already defeated earlier in the run.
+    this.localRoom.spawn_all_bots(this.seededDefeatedBotIds);
+
+    // Count initial bots/enemies to determine win condition.
+    // Players object uses socketid as key.
+    this.initialBotCount = Object.entries(this.localRoom.players).filter(
+      ([socketid, _player]) => socketid !== this.mysocketid
+    ).length;
   }
 
   // Socketids of every enemy defeated on this level so far, cumulative across

@@ -324,6 +324,7 @@
     "levelNamePlaceholder": "Ingresa nombre del nivel",
     "clearLevel": "Limpiar Nivel",
     "saveLevel": "Guardar Nivel",
+    "testLevel": "Probar nivel",
     "selectBlock": "Selecciona un bloque",
     "confirmClear": "¿Estás seguro de que quieres limpiar todo el nivel?",
     "blocks": {

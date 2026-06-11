@@ -4,6 +4,7 @@ import {
   Search,
   Gamepad2,
   Plus,
+  Play,
   Pencil,
   Trash2,
   ArrowUp,
@@ -31,6 +32,7 @@ interface LevelSelectorProps {
   mode?: "solo" | "room" | "myLevels" | "pick";
   onSelect?: (levelId: number) => void; // solo mode
   onMultiSelect?: (levelIds: number[]) => void; // room mode
+  onPlay?: (levelId: number) => void; // myLevels mode
   onEdit?: (levelId: number) => void; // myLevels mode
   onDelete?: (levelId: number) => void; // myLevels mode
   onCreate?: () => void; // "Create New" clicked (myLevels mode)
@@ -42,6 +44,7 @@ export function LevelSelector({
   mode = "solo",
   onSelect,
   onMultiSelect,
+  onPlay,
   onEdit,
   onDelete,
   onCreate,
@@ -191,6 +194,14 @@ export function LevelSelector({
   ) => {
     e.stopPropagation();
     onEdit?.(levelId);
+  };
+
+  const handlePlay = (
+    levelId: number,
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.stopPropagation();
+    onPlay?.(levelId);
   };
 
   const toggleSortOrder = () => {
@@ -352,6 +363,15 @@ export function LevelSelector({
               {/* Action buttons for myLevels mode */}
               {showActions && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {onPlay && (
+                    <Button
+                      variant="green"
+                      size="sm"
+                      onClick={(e) => handlePlay(level.level_id, e)}
+                    >
+                      <Play size={16} /> Play
+                    </Button>
+                  )}
                   <Button
                     variant="blue"
                     size="sm"

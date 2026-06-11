@@ -11,6 +11,7 @@ import { Input, Button } from "./primitives";
 interface CampaignSelectorProps {
   mode?: "play" | "my";
   onSelect?: (campaignId: number) => void; // play mode
+  onPlay?: (campaignId: number) => void; // my mode
   onEdit?: (campaignId: number) => void; // my mode
   onDelete?: (campaignId: number) => void; // my mode
   onCreate?: () => void; // "New Campaign" clicked (my mode)
@@ -19,6 +20,7 @@ interface CampaignSelectorProps {
 export function CampaignSelector({
   mode = "play",
   onSelect,
+  onPlay,
   onEdit,
   onDelete,
   onCreate,
@@ -85,6 +87,7 @@ export function CampaignSelector({
               completed={c.completed || false}
               author={c.campaign_creator_name}
               onClick={() => (isMy ? undefined : onSelect?.(c.campaign_id))}
+              {...(isMy && onPlay ? { onPlay } : {})}
               {...(isMy && onEdit ? { onEdit } : {})}
               {...(isMy && onDelete ? { onDelete } : {})}
             />

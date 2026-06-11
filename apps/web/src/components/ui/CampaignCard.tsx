@@ -1,4 +1,11 @@
-import { Layers, CheckCircle2, Pencil, Trash2, Trophy } from "lucide-react";
+import {
+  Layers,
+  CheckCircle2,
+  Play,
+  Pencil,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { Button, Card } from "./primitives";
@@ -17,6 +24,7 @@ interface CampaignCardProps {
   completed?: boolean; // finished a full run at least once
   author?: string;
   onClick?: () => void;
+  onPlay?: (campaignId: number) => void; // shown as Play button when provided
   onEdit?: (campaignId: number) => void; // shown as Edit button when provided
   onDelete?: (campaignId: number) => void; // shown as Delete button when provided
 }
@@ -30,11 +38,12 @@ export function CampaignCard({
   completed = false,
   author,
   onClick,
+  onPlay,
   onEdit,
   onDelete,
 }: CampaignCardProps) {
   const { t } = useTranslation();
-  const showActions = !!(onEdit || onDelete);
+  const showActions = !!(onPlay || onEdit || onDelete);
   const pct = Math.max(0, Math.min(100, completionPercent || 0));
 
   return (
@@ -92,6 +101,18 @@ export function CampaignCard({
 
       {showActions && (
         <div className="absolute right-3 top-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onPlay && (
+            <Button
+              variant="green"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay(campaignId);
+              }}
+            >
+              <Play size={16} /> Play
+            </Button>
+          )}
           {onEdit && (
             <Button
               variant="blue"

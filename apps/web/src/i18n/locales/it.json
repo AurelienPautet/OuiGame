@@ -324,6 +324,7 @@
     "levelNamePlaceholder": "Inserisci il nome del livello",
     "clearLevel": "Cancella Livello",
     "saveLevel": "Salva Livello",
+    "testLevel": "Prova livello",
     "selectBlock": "Seleziona un blocco",
     "confirmClear": "Sei sicuro di voler cancellare l'intero livello?",
     "blocks": {

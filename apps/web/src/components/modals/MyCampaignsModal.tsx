@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useModal, useAuth } from "../../contexts";
 import { CampaignSelector } from "../ui";
 import { useDeleteCampaign } from "../../hooks/api";
+import { useStartCampaign } from "../../hooks/useStartCampaign";
 import { Dialog, DialogContent, DialogTitle, Button } from "../ui/primitives";
 
 export const MyCampaignsModal = () => {
@@ -10,7 +11,12 @@ export const MyCampaignsModal = () => {
   const navigate = useNavigate();
   const { closeModal } = useModal();
   const { user } = useAuth();
+  const { start: startCampaignById } = useStartCampaign();
   const deleteCampaign = useDeleteCampaign();
+
+  const handlePlay = (campaignId: number) => {
+    startCampaignById(campaignId, closeModal);
+  };
 
   const handleEdit = (campaignId: number) => {
     closeModal();
@@ -62,6 +68,7 @@ export const MyCampaignsModal = () => {
         <div className="flex-1 min-h-0">
           <CampaignSelector
             mode="my"
+            onPlay={handlePlay}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onCreate={handleCreate}
