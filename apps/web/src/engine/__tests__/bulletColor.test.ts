@@ -2,29 +2,36 @@ import { describe, it, expect } from "vitest";
 import { bulletFill } from "../Renderer.js";
 import { palette } from "../../theme/palette.js";
 
-// Regression for: "bots that shoot fresh (zero-bounce) bullets show yellow
-// instead of red". The colour used to be driven by bounces *remaining*
-// (max_bounce - bounce), so a freshly fired bullet with its full bounce budget
-// came out yellow. Colour is now driven by bounces *taken*, so a direct shot is
-// red and fades toward yellow as it ricochets.
+// Bullet colour tracks bounces *remaining* (max_bounce - bounce): a fresh bullet
+// with its full bounce budget reads yellow and ramps toward red as it ricochets,
+// turning red the hit before it expires. max_bounce defaults to 3 (the standard
+// shot budget) when absent.
 describe("bulletFill", () => {
-  it("colours a fresh (zero-bounce) bullet red", () => {
-    expect(bulletFill(0)).toBe(palette.red);
+  it("colours a fresh bullet (full budget) yellow", () => {
+    expect(bulletFill(0, 3)).toBe(palette.yellow);
   });
 
-  it("ramps red → orange → yellow as the bullet bounces", () => {
-    expect(bulletFill(0)).toBe(palette.red);
-    expect(bulletFill(1)).toBe(palette.orange);
-    expect(bulletFill(2)).toBe(palette.yellow);
+  it("ramps yellow → orange → red as bounces remaining drops", () => {
+    expect(bulletFill(1, 3)).toBe(palette.yellow); // 2 remaining
+    expect(bulletFill(2, 3)).toBe(palette.orange); // 1 remaining
+    expect(bulletFill(3, 3)).toBe(palette.red); // 0 remaining, about to expire
   });
 
-  it("clamps further bounces to yellow", () => {
-    expect(bulletFill(3)).toBe(palette.yellow);
-    expect(bulletFill(99)).toBe(palette.yellow);
+  it("colours a one-bounce bullet by its remaining budget", () => {
+    expect(bulletFill(0, 1)).toBe(palette.orange); // 1 remaining
+    expect(bulletFill(1, 1)).toBe(palette.red); // 0 remaining
   });
 
-  it("treats a missing or negative count as fresh (red)", () => {
-    expect(bulletFill(undefined)).toBe(palette.red);
-    expect(bulletFill(-1)).toBe(palette.red);
+  it("clamps a large remaining budget to yellow", () => {
+    expect(bulletFill(0, 99)).toBe(palette.yellow);
+  });
+
+  it("defaults a missing max_bounce to the standard 3-bounce budget", () => {
+    expect(bulletFill(0, undefined)).toBe(palette.yellow); // 3 remaining
+    expect(bulletFill(3, undefined)).toBe(palette.red); // 0 remaining
+  });
+
+  it("clamps an over-bounced (negative remaining) bullet to red", () => {
+    expect(bulletFill(5, 3)).toBe(palette.red);
   });
 });
