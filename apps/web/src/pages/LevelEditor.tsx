@@ -269,13 +269,13 @@ export const LevelEditor = () => {
     }
     if (saveLevelMutation.isError) {
       setSaving(false);
+      // Log the raw error for debugging, but show the player a localized message
+      // rather than leaking the server's English text.
       console.error("Save failed:", saveLevelMutation.error);
       addToast(
         TOAST_TYPES.ERROR,
         t("levelEditor.toast.title"),
-        t("levelEditor.toast.failedSave", {
-          error: saveLevelMutation.error?.message || t("common.unknownError"),
-        })
+        t("levelEditor.toast.failedSave")
       );
     }
   }, [

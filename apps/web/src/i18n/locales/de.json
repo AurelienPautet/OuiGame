@@ -17,6 +17,7 @@
     "by": "von {{name}}",
     "unknown": "Unbekannt",
     "unknownError": "Unbekannter Fehler",
+    "error": "Fehler",
     "guest": "Gast"
   },
   "nav": {
@@ -71,7 +72,16 @@
     "enterPassword": "Passwort eingeben",
     "loginButton": "Anmelden",
     "registerButton": "Registrieren",
-    "or": "ODER"
+    "or": "ODER",
+    "errors": {
+      "emailNotFound": "Wir konnten kein Konto mit dieser E-Mail finden.",
+      "invalidPassword": "Falsches Passwort. Bitte versuche es erneut.",
+      "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
+      "emailRegistered": "Ein Konto mit dieser E-Mail existiert bereits.",
+      "validation": "Bitte überprüfe deine Angaben und versuche es erneut.",
+      "googleNoEmail": "Dein Google-Konto hat keine bestätigte E-Mail.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+    }
   },
   "profile": {
     "noEmail": "Keine E-Mail",
@@ -118,7 +128,8 @@
     "rounds": "Runden",
     "creating": "Erstelle…",
     "createWithCount": "Raum erstellen ({{count}} Level)",
-    "mustLogin": "Du musst angemeldet sein, um einen Raum zu erstellen."
+    "mustLogin": "Du musst angemeldet sein, um einen Raum zu erstellen.",
+    "failedCreate": "Der Raum konnte nicht erstellt werden. Bitte versuche es erneut."
   },
   "levelSelector": {
     "searchPlaceholder": "Levelnamen durchsuchen…",
@@ -168,12 +179,14 @@
   "myLevels": {
     "title": "Deine Level",
     "loginToView": "Bitte melden dich an, um deine Level anzuschauen.",
-    "confirmDelete": "Möchtest du diesen Level wirklich löschen? Das kann nicht rückgängig gemacht werden."
+    "confirmDelete": "Möchtest du diesen Level wirklich löschen? Das kann nicht rückgängig gemacht werden.",
+    "failedDelete": "Das Level konnte nicht gelöscht werden. Bitte versuche es erneut."
   },
   "myCampaigns": {
     "title": "Deine Kampagnen",
     "loginToManage": "Bitte melden dich an, um Kampagnen zu erstellen und zu verwalten.",
-    "confirmDelete": "Möchtest du diese Kampagne wirklich löschen? Das kann nicht rückgängig gemacht werden."
+    "confirmDelete": "Möchtest du diese Kampagne wirklich löschen? Das kann nicht rückgängig gemacht werden.",
+    "failedDelete": "Die Kampagne konnte nicht gelöscht werden. Bitte versuche es erneut."
   },
   "tankSelect": {
     "title": "Dein Tank",
@@ -226,6 +239,10 @@
     "bombs": "Bomben",
     "blocks": "Blöcke"
   },
+  "game": {
+    "failedStart": "Das Spiel konnte nicht gestartet werden. Bitte versuche es erneut.",
+    "failedJoin": "Der Raum konnte nicht betreten werden – er ist möglicherweise voll oder nicht mehr verfügbar."
+  },
   "endGame": {
     "youWon": "Du hast gewonnen!",
     "youLost": "Du hast verloren :(",
@@ -237,7 +254,7 @@
     "ratedToast": "Du hast das Level mit {{count}} Sternen bewertet",
     "success": "Erfolg",
     "error": "Fehler",
-    "cantRate": "Bewertung fehlgeschlagen: {{error}}",
+    "cantRate": "Deine Bewertung konnte nicht gesendet werden. Bitte versuche es erneut.",
     "needLoginRate": "Du musst angemeldet sein, um einen Level zu bewerten",
     "noLevelRate": "Kein Level zum Bewerten",
     "playAgain": "Nochmal spielen",
@@ -338,7 +355,7 @@
     },
     "toast": {
       "title": "Level",
-      "failedSave": "Level konnte nicht gespeichert werden: {{error}}",
+      "failedSave": "Das Level konnte nicht gespeichert werden. Bitte versuche es erneut.",
       "loginToSave": "Bitte melde dich an, um Level zu speichern.",
       "needSpawn": "Du brauchst mindestens einen Spawn-Punkt (Flagge) für Spieler!",
       "tooManySpawns": "Du kannst nicht mehr als 8 Spawn-Punkte haben!",

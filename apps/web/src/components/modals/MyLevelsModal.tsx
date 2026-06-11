@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useModal, useAuth } from "../../contexts";
+import { useModal, useAuth, useToast } from "../../contexts";
 import { LevelSelector } from "../ui";
 import { useDeleteLevel } from "../../hooks/api";
 import { Dialog, DialogContent, DialogTitle, Button } from "../ui/primitives";
@@ -10,6 +10,7 @@ export const MyLevelsModal = () => {
   const navigate = useNavigate();
   const { closeModal } = useModal();
   const { user } = useAuth();
+  const { addToast, TOAST_TYPES } = useToast();
   const deleteLevel = useDeleteLevel();
 
   const handleEdit = (levelId: number) => {
@@ -19,7 +20,15 @@ export const MyLevelsModal = () => {
 
   const handleDelete = (levelId: number) => {
     if (window.confirm(t("myLevels.confirmDelete"))) {
-      deleteLevel.mutate(levelId);
+      deleteLevel.mutate(levelId, {
+        onError: () => {
+          addToast(
+            TOAST_TYPES.ERROR,
+            t("common.error"),
+            t("myLevels.failedDelete")
+          );
+        },
+      });
     }
   };
 

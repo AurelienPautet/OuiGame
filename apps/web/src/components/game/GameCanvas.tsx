@@ -1,9 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useGame,
   useSocket,
   useModal,
   useSettings,
+  useToast,
   MODALS,
 } from "../../contexts";
 import { GameEngine } from "../../engine/GameEngine";
@@ -86,7 +88,27 @@ export const GameCanvas = () => {
   const { socket, serverId } = useSocket()!;
   const { openModal } = useModal();
   const { settings } = useSettings();
+  const { addToast, TOAST_TYPES } = useToast();
+  const { t } = useTranslation();
   const touchEnabled = useTouchControlsEnabled();
+
+  // Surface a localized failure if the engine can't start, then bail back to the
+  // menu so the player isn't stranded on a blank game stage. Routed through a ref
+  // (like the other live closures here) so the engine-creation effect below
+  // doesn't re-run on language change or toast identity churn.
+  const handleStartError = (failedMode: typeof mode, err: unknown) => {
+    console.error("Failed to start game:", err);
+    addToast(
+      TOAST_TYPES.ERROR,
+      t("common.error"),
+      t(failedMode === "online" ? "game.failedJoin" : "game.failedStart")
+    );
+    quitGame();
+  };
+  const startErrorRef = useRef(handleStartError);
+  useEffect(() => {
+    startErrorRef.current = handleStartError;
+  });
 
   // In-game settings overlay (opened from the pause menu). Local state rather
   // than ModalContext, since ModalRenderer isn't mounted over the game stage.
@@ -502,7 +524,12 @@ export const GameCanvas = () => {
           );
         }
       } catch (err) {
-        console.error("Failed to start game:", err);
+        // Ignore a late rejection from an engine the effect has already torn
+        // down and replaced (fast mode/level/room switch): the old start's
+        // `id`/`id-fail` listeners can still fire after quit(), and acting on
+        // them would yank the player out of the freshly started game.
+        if (engineRef.current !== engine) return;
+        startErrorRef.current(mode, err);
       }
     };
 

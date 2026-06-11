@@ -17,6 +17,7 @@
     "by": "par {{name}}",
     "unknown": "Inconnu",
     "unknownError": "Erreur inconnue",
+    "error": "Erreur",
     "guest": "Invité"
   },
   "nav": {
@@ -71,7 +72,16 @@
     "enterPassword": "Saisis ton mot de passe",
     "loginButton": "Se connecter",
     "registerButton": "S'inscrire",
-    "or": "OU"
+    "or": "OU",
+    "errors": {
+      "emailNotFound": "Aucun compte ne correspond à cet e-mail.",
+      "invalidPassword": "Mot de passe incorrect. Veuillez réessayer.",
+      "usernameTaken": "Ce pseudo est déjà pris.",
+      "emailRegistered": "Un compte avec cet e-mail existe déjà.",
+      "validation": "Veuillez vérifier vos informations et réessayer.",
+      "googleNoEmail": "Votre compte Google n'a pas d'e-mail vérifié.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
+    }
   },
   "profile": {
     "noEmail": "Pas d'email",
@@ -118,7 +128,8 @@
     "rounds": "Manches",
     "creating": "Création…",
     "createWithCount": "Créer la partie ({{count}} niveaux)",
-    "mustLogin": "Tu dois être connecté pour créer une partie."
+    "mustLogin": "Tu dois être connecté pour créer une partie.",
+    "failedCreate": "Impossible de créer le salon. Veuillez réessayer."
   },
   "levelSelector": {
     "searchPlaceholder": "Cherche un niveau…",
@@ -168,12 +179,14 @@
   "myLevels": {
     "title": "Tes niveaux",
     "loginToView": "Connecte-toi pour voir tes niveaux.",
-    "confirmDelete": "Es-tu sûr de vouloir supprimer ce niveau ? Cette action ne peut pas être annulée."
+    "confirmDelete": "Es-tu sûr de vouloir supprimer ce niveau ? Cette action ne peut pas être annulée.",
+    "failedDelete": "Impossible de supprimer le niveau. Veuillez réessayer."
   },
   "myCampaigns": {
     "title": "Tes campagnes",
     "loginToManage": "Connecte-toi pour créer et gérer tes campagnes.",
-    "confirmDelete": "Es-tu sûr de vouloir supprimer cette campagne ? Cette action ne peut pas être annulée."
+    "confirmDelete": "Es-tu sûr de vouloir supprimer cette campagne ? Cette action ne peut pas être annulée.",
+    "failedDelete": "Impossible de supprimer la campagne. Veuillez réessayer."
   },
   "tankSelect": {
     "title": "Ton char",
@@ -226,6 +239,10 @@
     "bombs": "Bombes",
     "blocks": "Blocs"
   },
+  "game": {
+    "failedStart": "Impossible de démarrer la partie. Veuillez réessayer.",
+    "failedJoin": "Impossible de rejoindre le salon — il est peut-être plein ou n'existe plus."
+  },
   "endGame": {
     "youWon": "Tu as gagné !",
     "youLost": "Tu as perdu :(",
@@ -237,7 +254,7 @@
     "ratedToast": "Tu as noté le niveau avec {{count}} étoiles",
     "success": "Succès",
     "error": "Erreur",
-    "cantRate": "Impossible de noter : {{error}}",
+    "cantRate": "Impossible d'envoyer votre note. Veuillez réessayer.",
     "needLoginRate": "Tu dois être connecté pour noter un niveau",
     "noLevelRate": "Pas de niveau à noter",
     "playAgain": "Rejouer",
@@ -338,7 +355,7 @@
     },
     "toast": {
       "title": "Niveau",
-      "failedSave": "Impossible d'enregistrer le niveau : {{error}}",
+      "failedSave": "Impossible d'enregistrer le niveau. Veuillez réessayer.",
       "loginToSave": "Connecte-toi pour enregistrer tes niveaux.",
       "needSpawn": "Tu as besoin d'au moins un point d'apparition (drapeau) pour les joueurs !",
       "tooManySpawns": "Tu ne peux pas avoir plus de 8 points d'apparition !",

@@ -1,6 +1,12 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useModal, useSocket, useGame, useAuth } from "../../contexts";
+import {
+  useModal,
+  useSocket,
+  useGame,
+  useAuth,
+  useToast,
+} from "../../contexts";
 import { storage } from "../../lib/storage";
 import { LevelSelector } from "../ui";
 import {
@@ -17,10 +23,22 @@ export const CreateRoomModal = () => {
   const { socket } = useSocket();
   const { startOnlineGame } = useGame();
   const { user } = useAuth();
+  const { addToast, TOAST_TYPES } = useToast();
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   const [roomName, setRoomName] = useState("");
   const [rounds, setRounds] = useState(10);
   const [isCreating, setIsCreating] = useState(false);
+  // The server acknowledges room creation with a `room_created` event but emits
+  // nothing on failure, so a stuck "Creating…" button is the only symptom of a
+  // dropped request. This timeout gives up after a while and tells the user.
+  const createTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCreateTimeout = () => {
+    if (createTimeoutRef.current) {
+      clearTimeout(createTimeoutRef.current);
+      createTimeoutRef.current = null;
+    }
+  };
 
   const handleMultiSelect = useCallback((levelIds: number[]) => {
     setSelectedLevels(levelIds);
@@ -30,6 +48,7 @@ export const CreateRoomModal = () => {
   useEffect(() => {
     if (!socket) return;
     const handleRoomCreated = (roomId: number) => {
+      clearCreateTimeout();
       setIsCreating(false);
       startOnlineGame(roomId);
       closeModal();
@@ -37,6 +56,7 @@ export const CreateRoomModal = () => {
     socket.on("room_created", handleRoomCreated);
     return () => {
       socket.off("room_created", handleRoomCreated);
+      clearCreateTimeout();
     };
   }, [socket, startOnlineGame, closeModal]);
 
@@ -48,6 +68,18 @@ export const CreateRoomModal = () => {
     // default) when not logged in. Server expects (name, rounds, list_id, creator).
     const creator = user?.username ?? storage.getPlayerName() ?? "Player";
     socket.emit("new-room", roomName, rounds, selectedLevels, creator);
+    // Fail open: if no `room_created` arrives, re-enable the form and surface a
+    // localized error rather than leaving the button stuck on "Creating…".
+    clearCreateTimeout();
+    createTimeoutRef.current = setTimeout(() => {
+      createTimeoutRef.current = null;
+      setIsCreating(false);
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("common.error"),
+        t("createRoom.failedCreate")
+      );
+    }, 10000);
   };
 
   return (
