@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useModal, useAuth } from "../../contexts";
+import { useModal, useAuth, useGame } from "../../contexts";
 import { LevelSelector } from "../ui";
 import { useDeleteLevel } from "../../hooks/api";
 import { Dialog, DialogContent, DialogTitle, Button } from "../ui/primitives";
@@ -10,7 +10,13 @@ export const MyLevelsModal = () => {
   const navigate = useNavigate();
   const { closeModal } = useModal();
   const { user } = useAuth();
+  const { startSoloGame } = useGame();
   const deleteLevel = useDeleteLevel();
+
+  const handlePlay = (levelId: number) => {
+    startSoloGame(levelId);
+    closeModal();
+  };
 
   const handleEdit = (levelId: number) => {
     closeModal();
@@ -62,6 +68,7 @@ export const MyLevelsModal = () => {
         <div className="flex-1 min-h-0">
           <LevelSelector
             mode="myLevels"
+            onPlay={handlePlay}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onCreate={handleCreate}

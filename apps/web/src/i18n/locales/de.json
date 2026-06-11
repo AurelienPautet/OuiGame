@@ -324,6 +324,7 @@
     "levelNamePlaceholder": "Levelname eingeben",
     "clearLevel": "Level löschen",
     "saveLevel": "Level speichern",
+    "testLevel": "Level testen",
     "selectBlock": "Wähle einen Block",
     "confirmClear": "Möchtest du wirklich den gesamten Level löschen?",
     "blocks": {

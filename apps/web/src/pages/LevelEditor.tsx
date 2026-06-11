@@ -7,10 +7,12 @@ import {
   useModal,
   useToast,
   useSettings,
+  useGame,
   MODALS,
 } from "../contexts";
 import { useSaveLevel, useLevel } from "../hooks/api";
-import { Save, X, Trash2 } from "lucide-react";
+import { Save, X, Trash2, Play } from "lucide-react";
+import { GameCanvas } from "../components/game";
 import {
   IoTitle,
   Input,
@@ -227,6 +229,9 @@ export const LevelEditor = () => {
   const { openModal } = useModal();
   const { addToast, TOAST_TYPES } = useToast();
   const { settings } = useSettings();
+  // `isPlaying` flips true while a test run is overlaid on the editor; quitting
+  // the run flips it back, revealing the editor with its layout still intact.
+  const { isPlaying, startTestGame } = useGame();
 
   // Interaction surface (mouse → grid), the 2D overlay (flags/bots/ghost, and
   // the full scene in the no-WebGL fallback), the WebGL output, and the shared
@@ -457,6 +462,29 @@ export const LevelEditor = () => {
     }
   };
 
+  // Test the current (possibly unsaved) layout: play it in a throwaway solo run
+  // overlaid on the editor. No login or save required — only a valid spawn count.
+  const handleTest = () => {
+    const spawnCount = layout.filter((b) => b === BLOCKS.FLAG).length;
+    if (spawnCount === 0) {
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.needSpawn")
+      );
+      return;
+    }
+    if (spawnCount > 8) {
+      addToast(
+        TOAST_TYPES.ERROR,
+        t("levelEditor.toast.title"),
+        t("levelEditor.toast.tooManySpawns")
+      );
+      return;
+    }
+    startTestGame(layout);
+  };
+
   // Save level
   const handleSave = () => {
     if (!user) {
@@ -554,7 +582,7 @@ export const LevelEditor = () => {
   ];
 
   return (
-    <div className="w-full h-full graph-paper text-ink flex flex-col">
+    <div className="relative w-full h-full graph-paper text-ink flex flex-col">
       {/* Header */}
       <div className="h-24 bg-white border-b-4 border-ink flex items-center justify-between gap-4 px-8">
         <IoTitle className="text-2xl shrink-0">
@@ -585,6 +613,9 @@ export const LevelEditor = () => {
         <div className="flex items-center gap-2 shrink-0">
           <IconButton onClick={handleClear} title={t("levelEditor.clearLevel")}>
             <Trash2 size={20} />
+          </IconButton>
+          <IconButton onClick={handleTest} title={t("levelEditor.testLevel")}>
+            <Play size={20} className="text-blue-d" />
           </IconButton>
           <IconButton
             onClick={handleSave}
@@ -666,6 +697,14 @@ export const LevelEditor = () => {
 
       {/* Footer */}
       <div className="h-16 bg-white border-t-4 border-ink" />
+
+      {/* Test run: the full game overlaid on the editor (which stays mounted, so
+          the layout survives). Quitting the run flips isPlaying back to false. */}
+      {isPlaying && (
+        <div className="absolute inset-0 z-50">
+          <GameCanvas />
+        </div>
+      )}
     </div>
   );
 };

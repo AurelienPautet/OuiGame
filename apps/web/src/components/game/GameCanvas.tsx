@@ -79,10 +79,14 @@ export const GameCanvas = () => {
     lives,
     runStartTime,
     campaignRunResult,
+    testLayout,
     startCampaign,
     campaignAdvance,
     campaignLoseLife,
   } = useGame();
+  // True for the editor "test" run: a throwaway in-memory level with no id, so
+  // no stats are submitted and quitting returns to the editor (no modal).
+  const isTest = testLayout != null;
   const { socket, serverId } = useSocket()!;
   const { openModal } = useModal();
   const { settings } = useSettings();
@@ -100,6 +104,9 @@ export const GameCanvas = () => {
   const playerNameRef = useRef(playerName);
   const tankColorsRef = useRef(tankColors);
   const serverIdRef = useRef(serverId);
+  // In-memory grid for an editor test run (null otherwise). A ref so the engine
+  // start/replay effects can read it without depending on it.
+  const testLayoutRef = useRef(testLayout);
   // Latest settings, read when an engine is created without retriggering the
   // creation effect on every settings change (live changes flow through the
   // dedicated effect below).
@@ -110,7 +117,8 @@ export const GameCanvas = () => {
     tankColorsRef.current = tankColors;
     settingsRef.current = settings;
     serverIdRef.current = serverId;
-  }, [playerName, tankColors, settings, serverId]);
+    testLayoutRef.current = testLayout;
+  }, [playerName, tankColors, settings, serverId, testLayout]);
 
   // Push effect toggles to the running engine whenever they change (live).
   useEffect(() => {
@@ -173,8 +181,9 @@ export const GameCanvas = () => {
     (result: SoloGameResult) => {
       const isWin = result.result === "win";
 
-      // Per-level solo stats (works for both solo and campaign levels)
-      if (levelId) {
+      // Per-level solo stats (works for both solo and campaign levels). Skipped
+      // for an editor test run: the level has no id, so there's nothing to log.
+      if (levelId && !isTest) {
         submitSoloRoundMutation.mutate({
           levelId,
           success: isWin,
@@ -271,6 +280,7 @@ export const GameCanvas = () => {
     },
     [
       levelId,
+      isTest,
       mode,
       campaignId,
       campaignIndex,
@@ -337,6 +347,9 @@ export const GameCanvas = () => {
     engineRef.current?.quit();
     quitGame();
 
+    // A test run exits straight back to the editor (rendered underneath); the
+    // browse-levels / browse-campaigns modals only make sense for real plays.
+    if (isTest) return;
     if (wasSolo) {
       openModal(MODALS.LEVEL_SELECTOR);
     } else if (wasCampaign) {
@@ -345,6 +358,7 @@ export const GameCanvas = () => {
   }, [
     quitGame,
     mode,
+    isTest,
     openModal,
     campaignRunResult,
     campaignIndex,
@@ -425,8 +439,15 @@ export const GameCanvas = () => {
       engine.onGameOver = handleGameOver;
       engine.onCountdownStart = handleCountdownStart;
 
-      // Start the game (countdown will be triggered by engine)
-      engine.startSolo(levelId, playerNameRef.current, tankColorsRef.current);
+      // Start the game (countdown will be triggered by engine). A test replay
+      // re-plays the same in-memory layout (no life cost, fresh enemies).
+      engine.startSolo(
+        levelId,
+        playerNameRef.current,
+        tankColorsRef.current,
+        [],
+        testLayoutRef.current ?? undefined
+      );
     }
   }, [
     levelId,
@@ -491,7 +512,9 @@ export const GameCanvas = () => {
             tankColorsRef.current,
             // Only campaigns carry defeated enemies across a retry; a solo
             // replay always starts the level fresh.
-            mode === "campaign" ? defeatedBotIdsRef.current : []
+            mode === "campaign" ? defeatedBotIdsRef.current : [],
+            // Editor test run plays this in-memory grid instead of fetching.
+            testLayoutRef.current ?? undefined
           );
         } else if (mode === "online" && roomId) {
           await engine.startOnline(
@@ -669,7 +692,8 @@ export const GameCanvas = () => {
             externalResult={soloResult}
             onReplay={handleReplay}
             onQuit={requestQuit}
-            levelId={levelId}
+            // A test level has no real id — suppress leaderboard / rating.
+            levelId={isTest ? null : levelId}
           />
         )}
 
