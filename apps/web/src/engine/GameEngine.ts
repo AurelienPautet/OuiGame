@@ -520,12 +520,17 @@ export class GameEngine {
   startOnline(
     roomId: number | string,
     playerName: string,
-    tankColors: TankColors
+    tankColors: TankColors,
+    serverId: string | null
   ): Promise<void> {
     this.mode = "online";
     this.running = true;
     this.paused = false;
     this.roomId = roomId;
+    // Echoed back in every "tock"; the server drops input whose serverid does
+    // not match its own (the "wrongserver" guard), so without this the player
+    // can join a room but never move or shoot.
+    this.serverId = serverId;
 
     const socket = this.socket;
     if (!socket) {
