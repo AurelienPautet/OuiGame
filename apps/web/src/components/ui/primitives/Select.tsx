@@ -32,6 +32,7 @@ export function Select({
     <RadixSelect.Root
       {...(value !== undefined ? { value } : {})}
       {...(defaultValue !== undefined ? { defaultValue } : {})}
+      onOpenChange={(open) => (open ? ui.open() : ui.close())}
       onValueChange={(v) => {
         ui.click();
         onValueChange?.(v);

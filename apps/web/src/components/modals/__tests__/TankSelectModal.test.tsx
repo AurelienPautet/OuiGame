@@ -30,12 +30,13 @@ describe("TankSelectModal", () => {
     closeModal.mockClear();
   });
 
-  it("renders a dialog with a body and a turret swatch row", () => {
+  it("renders a dialog with a body and a turret radio swatch row", () => {
     renderWithProviders(<TankSelectModal />);
     // Radix renders the dialog into a portal, so scope queries to the dialog.
     const dialog = screen.getByRole("dialog");
-    // One pressable swatch per colour, in each of the two rows.
-    expect(dialog.querySelectorAll("button[aria-pressed]")).toHaveLength(
+    // Two radiogroups (body + turret), one radio swatch per colour in each.
+    expect(dialog.querySelectorAll('[role="radiogroup"]')).toHaveLength(2);
+    expect(dialog.querySelectorAll('[role="radio"]')).toHaveLength(
       TANK_COLORS.length * 2
     );
   });
@@ -49,8 +50,10 @@ describe("TankSelectModal", () => {
     // Body swatches come first; pick index 2 (default selection is index 1).
     const swatches = screen
       .getByRole("dialog")
-      .querySelectorAll("button[aria-pressed]");
+      .querySelectorAll('[role="radio"]');
     fireEvent.click(swatches[2]!);
+    // The picked swatch reflects selection through radio semantics.
+    expect(swatches[2]!.getAttribute("aria-checked")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(setSpy).toHaveBeenCalledWith(2, 1, TANK_COLORS[2], TANK_COLORS[1]);

@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogTitle,
   Button,
+  RadioGroup,
   TankAvatar,
 } from "../ui/primitives";
 import { cn } from "../../lib/cn";
@@ -16,6 +17,10 @@ import { cn } from "../../lib/cn";
 const clampIndex = (saved: number | null) =>
   Math.max(0, Math.min(saved ?? 1, COLORS.length - 1));
 
+// A single-select colour picker, built on the shared RadioGroup primitive so it
+// gets the arcade click sound + radiogroup keyboard/ARIA for free (the swatches
+// used to be bare <button>s that bypassed the audio system entirely). State is
+// the persisted colour index; we map to/from the colour name at the boundary.
 const SwatchRow = ({
   label,
   selected,
@@ -27,21 +32,21 @@ const SwatchRow = ({
 }) => (
   <div className="flex items-center gap-2 flex-wrap">
     <span className="text-sm font-semibold text-ink w-16">{label}</span>
-    {COLORS.map((name, i) => (
-      <button
-        key={name}
-        type="button"
-        aria-label={`${label} ${name}`}
-        aria-pressed={i === selected}
-        onClick={() => onPick(i)}
-        className={cn(
-          "size-8 rounded-lg border-[3px] border-ink cursor-pointer transition-transform shadow-[0_3px_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5",
-          i === selected &&
+    <RadioGroup
+      aria-label={label}
+      value={COLORS[selected] ?? COLORS[0]!}
+      options={COLORS}
+      onValueChange={(name) => onPick(COLORS.indexOf(name))}
+      className="flex items-center gap-2 flex-wrap"
+      optionStyle={(name) => ({ background: tankColors(name).fill })}
+      optionClassName={(_name, checked) =>
+        cn(
+          "size-8 rounded-lg border-[3px] border-ink transition-transform shadow-[0_3px_0_rgba(0,0,0,0.18)] hover:-translate-y-0.5",
+          checked &&
             "outline-3 outline-white -outline-offset-[7px] -translate-y-0.5 scale-110"
-        )}
-        style={{ background: tankColors(name).fill }}
-      />
-    ))}
+        )
+      }
+    />
   </div>
 );
 
