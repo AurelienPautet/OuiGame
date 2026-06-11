@@ -44,8 +44,14 @@ declare global {
   };
 }
 
+// The OAuth client ID must match the one whose "Authorized JavaScript origins"
+// list the site's origins AND the backend's GOOGLE_CLIENT_ID (the token's
+// audience is checked server-side) — otherwise GSI reports "origin not allowed"
+// and /api/auth/google rejects the token. Overridable per build via
+// VITE_GOOGLE_CLIENT_ID; the fallback is the live "Client Web 1" credential.
 const GOOGLE_CLIENT_ID =
-  "403445313450-kvueoci8r29rcpqk2p8jle1escfn6cc9.apps.googleusercontent.com";
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ??
+  "687983751036-9kgnu6hi5k8n3r9q0hf8ui8safd0pdr7.apps.googleusercontent.com";
 
 const Label = ({ children }: { children: React.ReactNode }) => (
   <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
@@ -80,6 +86,7 @@ export const AuthModal = () => {
   // of only when the user happens to toggle the Login/Register tab.
   const [gsiReady, setGsiReady] = useState(() => typeof google !== "undefined");
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const gsiInitialized = useRef(false);
 
   useEffect(() => {
     if (user) closeModal();
@@ -109,22 +116,36 @@ export const AuthModal = () => {
     credentialHandlerRef.current = handleCredentialResponse;
   });
 
+  // Initialize GSI exactly once. Calling initialize() again on every tab/locale
+  // change (the old behaviour) logs "called multiple times" and orphans the
+  // already-rendered button — "only the last initialized instance will be
+  // used" — which is why the button only appeared after toggling the tab.
   useEffect(() => {
-    if (!gsiReady || !googleButtonRef.current) return;
+    if (!gsiReady || gsiInitialized.current) return;
     google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: (response) => credentialHandlerRef.current(response),
       auto_select: false,
     });
-    // Clear any previously rendered button before re-rendering on tab/locale
-    // change so GSI never stacks duplicate buttons into the same node.
+    gsiInitialized.current = true;
+  }, [gsiReady]);
+
+  // (Re)render the button once GSI is ready and on tab/locale change. This runs
+  // after the initialize effect above on the same commit, so it never renders
+  // against an uninitialized instance.
+  useEffect(() => {
+    if (!gsiReady || !gsiInitialized.current || !googleButtonRef.current)
+      return;
+    // Clear any previously rendered button so GSI never stacks duplicates.
     googleButtonRef.current.innerHTML = "";
     google.accounts.id.renderButton(googleButtonRef.current, {
       theme: "outline",
       size: "large",
       text: isLogin ? "signin_with" : "signup_with",
       locale: i18n.language,
-      width: "100%",
+      // GSI wants a pixel width (max 400), not "100%", which it rejects with
+      // "Provided button width is invalid" and then fails to render.
+      width: "360",
     });
   }, [gsiReady, isLogin, i18n.language]);
 
@@ -157,7 +178,10 @@ export const AuthModal = () => {
   if (needsGoogleUsername) {
     return (
       <Dialog open onOpenChange={close}>
-        <DialogContent widthClassName="w-[min(94vw,420px)]">
+        <DialogContent
+          widthClassName="w-[min(94vw,420px)]"
+          aria-describedby={undefined}
+        >
           <DialogTitle className="text-xl font-bold mb-2">
             {t("auth.chooseUsername")}
           </DialogTitle>
@@ -198,7 +222,10 @@ export const AuthModal = () => {
 
   return (
     <Dialog open onOpenChange={close}>
-      <DialogContent widthClassName="w-[min(94vw,440px)]">
+      <DialogContent
+        widthClassName="w-[min(94vw,440px)]"
+        aria-describedby={undefined}
+      >
         <Tabs
           value={isLogin ? "login" : "register"}
           onValueChange={(v) => {
