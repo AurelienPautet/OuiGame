@@ -144,7 +144,12 @@ function createTickLoop({
           // round's final values, not a freshly-zeroed object.
           const stats: RoundStats = { ...player.round_stats.stats };
           player.round_stats.reset();
-          void recordOnlineRound(socketid, playerId, levelId, stats);
+          // Fire-and-forget so the tick never blocks; the .catch keeps a
+          // transient DB error (during insert or achievement eval) from
+          // surfacing as an unhandled rejection.
+          void recordOnlineRound(socketid, playerId, levelId, stats).catch(
+            (err) => console.error("recordOnlineRound failed:", err)
+          );
         }
 
         scheduleRespawn(room);

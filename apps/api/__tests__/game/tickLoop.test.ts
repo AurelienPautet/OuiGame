@@ -152,9 +152,18 @@ test("records a null playerId for a socket with no logged-in user", async () => 
   expect(achievementsService.evaluateOnlineRound).not.toHaveBeenCalled();
 });
 
-test("evaluates achievements for a logged-in player's round", async () => {
+test("evaluates achievements for a logged-in player's round with a pre-reset snapshot", async () => {
   users["p1"] = { playerId: 42, username: "p1", email: "p1@e.com" };
   const player = mkPlayer();
+  // Capture the round's final values, then make reset() actually zero the live
+  // stats object. This proves the loop passes a SNAPSHOT, not the live
+  // reference — if it passed the live object, the assertion below would see
+  // zeros and fail.
+  const expected = { ...player.round_stats.stats };
+  player.round_stats.reset = jest.fn(() => {
+    const live = player.round_stats.stats as Record<string, number>;
+    for (const k of Object.keys(live)) live[k] = 0;
+  });
   const room = makeRoom(7, true);
   room.players = { p1: player };
   const loop = createTickLoop({
@@ -167,10 +176,9 @@ test("evaluates achievements for a logged-in player's round", async () => {
   loop.start();
   await jest.advanceTimersByTimeAsync(20);
 
-  // Evaluated with the round-stats snapshot (same values as the player's stats).
   expect(achievementsService.evaluateOnlineRound).toHaveBeenCalledWith(
     42,
-    player.round_stats.stats
+    expected
   );
 });
 
