@@ -5,8 +5,9 @@
 import { verifySession } from "../auth/session";
 import * as levelsService from "../services/levels.service";
 import * as ratingsRepo from "../repositories/ratings.repo";
+import { beginCountdown } from "../game/countdown";
 import { users } from "../shared_state";
-import type { Room } from "@ouigame/shared/game";
+import type { Room, RoomMode } from "@ouigame/shared/game";
 import type { Block, CollisonsBox } from "@ouigame/shared/types";
 import type { AppServer, AppSocket } from "./types";
 
@@ -37,20 +38,28 @@ function registerSocketHandlers({
   io,
   serverid,
   rooms,
+  roomTimers,
   room_list,
   create_room,
+  broadcast_lobby_state,
   deleteRoomIfEmpty,
 }: {
   io: AppServer;
   serverid: string;
   rooms: Record<number, Room>;
+  roomTimers: Map<
+    number,
+    { respawn?: NodeJS.Timeout; countdown?: NodeJS.Timeout }
+  >;
   room_list: (socket: AppSocket | 0) => void;
   create_room: (
     name: string,
     rounds: number,
     list_id: number[],
-    creator: string
-  ) => Promise<number>;
+    creator: string,
+    mode?: RoomMode
+  ) => Promise<number | { error: string }>;
+  broadcast_lobby_state: (room: Room) => void;
   deleteRoomIfEmpty: (room: Room) => void;
 }) {
   // Resolve a session token to an in-memory user record keyed by socket id.
@@ -77,13 +86,37 @@ function registerSocketHandlers({
     try {
       for (const r of Object.values(rooms)) {
         socket.leave(String(r.id));
+        const wasMember = r.players[socket.id] !== undefined;
         r.delete_player(socket.id);
-        deleteRoomIfEmpty(r); // remove the room once its last player has left
+        if (wasMember) {
+          // Host transfer: the first human still present inherits the lobby
+          // controls ("" when nobody is left — the room is about to be
+          // reaped anyway).
+          if (r.hostid === socket.id) {
+            r.hostid = r.human_players.find((id) => r.players[id]) ?? "";
+          }
+          broadcast_lobby_state(r);
+        }
+        deleteRoomIfEmpty(r); // remove the room once its last HUMAN has left
       }
     } catch (error) {
       console.error("Error handling player leaving game:", error);
     }
     room_list(0);
+  }
+
+  // Shared guard for the host-only lobby controls: the room must exist, still
+  // be in its pre-game lobby, and the request must come from the host. Silent
+  // no-op otherwise (a stale or forged emit deserves no feedback).
+  function lobbyRoomForHost(
+    socket: AppSocket,
+    room_id: number | string
+  ): Room | null {
+    const room = rooms[Number(room_id)];
+    if (!room) return null;
+    if (room.status !== "lobby") return null;
+    if (room.hostid !== socket.id) return null;
+    return room;
   }
 
   function disconnect_socket(socket: AppSocket) {
@@ -139,9 +172,49 @@ function registerSocketHandlers({
         });
     });
 
-    socket.on("new-room", async (name, rounds, list_id, creator) => {
-      const room_id = await create_room(name, 10, list_id, creator);
-      socket.emit("room_created", room_id);
+    socket.on("new-room", async (name, rounds, list_id, creator, mode) => {
+      const result = await create_room(name, 10, list_id, creator, mode);
+      if (typeof result === "number") {
+        socket.emit("room_created", result);
+      } else {
+        socket.emit("room_create_failed", result.error);
+      }
+    });
+
+    // --- Lobby controls (host-only, pre-start only) ---
+
+    socket.on("lobby_add_bot", (room_id) => {
+      const room = lobbyRoomForHost(socket, room_id);
+      if (!room) return;
+      // Coop rooms get their bots from the level on start; in ffa a bot holds
+      // a real spawn slot, so capacity counts every combatant.
+      if (room.mode === "coop") return;
+      if (Object.keys(room.players).length >= room.maxplayernb) return;
+      if (room.spawn_lobby_bot() === null) return;
+      broadcast_lobby_state(room);
+      room_list(0);
+    });
+
+    socket.on("lobby_remove_bot", (room_id, bot_socketid) => {
+      const room = lobbyRoomForHost(socket, room_id);
+      if (!room) return;
+      // Only ids the host actually added qualify — never humans.
+      if (!room.lobby_bots.includes(bot_socketid)) return;
+      room.remove_player_quiet(bot_socketid, true);
+      broadcast_lobby_state(room);
+      room_list(0);
+    });
+
+    socket.on("lobby_start", (room_id) => {
+      const room = lobbyRoomForHost(socket, room_id);
+      if (!room) return;
+      // An ffa round needs two combatants (humans + bots) or the winner
+      // check would end it instantly.
+      if (Object.keys(room.players).length < 2) return;
+      room.status = "playing";
+      beginCountdown(room, roomTimers);
+      broadcast_lobby_state(room);
+      room_list(0);
     });
 
     socket.on("quit", () => {
@@ -163,10 +236,14 @@ function registerSocketHandlers({
         Object.keys(room.players).length < room.maxplayernb
       ) {
         room.spawn_new_player(playerName, turretc, bodyc, socket.id);
+        // First human in becomes the lobby host (the creator auto-joins their
+        // own room right after room_created, so in practice this is them).
+        if (!room.hostid) room.hostid = socket.id;
         socket.emit("id", room.id, room.ids.length - 1, socket.id);
         socket.leave("lobby" + serverid);
         socket.join(String(room.id));
         io.to(String(room.id)).emit("player-connection", playerName);
+        broadcast_lobby_state(room);
         // room.levels holds level IDs; the current entry is present for a live
         // room.
         const levelId = room.levels[room.levelid];

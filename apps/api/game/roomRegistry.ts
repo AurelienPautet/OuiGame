@@ -3,6 +3,8 @@
 // the HTTP layer via setRoomsRef — so it is only ever MUTATED in place
 // (rooms[id] = … / delete rooms[id]), never reassigned.
 import { loadlevel, Room } from "@ouigame/shared/game";
+import type { RoomMode } from "@ouigame/shared/game";
+import type { LobbyState } from "@ouigame/shared/types";
 import * as levelsService from "../services/levels.service";
 import * as levelsRepo from "../repositories/levels.repo";
 import { setRoomsRef } from "../routes/rooms.routes";
@@ -42,7 +44,14 @@ function createRoomRegistry({
     for (const room of Object.values(rooms)) {
       room_ids.push(room.id);
       room_names.push(room.name);
-      room_players.push(Object.keys(room.players).length);
+      // Capacity-relevant count: coop rooms gate on humans (level bots don't
+      // consume seats); ffa counts every combatant (lobby bots hold real
+      // spawn slots).
+      room_players.push(
+        room.mode === "coop"
+          ? room.human_count()
+          : Object.keys(room.players).length
+      );
       room_players_max.push(room.maxplayernb);
       room_creator_name.push(room.creator);
     }
@@ -67,13 +76,29 @@ function createRoomRegistry({
     }
   }
 
+  // `mode` doubles as the lobby opt-in: when present (every new web client
+  // sends it) the room is born held in a pre-game lobby — countdownActive
+  // freezes input/sim exactly like the between-rounds wait — until the host's
+  // lobby_start. Absent (old clients), the room keeps the historical
+  // immediate-play behaviour. Returns the new room id, or { error } when the
+  // request is rejected (the handler relays it as room_create_failed).
   async function create_room(
     name: string,
     rounds: number,
     list_id: number[],
-    creator: string
-  ) {
+    creator: string,
+    mode?: RoomMode
+  ): Promise<number | { error: string }> {
+    if (mode === "coop") {
+      // Enabled by the coop PR (playlist validation + bot setup).
+      return { error: "coop_unavailable" };
+    }
     const room = new Room(name, rounds, list_id, creator, io);
+    if (mode !== undefined) {
+      room.mode = mode;
+      room.status = "lobby";
+      room.countdownActive = true; // the indefinite pre-start hold
+    }
     room.maxplayernb = (await levelsRepo.getMinMaxPlayers(list_id))
       .min as number;
     // room.levels is the list_id passed above; the entry at levelid (0 on a
@@ -90,6 +115,33 @@ function createRoomRegistry({
     room_list(0);
     console.log("Room created:", room.id, room.name);
     return room.id;
+  }
+
+  // One lobby_state snapshot to everyone in the room — on join/leave, host
+  // change, bot add/remove and start. Never per tick.
+  function broadcast_lobby_state(room: Room) {
+    const members: LobbyState["members"] = [];
+    for (const socketid of room.ids) {
+      const player = room.players[socketid];
+      if (!player) continue;
+      members.push({
+        socketid,
+        name: player.name,
+        turretc: player.turretc,
+        bodyc: player.bodyc,
+        is_bot: player.is_bot,
+        is_host: socketid === room.hostid,
+      });
+    }
+    const state: LobbyState = {
+      room_id: room.id,
+      name: room.name,
+      status: room.status,
+      mode: room.mode,
+      max_players: room.maxplayernb,
+      members,
+    };
+    io.to(String(room.id)).emit("lobby_state", state);
   }
 
   // Clear (and forget) any pending respawn/countdown timers for a room.
@@ -114,10 +166,14 @@ function createRoomRegistry({
   // the re-join id-fail and leaving online play unjoinable) and brief reconnects
   // in prod.
   function deleteRoomIfEmpty(room: Room) {
-    if (Object.keys(room.players).length !== 0) return;
+    // HUMAN-empty, not players-empty: lobby bots stay registered in
+    // room.players, so a bots-only room would otherwise survive its last
+    // human forever (ticking, listed, undeletable).
+    if (room.human_count() !== 0) return;
     setTimeout(() => {
-      // Same room object (id not reused) and still empty when the timer fires?
-      if (rooms[room.id] === room && Object.keys(room.players).length === 0) {
+      // Same room object (id not reused) and still human-empty when the timer
+      // fires?
+      if (rooms[room.id] === room && room.human_count() === 0) {
         clearRoomTimers(room.id);
         delete rooms[room.id];
         room_list(0);
@@ -130,6 +186,7 @@ function createRoomRegistry({
     roomTimers,
     room_list,
     create_room,
+    broadcast_lobby_state,
     clearRoomTimers,
     deleteRoomIfEmpty,
   };
