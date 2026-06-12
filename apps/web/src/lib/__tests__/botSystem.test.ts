@@ -17,8 +17,9 @@ beforeEach(() => {
 });
 
 describe("resolveBotSystem", () => {
-  it("defaults when nothing is set", () => {
-    expect(resolveBotSystem()).toBe(DEFAULT_BOT_SYSTEM);
+  it("defaults to v2 when nothing is set (flipping back is a deliberate change)", () => {
+    expect(DEFAULT_BOT_SYSTEM).toBe("v2");
+    expect(resolveBotSystem()).toBe("v2");
   });
 
   it("reads ?bots= from the search string (before the hash)", () => {

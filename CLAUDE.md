@@ -65,6 +65,14 @@ authoritative `Room` for **online** play and broadcasts a `tick` snapshot. Same
 simulation code, two hosts. This runtime is still plain **JS** (with ambient
 `.d.ts` shims); everything else is TypeScript.
 
+**Two bot AI systems, selected by `Room.bot_system`.** The default for solo/
+campaign is the **v2** brain (`packages/shared/src/game/ai/` — leading, ricochet
+planning, context steering, mines; see its README). The legacy AI (`Bot.ts` +
+`possible_moves.ts` + `possible_shots_balls.ts`) is frozen by golden tests and
+reachable via `?bots=legacy` (or localStorage `bot_system`) — never edit the
+legacy files or import them from `ai/`. Bot kinds map to level cells 11–16;
+15/16 (Miner/Hunter) exist only under v2.
+
 **Client = React UI + a separate imperative engine.** React owns menus/modals/HUD;
 the game itself runs in `apps/web/src/engine/` driven by `requestAnimationFrame`,
 never re-rendered by React. The two are bridged by a single `useRef` in
