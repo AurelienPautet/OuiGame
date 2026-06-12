@@ -83,8 +83,10 @@ function createTickLoop({
         }
         // loadlevel above refilled the (typically single-spawn) player pool;
         // grow it so every human — including joiners who waited out the
-        // round — gets a deterministic slot near the authored spawn.
-        room.ensure_spawn_capacity(room.human_count());
+        // round — gets a deterministic slot near the authored spawn. Every
+        // human is about to be re-dealt, so their (previous-level) spawnpos
+        // cells must NOT be reserved against the fresh grid.
+        room.ensure_spawn_capacity(room.human_count(), false);
       }
 
       room.respawn_the_room();
@@ -154,8 +156,13 @@ function createTickLoop({
           if (player === undefined || levelId === undefined) continue;
           // Bots have no account and no meaningful per-round row (they would
           // insert as anonymous junk); a waiting coop joiner sat the round
-          // out, so recording their zeroed stats would skew averages.
-          if (player.is_bot || player.pending_spawn) continue;
+          // out, so recording their zeroed stats would skew averages. Their
+          // stats still reset — a persistent FFA lobby bot would otherwise
+          // accumulate kills/wins across rounds on every scoreboard.
+          if (player.is_bot || player.pending_spawn) {
+            player.round_stats.reset();
+            continue;
+          }
           const user = users[socketid];
           const playerId = user ? user.playerId : null;
           // Snapshot the stats before reset so the async recorder reads the

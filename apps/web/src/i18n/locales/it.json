@@ -130,7 +130,8 @@
     "failReason": {
       "level_not_found": "Un livello selezionato non esiste più.",
       "not_solo": "Le stanze coop giocano solo livelli singolo giocatore.",
-      "no_bot_spawns": "Ogni livello coop deve avere almeno un nemico."
+      "no_bot_spawns": "Ogni livello coop deve avere almeno un nemico.",
+      "no_player_spawn": "Ogni livello coop deve avere un punto di spawn del giocatore."
     }
   },
   "levelSelector": {

@@ -144,16 +144,17 @@ test("skips bots and waiting joiners when recording rounds", async () => {
   loop.start();
   await jest.advanceTimersByTimeAsync(20);
 
-  // Only the real, fielded human produced a row; the bot and the joiner who
-  // sat the round out are skipped entirely (no insert, no stats reset).
+  // Only the real, fielded human produced a row — but EVERYONE's stats reset
+  // (a persistent FFA lobby bot would otherwise accumulate kills/wins across
+  // rounds on every scoreboard).
   expect(statsRepo.insertRound).toHaveBeenCalledTimes(1);
   expect(statsRepo.insertRound).toHaveBeenCalledWith(
     null,
     101,
     human.round_stats.stats
   );
-  expect(bot.round_stats.reset).not.toHaveBeenCalled();
-  expect(waiting.round_stats.reset).not.toHaveBeenCalled();
+  expect(bot.round_stats.reset).toHaveBeenCalledTimes(1);
+  expect(waiting.round_stats.reset).toHaveBeenCalledTimes(1);
 });
 
 test("records a null playerId for a socket with no logged-in user", async () => {
@@ -277,7 +278,9 @@ test("a coop respawn cycles bots out, grows spawns, respawns, then re-spawns bot
       delete (room.players as Record<string, unknown>)[id];
       room.ids.splice(room.ids.indexOf(id), 1);
     }),
-    ensure_spawn_capacity: jest.fn((n: number) => order.push(`ensure:${n}`)),
+    ensure_spawn_capacity: jest.fn((n: number, reserve: boolean) =>
+      order.push(`ensure:${n}:${reserve}`)
+    ),
     spawn_all_bots: jest.fn(() => order.push("spawn_all_bots")),
   });
   room.respawn_the_room = jest.fn(() => order.push("respawn"));
@@ -294,11 +297,12 @@ test("a coop respawn cycles bots out, grows spawns, respawns, then re-spawns bot
   await jest.advanceTimersByTimeAsync(5100); // respawn fires
 
   // Dead-bot cleanup (slots NOT returned to the player pool) → pool top-up
-  // for the humans → human respawn → fresh level bots → countdown.
+  // for the humans WITHOUT reserving previous-level spawnpos cells → human
+  // respawn → fresh level bots → countdown.
   expect(order).toEqual([
     "remove:bot0:false",
     "remove:bot1:false",
-    "ensure:1",
+    "ensure:1:false",
     "respawn",
     "spawn_all_bots",
   ]);

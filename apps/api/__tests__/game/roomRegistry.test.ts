@@ -79,6 +79,24 @@ describe("create_room", () => {
     expect(reg.rooms[id]!.countdownActive).toBe(true);
   });
 
+  test("the creator's socket pre-assigns the lobby host", async () => {
+    const { reg } = mkReg();
+    const id = asId(
+      await reg.create_room("Arena", 10, [101], "alice", "ffa", "sock-creator")
+    );
+    // Never listed hostless: a faster joiner can no longer claim the lobby
+    // before the creator's own play lands.
+    expect(reg.rooms[id]!.hostid).toBe("sock-creator");
+  });
+
+  test("legacy rooms (no mode) never get a host pre-assigned", async () => {
+    const { reg } = mkReg();
+    const id = asId(
+      await reg.create_room("Arena", 10, [101], "alice", undefined, "sock-x")
+    );
+    expect(reg.rooms[id]!.hostid).toBe("");
+  });
+
   test("a validated coop room: lobby-held, v2 bots, human cap of 4", async () => {
     const { reg } = mkReg();
     (levelsService.validateCoopLevels as jest.Mock).mockResolvedValue({

@@ -52,7 +52,7 @@ describe("GET /api/rooms", () => {
         maxplayernb: 4,
         status: "lobby",
         mode: "ffa",
-        human_count: () => 1,
+        seat_count: () => 2,
       },
       2: {
         id: 2,
@@ -62,7 +62,7 @@ describe("GET /api/rooms", () => {
         maxplayernb: 4,
         status: "playing",
         mode: "coop",
-        human_count: () => 1,
+        seat_count: () => 1,
       },
     });
 

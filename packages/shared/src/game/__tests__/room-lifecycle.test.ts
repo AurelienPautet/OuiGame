@@ -42,11 +42,15 @@ describe("Room.spawn_new_player", () => {
     expect(room.spawns).toEqual([{ x: 200, y: 200 }]); // first slot consumed
   });
 
-  it("still registers a player when the spawn pool is empty (position undefined)", () => {
+  it("falls back to a real position when the spawn pool is empty", () => {
+    // Historically this produced position === undefined — an alive "ghost"
+    // whose presence crashed every other entity's collision pass. The pool
+    // exhaustion now lands on fallback_spawn(): the first walkable floor
+    // cell, or the arena centre on a blocklist-less room like this one.
     const room = mkRoom();
     room.spawns = [];
     room.spawn_new_player("Bob", "red", "red", "s2");
-    expect(room.players.s2.position).toBeUndefined();
+    expect(room.players.s2.position).toEqual({ x: 550, y: 400 });
     expect(room.nbliving).toBe(1);
   });
 });

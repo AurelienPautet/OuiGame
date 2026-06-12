@@ -132,7 +132,8 @@
     "failReason": {
       "level_not_found": "A selected level no longer exists.",
       "not_solo": "Co-op rooms can only play solo levels.",
-      "no_bot_spawns": "Every co-op level needs at least one enemy on it."
+      "no_bot_spawns": "Every co-op level needs at least one enemy on it.",
+      "no_player_spawn": "Every co-op level needs a player spawn point."
     }
   },
   "levelSelector": {

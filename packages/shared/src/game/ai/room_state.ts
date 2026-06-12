@@ -1,7 +1,7 @@
 import { TILE } from "./constants.js";
 import { AIGrid } from "./grid.js";
 import { FlowField } from "./flow.js";
-import { targetIds } from "./allegiance.js";
+import { syncTargetIds } from "./allegiance.js";
 import type { Room } from "../Room.js";
 import type { CollisionBox } from "../CollisionBox.js";
 
@@ -14,6 +14,10 @@ const VEL_EMA_ALPHA = 0.2; // per-tick smoothing of human velocity for leading
 
 export class AIRoomState {
   grid = new AIGrid();
+  // Targetable socketids (humans ++ lobby bots), kept in sync by
+  // refreshPerTick via syncTargetIds — the allocation-free per-tick view of
+  // allegiance.targetIds. pickTarget iterates this.
+  targets: string[] = [];
   // One flow field per live human socketid (chase = downhill, flee = uphill).
   flows = new Map<string, FlowField>();
   // Smoothed velocities so a juking player doesn't whip every lead point.
@@ -52,7 +56,8 @@ export function refreshPerTick(room: Room, s: AIRoomState): void {
 
   // Velocity EMAs and flow fields exist for every targetable tank — humans
   // plus lobby bots — so bots can lead and chase each other in FFA rooms.
-  const targets = targetIds(room);
+  syncTargetIds(s.targets, room);
+  const targets = s.targets;
   for (const id of targets) {
     const p = room.players[id];
     if (!p || !p.alive) continue;

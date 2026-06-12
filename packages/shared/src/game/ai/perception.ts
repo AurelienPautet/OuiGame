@@ -10,7 +10,6 @@ import {
 } from "./constants.js";
 import { castRay, makeRayHit, segmentClear, type AIGrid } from "./grid.js";
 import { FLOW_INF } from "./flow.js";
-import { targetIds } from "./allegiance.js";
 import type { AIRoomState } from "./room_state.js";
 import type { ArchetypeAI } from "./archetypes.js";
 import type { Room } from "../Room.js";
@@ -321,7 +320,9 @@ export function pickTarget(
   let current: Player | null = null;
   let currentScore = Infinity;
 
-  for (const id of targetIds(room)) {
+  // s.targets is the allocation-free humans++lobby-bots view kept in sync by
+  // refreshPerTick (which every brain tick runs before targeting).
+  for (const id of s.targets) {
     if (id === bot.socketid) continue; // a lobby bot is in the target set
     const p = room.players[id];
     if (!p || !p.alive || p.position == undefined) continue;

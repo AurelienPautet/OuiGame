@@ -52,6 +52,8 @@ const TANK_PALETTE: Record<string, TankColors> = {
   purple: { fill: palette.purple, stroke: palette.purpleD },
   yellow: { fill: palette.yellow, stroke: palette.yellowD },
   turquoise: { fill: palette.teal, stroke: palette.tealD },
+  // The bot7 "match bot" colour name (host-added lobby bots, Room.bot_colors).
+  dimgray: { fill: "#8e959e", stroke: palette.inkSoft },
   blueF: { fill: "#5ec9ee", stroke: palette.blueD },
   violetF: { fill: "#d2a6fb", stroke: palette.purpleD },
   // `none` = invisible tank (spectator / empty slot); renderer skips drawing it.
