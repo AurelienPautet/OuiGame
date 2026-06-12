@@ -6,7 +6,7 @@ import type { Size } from "../types.js";
 // code. Kinds map to the same level cells / colors as the legacy system
 // (11→bot1 … 14→bot4); the Wii Play Tanks! roster is the tuning reference.
 
-export type AIBotKind = "bot1" | "bot2" | "bot3" | "bot4";
+export type AIBotKind = "bot1" | "bot2" | "bot3" | "bot4" | "bot5" | "bot6";
 
 // Player-chassis overrides applied in the AIBot constructor. These mirror the
 // legacy BOT_CONFIGS chassis values kind-for-kind so a v2 bot *shoots the same
@@ -58,6 +58,8 @@ export interface Archetype {
 //   bot2 (green)  aggressive presser — closes to mid range, strafes, light mines
 //   bot3 (orange) kiting sniper — 600 px/s direct shots, strong dodge, full-ish lead
 //   bot4 (red)    stationary ricochet master — fast turret, full lead, deadly precise
+//   bot5 (yellow) miner — no gun at all; fast, mine-obsessed area denial (Wii yellow)
+//   bot6 (purple) hunter — fast closer with 5 bullets + mines, corners the player
 export const ARCHETYPES: Record<AIBotKind, Archetype> = {
   bot1: {
     chassis: {
@@ -203,6 +205,79 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       fleeDropP: 0,
       breachEnabled: false,
       idleScanRadS: 0.6,
+    },
+  },
+  bot5: {
+    chassis: {
+      canMove: true,
+      mvtspeed: 200, // slightly faster than players: hard to corner
+      shoot_speed: 300,
+      shoot_max_bounce: 3,
+      bullet_type: 1,
+      bullet_size: { w: 15, h: 15 },
+      max_bulletcount: 0, // NO gun — the fire gate (bulletcount < max) never opens
+      max_minecount: 4,
+    },
+    ai: {
+      thinkPeriod: 8,
+      turretSlewRadS: 2.0,
+      cooldownTicks: 0,
+      reactionTicks: 0,
+      aimTolRad: 0,
+      leadFactor: 0,
+      aimSigmaRad: 0,
+      maxPlanBounces: 0,
+      fanRays: 0,
+      unfoldBudget: 0,
+      minQuality: 1,
+      // Keeps a respectful middle distance while it seeds the arena.
+      bandMinPx: 250,
+      bandMaxPx: 450,
+      dodgeSkill: 0.15, // Wii yellow mostly ignores bullets...
+      threatHorizonS: 0.5,
+      bounceAwareDodge: false,
+      minesEnabled: true, // ...but lives for mines
+      mineCooldownTicks: 240,
+      chokeP: 0.6,
+      fleeDropP: 0.5,
+      breachEnabled: true,
+      idleScanRadS: 0.8,
+    },
+  },
+  bot6: {
+    chassis: {
+      canMove: true,
+      mvtspeed: 210, // the fastest thing on the field
+      shoot_speed: 300,
+      shoot_max_bounce: 3,
+      bullet_type: 1,
+      bullet_size: { w: 15, h: 15 },
+      max_bulletcount: 5, // player-grade magazine — sustained crossfire
+      max_minecount: 2,
+    },
+    ai: {
+      thinkPeriod: 6,
+      turretSlewRadS: 3.0,
+      cooldownTicks: 40,
+      reactionTicks: 7,
+      aimTolRad: 0.06,
+      leadFactor: 0.85,
+      aimSigmaRad: 0.03,
+      maxPlanBounces: 1,
+      fanRays: 4,
+      unfoldBudget: 6,
+      minQuality: 0.2,
+      bandMinPx: 120, // corners the player at knife range
+      bandMaxPx: 260,
+      dodgeSkill: 0.7,
+      threatHorizonS: 0.8,
+      bounceAwareDodge: true,
+      minesEnabled: true,
+      mineCooldownTicks: 500,
+      chokeP: 0.15,
+      fleeDropP: 0.25,
+      breachEnabled: false,
+      idleScanRadS: 0.9,
     },
   },
 };

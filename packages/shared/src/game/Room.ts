@@ -3,7 +3,7 @@ import { SIM_STEP_S } from "./loop.js";
 import { generateBcollision } from "./level_loader.js";
 import { Player } from "./Player.js";
 import { Bot, type BotKind } from "./Bot.js";
-import { AIBot } from "./ai/index.js";
+import { AIBot, type AIBotKind } from "./ai/index.js";
 import type {
   Vec2,
   RoomIo,
@@ -33,11 +33,15 @@ export type BotSystem = "legacy" | "v2";
 
 export class Room {
   static next_id = 1;
-  static bot_colors: Record<BotKind, [string, string]> = {
+  // Keyed by AIBotKind (a superset of the legacy BotKind): bot5/bot6 exist
+  // only in the v2 system, but their colors live here with the others.
+  static bot_colors: Record<AIBotKind, [string, string]> = {
     bot1: ["blue", "blue"],
     bot2: ["green", "green"],
     bot3: ["orange", "orange"],
     bot4: ["red", "red"],
+    bot5: ["yellow", "yellow"],
+    bot6: ["purple", "purple"],
   };
 
   static getNextId(): number {
@@ -78,6 +82,8 @@ export class Room {
   bot2_spawns: Vec2[];
   bot3_spawns: Vec2[];
   bot4_spawns: Vec2[];
+  bot5_spawns: Vec2[];
+  bot6_spawns: Vec2[];
   countdownActive: boolean;
   countdownDuration: number;
   // v2 bot AI opt-in (see BotSystem above) + the seed its per-bot RNGs derive
@@ -139,6 +145,8 @@ export class Room {
     this.bot2_spawns = [];
     this.bot3_spawns = [];
     this.bot4_spawns = [];
+    this.bot5_spawns = [];
+    this.bot6_spawns = [];
     this.blocklist = [];
 
     // Countdown state - when true, render but skip player input/actions
@@ -204,22 +212,26 @@ export class Room {
       this.bot1_spawns.length
     );
     // One config-driven loop replacing the former Bot1-4 subclasses. Per-kind
-    // tuning lives in BOT_CONFIGS (Bot.js); colours stay sourced from
-    // Room.bot_colors. Preserves the exact socketid numbering: a single
-    // bot_index across all kinds, spawn key === the bot's socketid (bot1's old
-    // `bot${i}` key already equalled `bot${bot_index}` since bot1 is first).
-    const kinds: BotKind[] = ["bot1", "bot2", "bot3", "bot4"];
-    const labels: Record<BotKind, string> = {
+    // tuning lives in BOT_CONFIGS (Bot.js) / ai/archetypes.ts; colours stay
+    // sourced from Room.bot_colors. Preserves the exact socketid numbering: a
+    // single bot_index across all kinds, spawn key === the bot's socketid
+    // (bot1's old `bot${i}` key already equalled `bot${bot_index}`).
+    const kinds: AIBotKind[] = ["bot1", "bot2", "bot3", "bot4", "bot5", "bot6"];
+    const labels: Record<AIBotKind, string> = {
       bot1: "Bot1",
       bot2: "Bot2",
       bot3: "Bot3",
       bot4: "Bot4",
+      bot5: "Bot5",
+      bot6: "Bot6",
     };
-    const spawnLists: Record<BotKind, Vec2[]> = {
+    const spawnLists: Record<AIBotKind, Vec2[]> = {
       bot1: this.bot1_spawns,
       bot2: this.bot2_spawns,
       bot3: this.bot3_spawns,
       bot4: this.bot4_spawns,
+      bot5: this.bot5_spawns,
+      bot6: this.bot6_spawns,
     };
     let bot_index = 0;
     for (const kind of kinds) {
@@ -239,18 +251,31 @@ export class Room {
         // class (i.e. the brain) differs, so campaign skipIds, the renderer's
         // `socketId.includes("bot")` check and the kill feed see no change.
         const label = `${labels[kind]}_ ${i}`;
-        const bot: Player =
-          this.bot_system === "v2"
-            ? new AIBot(
-                { x: 0, y: 0 },
-                botId,
-                label,
-                colors[0],
-                colors[1],
-                kind,
-                this.bot_seed
-              )
-            : new Bot({ x: 0, y: 0 }, botId, label, colors[0], colors[1], kind);
+        let bot: Player;
+        if (this.bot_system === "v2") {
+          bot = new AIBot(
+            { x: 0, y: 0 },
+            botId,
+            label,
+            colors[0],
+            colors[1],
+            kind,
+            this.bot_seed
+          );
+        } else {
+          // bot5/bot6 exist only in the v2 system: under legacy their spawn
+          // slots stay empty, but bot_index already advanced above, so the
+          // OTHER bots keep stable ids across systems (campaign skipIds).
+          if (kind === "bot5" || kind === "bot6") continue;
+          bot = new Bot(
+            { x: 0, y: 0 },
+            botId,
+            label,
+            colors[0],
+            colors[1],
+            kind
+          );
+        }
         this.spawn_new(bot, botId, spawns);
       }
     }
