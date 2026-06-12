@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { extractBotCounts, getBotColor, hexToDataUrl } from "../levelUtils";
+import {
+  extractBotCounts,
+  getBotColor,
+  hexToDataUrl,
+  hasBotSpawns,
+} from "../levelUtils";
 
 describe("extractBotCounts", () => {
   it("returns an empty object for nullish or non-array input", () => {
@@ -34,5 +39,22 @@ describe("hexToDataUrl", () => {
   it("decodes hex into a base64 jpeg data URL", () => {
     // 0x61 0x62 -> "ab" -> btoa("ab") === "YWI="
     expect(hexToDataUrl("6162")).toBe("data:image/jpeg;base64,YWI=");
+  });
+});
+
+describe("hasBotSpawns", () => {
+  it("is true when any bot cell (11-16) is present", () => {
+    expect(hasBotSpawns([0, 0, 11, 0])).toBe(true);
+    expect(hasBotSpawns([0, 16])).toBe(true);
+  });
+
+  it("is false for walls, spawns, holes and empty grids", () => {
+    expect(hasBotSpawns([0, 1, 2, 3, 4, 10])).toBe(false);
+    expect(hasBotSpawns([])).toBe(false);
+  });
+
+  it("is false for nullish input", () => {
+    expect(hasBotSpawns(null)).toBe(false);
+    expect(hasBotSpawns(undefined)).toBe(false);
   });
 });

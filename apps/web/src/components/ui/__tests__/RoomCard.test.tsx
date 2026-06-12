@@ -41,4 +41,27 @@ describe("RoomCard", () => {
     expect(onClick).not.toHaveBeenCalled();
     expect(screen.getByText("4/4")).toBeTruthy();
   });
+
+  it("shows lobby/in-game and co-op badges when the server provides them", () => {
+    renderWithProviders(
+      <RoomCard
+        room={{ ...baseRoom, status: "lobby", mode: "coop" }}
+        onClick={() => {}}
+      />
+    );
+    expect(screen.getByText("In lobby")).toBeTruthy();
+    expect(screen.getByText("Co-op")).toBeTruthy();
+
+    renderWithProviders(
+      <RoomCard room={{ ...baseRoom, status: "playing" }} onClick={() => {}} />
+    );
+    expect(screen.getByText("In game")).toBeTruthy();
+  });
+
+  it("renders no badges for an old server that omits status/mode", () => {
+    renderWithProviders(<RoomCard room={baseRoom} onClick={() => {}} />);
+    expect(screen.queryByText("In lobby")).toBeNull();
+    expect(screen.queryByText("In game")).toBeNull();
+    expect(screen.queryByText("Co-op")).toBeNull();
+  });
 });

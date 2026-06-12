@@ -110,7 +110,10 @@
     "noRooms": "Sin salas disponibles",
     "createToStart": "¡Crea una para empezar!",
     "full": "LLENA",
-    "passwordProtected": "Protegida con contraseña"
+    "passwordProtected": "Protegida con contraseña",
+    "inLobby": "En sala",
+    "inGame": "En juego",
+    "coop": "Coop"
   },
   "createRoom": {
     "title": "Crear Sala",
@@ -118,7 +121,17 @@
     "rounds": "Rondas",
     "creating": "Creando…",
     "createWithCount": "Crear Sala ({{count}} niveles)",
-    "mustLogin": "Debes estar conectado para crear una sala."
+    "mustLogin": "Debes estar conectado para crear una sala.",
+    "mode": "Modo de juego",
+    "modeClassic": "Clásico",
+    "modeCoop": "Coop",
+    "coopHint": "Coop: hasta 4 jugadores se alían contra los bots del nivel. Solo niveles en solitario con enemigos.",
+    "failed": "No se pudo crear la sala",
+    "failReason": {
+      "level_not_found": "Un nivel seleccionado ya no existe.",
+      "not_solo": "Las salas coop solo juegan niveles en solitario.",
+      "no_bot_spawns": "Cada nivel coop necesita al menos un enemigo."
+    }
   },
   "levelSelector": {
     "searchPlaceholder": "Buscar nivel…",
@@ -241,7 +254,9 @@
     "needLoginRate": "Debes estar conectado para calificar un nivel",
     "noLevelRate": "Sin nivel para calificar",
     "playAgain": "Jugar de Nuevo",
-    "quit": "Salir"
+    "quit": "Salir",
+    "coopVictory": "¡Victoria! Todos los bots destruidos",
+    "coopDefeat": "Derrota — tu equipo fue eliminado"
   },
   "campaignEnd": {
     "complete": "¡Campaña Completada!",
@@ -387,5 +402,16 @@
     "title": "Algo salió mal",
     "message": "El juego encontró un error inesperado. Recargar generalmente lo soluciona.",
     "reload": "Recargar"
+  },
+  "lobby": {
+    "classic": "Clásico",
+    "coop": "Coop",
+    "addBot": "Añadir bot",
+    "removeBot": "Quitar bot",
+    "start": "Empezar partida",
+    "leave": "Salir",
+    "bot": "Bot",
+    "host": "Anfitrión",
+    "waitingForHost": "Esperando a que el anfitrión empiece…"
   }
 }

@@ -112,7 +112,10 @@
     "noRooms": "Aucune partie disponible",
     "createToStart": "Crée-en une pour commencer !",
     "full": "PLEIN",
-    "passwordProtected": "Protégée par mot de passe"
+    "passwordProtected": "Protégée par mot de passe",
+    "inLobby": "Dans le salon",
+    "inGame": "En jeu",
+    "coop": "Coop"
   },
   "createRoom": {
     "title": "Créer une partie",
@@ -120,7 +123,17 @@
     "rounds": "Manches",
     "creating": "Création…",
     "createWithCount": "Créer la partie ({{count}} niveaux)",
-    "mustLogin": "Tu dois être connecté pour créer une partie."
+    "mustLogin": "Tu dois être connecté pour créer une partie.",
+    "mode": "Mode de jeu",
+    "modeClassic": "Classique",
+    "modeCoop": "Coop",
+    "coopHint": "Coop : jusqu'à 4 joueurs s'allient contre les bots du niveau. Uniquement des niveaux solo avec des ennemis.",
+    "failed": "Impossible de créer le salon",
+    "failReason": {
+      "level_not_found": "Un niveau sélectionné n'existe plus.",
+      "not_solo": "Les salons coop ne jouent que des niveaux solo.",
+      "no_bot_spawns": "Chaque niveau coop doit contenir au moins un ennemi."
+    }
   },
   "levelSelector": {
     "searchPlaceholder": "Cherche un niveau…",
@@ -243,7 +256,9 @@
     "needLoginRate": "Tu dois être connecté pour noter un niveau",
     "noLevelRate": "Pas de niveau à noter",
     "playAgain": "Rejouer",
-    "quit": "Quitter"
+    "quit": "Quitter",
+    "coopVictory": "Victoire — tous les bots détruits !",
+    "coopDefeat": "Défaite — votre équipe a été éliminée"
   },
   "campaignEnd": {
     "complete": "Campagne terminée !",
@@ -468,5 +483,16 @@
     "title": "Quelque chose s'est mal passé",
     "message": "Le jeu a rencontré une erreur inattendue. Recharger règle généralement le problème.",
     "reload": "Recharger"
+  },
+  "lobby": {
+    "classic": "Classique",
+    "coop": "Coop",
+    "addBot": "Ajouter un bot",
+    "removeBot": "Retirer le bot",
+    "start": "Lancer la partie",
+    "leave": "Quitter",
+    "bot": "Bot",
+    "host": "Hôte",
+    "waitingForHost": "En attente du lancement par l'hôte…"
   }
 }

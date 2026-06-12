@@ -10,12 +10,13 @@ import { GameEngine } from "../../engine/GameEngine";
 import { EndGameScreen } from "./EndGameScreen";
 import type { SoloGameResult } from "./EndGameScreen";
 import { CountdownOverlay } from "./CountdownOverlay";
+import { LobbyOverlay } from "./LobbyOverlay";
 import { LivesHud } from "./LivesHud";
 import { RunTimer } from "./RunTimer";
 import { CampaignEndScreen } from "./CampaignEndScreen";
 import { CampaignInterstitial } from "./CampaignInterstitial";
 import type { InterstitialData, LevelStats } from "./CampaignInterstitial";
-import type { WinnerPayload } from "@ouigame/shared/types";
+import type { WinnerPayload, LobbyState } from "@ouigame/shared/types";
 import { useSubmitSoloRound, useSubmitCampaignRun } from "../../hooks/api";
 import { LIFE_EVERY } from "../../constants/campaign";
 import { PauseOverlay } from "./PauseOverlay";
@@ -65,6 +66,9 @@ export const GameCanvas = () => {
   const [isEndGameVisible, setIsEndGameVisible] = useState(false);
   const [soloResult, setSoloResult] = useState<SoloGameResult | null>(null);
   const [showCountdown, setShowCountdown] = useState(false);
+  // Latest lobby_state for the joined online room. Non-null with status
+  // "lobby" ⇒ the room is pre-game (frozen arena) and the lobby panel shows.
+  const [lobby, setLobby] = useState<LobbyState | null>(null);
   // Between-level screen for campaigns.
   const [interstitial, setInterstitial] = useState<InterstitialData | null>(
     null
@@ -153,16 +157,34 @@ export const GameCanvas = () => {
       // Kick off the parachute drop in step with the server countdown.
       engineRef.current?.startSpawnAnimation();
       // Server controls the timing, client just shows the UI
+      // The match-start countdown also ends the lobby — drop the panel even
+      // if the status-flip lobby_state broadcast got lost.
+      setLobby((prev) =>
+        prev && prev.status === "lobby" ? { ...prev, status: "playing" } : prev
+      );
+    };
+
+    // Pre-game lobby snapshots (membership/host/status changes).
+    const handleLobbyState = (state: LobbyState) => {
+      setLobby(state);
     };
 
     socket.on("winner", handleWinner);
     socket.on("countdown_start", handleCountdownStartServer);
+    socket.on("lobby_state", handleLobbyState);
 
     return () => {
       socket.off("winner", handleWinner);
       socket.off("countdown_start", handleCountdownStartServer);
+      socket.off("lobby_state", handleLobbyState);
     };
   }, [socket]);
+
+  // A stale lobby panel must never survive into another room (GameCanvas does
+  // not unmount between rooms — the engine-init effect just re-runs).
+  useEffect(() => {
+    setLobby(null);
+  }, [roomId]);
 
   // Handle countdown start callback from engine
   const handleCountdownStart = useCallback(() => {
@@ -353,6 +375,7 @@ export const GameCanvas = () => {
     setSoloResult(null);
     setIsEndGameVisible(false);
     setShowCountdown(false);
+    setLobby(null);
     setInterstitial(null);
     engineRef.current?.quit();
     quitGame();
@@ -587,8 +610,14 @@ export const GameCanvas = () => {
   // Show the custom reticle (and hide the OS cursor) only during live play —
   // when an overlay is up we hand the native pointer back so its buttons are
   // clickable. The reticle is tinted with the player's turret colour.
+  const lobbyUp =
+    mode === "online" && roomId != null && lobby?.status === "lobby";
   const overlayUp =
-    isPaused || isEndGameVisible || !!interstitial || !!campaignRunResult;
+    isPaused ||
+    isEndGameVisible ||
+    !!interstitial ||
+    !!campaignRunResult ||
+    lobbyUp;
   const showCursor = !overlayUp;
   const turretFill = resolveTankColors(tankColors.turret).fill;
   const cursorColor = turretFill === "transparent" ? palette.red : turretFill;
@@ -670,6 +699,12 @@ export const GameCanvas = () => {
             time is shown there). */}
         {mode === "solo" && !isEndGameVisible && (
           <RunTimer getElapsedMs={getElapsedMs} />
+        )}
+
+        {/* Pre-game lobby panel over the live (frozen) arena. Below the
+            countdown overlay so the 3-2-1 paints on top during the handoff. */}
+        {lobbyUp && lobby && roomId != null && (
+          <LobbyOverlay state={lobby} roomId={roomId} onLeave={requestQuit} />
         )}
 
         {/* Countdown overlay (freezes while paused) */}

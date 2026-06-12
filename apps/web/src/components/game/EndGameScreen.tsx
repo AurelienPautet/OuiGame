@@ -93,6 +93,9 @@ export const EndGameScreen = ({
   const [result, setResult] = useState<GameResult | null>(null);
   const [resultName, setResultName] = useState(""); // Winner's name for lose case
   const [scores, setScores] = useState<ScoreRowData[]>([]);
+  // Coop rounds carry a team verdict: the result framing is "all bots
+  // destroyed" / "team wiped", not "<name> won". Null for ffa/solo.
+  const [coopVerdict, setCoopVerdict] = useState<"win" | "loss" | null>(null);
 
   // Victory / defeat / draw stinger when the end screen appears (solo + online).
   useEffect(() => {
@@ -189,7 +192,11 @@ export const EndGameScreen = ({
 
       let resultType: GameResult;
       let winnerName = "";
-      if (socketid === -1) {
+      if (data.coop) {
+        // Team verdict — the payload's socketid (first surviving human on a
+        // win, -1 on a loss) is an old-client fallback, not "the winner".
+        resultType = data.coop === "win" ? "win" : "lose";
+      } else if (socketid === -1) {
         resultType = "draw";
       } else if (socketid === socket.id) {
         resultType = "win";
@@ -197,6 +204,7 @@ export const EndGameScreen = ({
         resultType = "lose";
         winnerName = ids_to_name[socketid] || t("common.unknown");
       }
+      setCoopVerdict(data.coop ?? null);
       setResult(resultType);
       setResultName(winnerName);
 
@@ -231,6 +239,7 @@ export const EndGameScreen = ({
         setResult(null);
         setResultName("");
         setScores([]);
+        setCoopVerdict(null);
       }, waitingtime);
     };
 
@@ -308,13 +317,17 @@ export const EndGameScreen = ({
 
   if (!visible || !result) return null;
 
-  const resultText = {
-    win: t("endGame.youWon"),
-    lose: resultName
-      ? t("endGame.someoneWon", { name: resultName })
-      : t("endGame.youLost"),
-    draw: t("endGame.draw"),
-  }[result];
+  const resultText = coopVerdict
+    ? coopVerdict === "win"
+      ? t("endGame.coopVictory")
+      : t("endGame.coopDefeat")
+    : {
+        win: t("endGame.youWon"),
+        lose: resultName
+          ? t("endGame.someoneWon", { name: resultName })
+          : t("endGame.youLost"),
+        draw: t("endGame.draw"),
+      }[result];
 
   const tone: ResultTone = result;
   const resultIcon =
