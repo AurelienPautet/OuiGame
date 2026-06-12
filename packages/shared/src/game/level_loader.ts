@@ -156,6 +156,8 @@ export async function loadlevel(
   room.bot2_spawns = [];
   room.bot3_spawns = [];
   room.bot4_spawns = [];
+  room.bot5_spawns = [];
+  room.bot6_spawns = [];
 
   for (let l = 0; l <= 16; l++) {
     for (let c = 0; c <= 23; c++) {
@@ -175,6 +177,10 @@ export async function loadlevel(
         room.bot3_spawns.push({ x: c * 50, y: l * 50 });
       } else if (room.blocklist[l * 23 + c] == 14) {
         room.bot4_spawns.push({ x: c * 50, y: l * 50 });
+      } else if (room.blocklist[l * 23 + c] == 15) {
+        room.bot5_spawns.push({ x: c * 50, y: l * 50 });
+      } else if (room.blocklist[l * 23 + c] == 16) {
+        room.bot6_spawns.push({ x: c * 50, y: l * 50 });
       }
     }
   }
