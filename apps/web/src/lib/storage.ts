@@ -11,6 +11,7 @@ const KEYS = {
   tankTurretColor: "tank_turret_color", // resolved colour NAME
   soloSelectorState: "soloLevelSelectorState", // JSON blob
   settings: "settings", // keybindings + effect toggles (JSON blob)
+  botSystem: "bot_system", // dev toggle: which bot AI solo rooms run
 } as const;
 
 function readInt(key: string): number | null {
@@ -68,4 +69,11 @@ export const storage = {
   getSettings: <T>(): T | null => readJson<T>(KEYS.settings),
   setSettings: (value: unknown) =>
     window.localStorage.setItem(KEYS.settings, JSON.stringify(value)),
+
+  // Dev toggle for the bot AI ("legacy" | "v2"); validated in lib/botSystem.
+  getBotSystem: (): string | null =>
+    window.localStorage.getItem(KEYS.botSystem),
+  setBotSystem: (value: string) =>
+    window.localStorage.setItem(KEYS.botSystem, value),
+  clearBotSystem: () => window.localStorage.removeItem(KEYS.botSystem),
 } as const;
