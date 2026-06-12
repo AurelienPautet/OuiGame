@@ -81,7 +81,9 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       maxPlanBounces: 2,
       fanRays: 6,
       unfoldBudget: 6,
-      minQuality: 0.3,
+      // Sentries take low-priority long shots (300 px/s across a big map
+      // lives on the distance-floor side of the quality formula).
+      minQuality: 0.15,
       bandMinPx: 0,
       bandMaxPx: 0,
       dodgeSkill: 0,
@@ -117,7 +119,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       maxPlanBounces: 1,
       fanRays: 0,
       unfoldBudget: 4,
-      minQuality: 0.25,
+      minQuality: 0.2,
       bandMinPx: 170,
       bandMaxPx: 320,
       dodgeSkill: 0.5,

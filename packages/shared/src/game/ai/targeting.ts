@@ -117,20 +117,29 @@ interface PathCheck {
 }
 const PATH_CHECK: PathCheck = { targetArc: -1, blockedArc: -1 };
 
-// Ordered circle tests along a folded bounce path. A path is a valid firing
-// solution when it strikes a live human hull strictly before any friendly
-// bot, the shooter itself (beyond the muzzle region — banked returns ARE
-// suicide shots) or a mine. Friendly-fire is real in this engine: no team
-// check exists in Room.update_bullets, so these vetoes are load-bearing.
+// Ordered circle tests along a folded bounce path. The strike test runs
+// against the PREDICTED target centre (qPred — where the lead math says the
+// target will be at impact time), NOT its current hull: a led shot is aimed
+// where nobody is standing yet. Hazards (friendly bots, the shooter itself on
+// banked returns, mines) are tested at their current positions and must not
+// precede the strike. Friendly-fire is real in this engine — no team check
+// exists in Room.update_bullets — so these vetoes are load-bearing. A hit on
+// a DIFFERENT human before the strike is not a veto (it's still a kill).
 function checkPath(
   path: BouncePath,
   bot: Player,
   room: Room,
   bulletR: number,
+  qPredX: number,
+  qPredY: number,
   out: PathCheck
 ): void {
   out.targetArc = -1;
   out.blockedArc = -1;
+  // Strike radius slightly shaved, hazard radii padded: borderline geometry
+  // must never flatter the plan.
+  const strikeR = HULL_R + bulletR - 2;
+  const hazardR = HULL_R + bulletR + 2;
   const segs = path.n - 1;
   for (let i = 0; i < segs; i++) {
     const x0 = path.xs[i]!;
@@ -141,40 +150,22 @@ function checkPath(
     const uy = (path.ys[i + 1]! - y0) / segLen;
     const base = path.segStart[i]!;
 
+    if (out.targetArc < 0) {
+      const s = segCircleHit(x0, y0, ux, uy, segLen, qPredX, qPredY, strikeR);
+      if (s >= 0) out.targetArc = base + s;
+    }
+
     for (const socketid in room.players) {
       const p = room.players[socketid];
       if (!p || !p.alive || p.position == undefined) continue;
+      if (p !== bot && !socketid.includes("bot")) continue; // humans: no veto
       const cx = p.position.x + p.size.w / 2;
       const cy = p.position.y + p.size.h / 2;
-      if (p === bot) {
-        const s = segCircleHit(
-          x0,
-          y0,
-          ux,
-          uy,
-          segLen,
-          cx,
-          cy,
-          HULL_R + bulletR + 2
-        );
-        if (s >= 0 && base + s > SELF_SKIP_ARC) {
-          const arc = base + s;
-          if (out.blockedArc < 0 || arc < out.blockedArc) out.blockedArc = arc;
-        }
-        continue;
-      }
-      const isBot = socketid.includes("bot");
-      // Conservative radii: shave the kill circle for the prize, pad it for
-      // the hazards, so borderline geometry never flatters the plan.
-      const R = isBot ? HULL_R + bulletR + 2 : HULL_R + bulletR - 2;
-      const s = segCircleHit(x0, y0, ux, uy, segLen, cx, cy, R);
+      const s = segCircleHit(x0, y0, ux, uy, segLen, cx, cy, hazardR);
       if (s < 0) continue;
       const arc = base + s;
-      if (isBot) {
-        if (out.blockedArc < 0 || arc < out.blockedArc) out.blockedArc = arc;
-      } else if (out.targetArc < 0 || arc < out.targetArc) {
-        out.targetArc = arc;
-      }
+      if (p === bot && arc <= SELF_SKIP_ARC) continue; // muzzle region
+      if (out.blockedArc < 0 || arc < out.blockedArc) out.blockedArc = arc;
     }
 
     for (let k = 0; k < room.mines.length; k++) {
@@ -206,7 +197,6 @@ function confirmAim(
   grid: AIGrid,
   bot: Player,
   room: Room,
-  target: Player,
   worldAngle: number,
   maxBounces: number,
   qPredX: number,
@@ -230,7 +220,7 @@ function confirmAim(
   );
   if (CONFIRM_PATH.grazed) return 0;
 
-  checkPath(CONFIRM_PATH, bot, room, bulletR, PATH_CHECK);
+  checkPath(CONFIRM_PATH, bot, room, bulletR, qPredX, qPredY, PATH_CHECK);
   if (PATH_CHECK.targetArc < 0) return 0;
   if (
     PATH_CHECK.blockedArc >= 0 &&
@@ -238,33 +228,19 @@ function confirmAim(
   )
     return 0;
 
-  // The strike must be near where we PREDICTED the target — a stale hit on
-  // its current position would miss once it keeps moving.
-  let seg = 0;
-  while (
-    seg < CONFIRM_PATH.n - 2 &&
-    CONFIRM_PATH.segStart[seg + 1]! < PATH_CHECK.targetArc
-  ) {
-    seg++;
-  }
-  const along = PATH_CHECK.targetArc - CONFIRM_PATH.segStart[seg]!;
-  const segLen = CONFIRM_PATH.segStart[seg + 1]! - CONFIRM_PATH.segStart[seg]!;
-  if (segLen > 1e-6) {
-    const hx =
-      CONFIRM_PATH.xs[seg]! +
-      ((CONFIRM_PATH.xs[seg + 1]! - CONFIRM_PATH.xs[seg]!) / segLen) * along;
-    const hy =
-      CONFIRM_PATH.ys[seg]! +
-      ((CONFIRM_PATH.ys[seg + 1]! - CONFIRM_PATH.ys[seg]!) / segLen) * along;
-    if (Math.hypot(hx - qPredX, hy - qPredY) > HULL_R + bulletR + 14) return 0;
-  }
-
+  const seg = segOfArc(CONFIRM_PATH, PATH_CHECK.targetArc);
   const tFlight = PATH_CHECK.targetArc / bot.shoot_speed;
-  let q = 1 - tFlight / FLIGHT_REF_S;
+  // Quality: prefer fast impacts, but keep a distance-based floor so slow
+  // (300 px/s) kinds still take low-priority long shots instead of holding
+  // fire forever across a big map.
+  let q = Math.max(
+    1 - tFlight / FLIGHT_REF_S,
+    0.45 * (1 - PATH_CHECK.targetArc / MAX_PLAN_DIST)
+  );
   if (q < 0) q = 0;
   for (let b = 0; b < CONFIRM_PATH.bounces; b++) q *= 0.85;
-  // Only count bounces actually used before the strike for the quality malus
-  // would be nicer, but bounces-after-strike paths are rare and conservative.
+  // Counting only bounces before the strike would be slightly kinder, but
+  // bounces-after-strike paths are rare and the malus is conservative.
   if (directBonus && CONFIRM_PATH.bounces === 0) q *= 1.15;
   if (q <= 0) return 0;
 
@@ -312,18 +288,7 @@ export function refreshSolution(
     const aimX = qx + lam * tvx * ICPT.t;
     const aimY = qy + lam * tvy * ICPT.t;
     const ang = Math.atan2(aimY - bcy, aimX - bcx);
-    const q = confirmAim(
-      grid,
-      bot,
-      room,
-      target,
-      ang,
-      0,
-      aimX,
-      aimY,
-      CANDIDATE,
-      true
-    );
+    const q = confirmAim(grid, bot, room, ang, 0, aimX, aimY, CANDIDATE, true);
     if (q > bestQ) {
       bestQ = q;
       copySolution(CANDIDATE, sol, target.socketid);
@@ -367,7 +332,6 @@ export function refreshSolution(
                 grid,
                 bot,
                 room,
-                target,
                 ang,
                 ai.maxPlanBounces,
                 qx + lam * tvx * ICPT.t,
@@ -406,7 +370,6 @@ export function refreshSolution(
                 grid,
                 bot,
                 room,
-                target,
                 ang,
                 ai.maxPlanBounces,
                 qx + lam * tvx * ICPT.t,
@@ -486,7 +449,6 @@ export function refreshSolution(
         grid,
         bot,
         room,
-        target,
         refined,
         ai.maxPlanBounces,
         px,
@@ -523,28 +485,37 @@ function copySolution(
   to.targetId = targetId;
 }
 
+// Segment index containing a given arc length along a path.
+function segOfArc(path: BouncePath, arc: number): number {
+  let seg = 0;
+  while (seg < path.n - 2 && path.segStart[seg + 1]! < arc) seg++;
+  return seg;
+}
+
 // Fire-commit revalidation: one cast along the angle the turret is about to
-// shoot, against the target's CURRENT lead point. Cheap, and the last line of
+// shoot, against the live lead point (same smoothed velocity the micro-aim
+// tracks, so the check tests the shot actually being taken). The last line of
 // defence against breached walls / drifted targets / friends walking in.
 export function validateAim(
   grid: AIGrid,
   bot: Player,
   room: Room,
   target: Player,
+  tvx: number,
+  tvy: number,
   worldAngle: number,
   ai: ArchetypeAI,
   sol: ShotSolution
 ): boolean {
   const qx = target.position.x + target.size.w / 2;
   const qy = target.position.y + target.size.h / 2;
-  const px = qx + ai.leadFactor * target.velocity.x * sol.tFlight;
-  const py = qy + ai.leadFactor * target.velocity.y * sol.tFlight;
+  const px = qx + ai.leadFactor * tvx * sol.tFlight;
+  const py = qy + ai.leadFactor * tvy * sol.tFlight;
   return (
     confirmAim(
       grid,
       bot,
       room,
-      target,
       worldAngle,
       ai.maxPlanBounces,
       px,

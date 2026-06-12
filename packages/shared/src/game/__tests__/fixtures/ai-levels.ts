@@ -25,6 +25,24 @@ export const openArena = withBorder([
   [8, 18, 3], // human
 ]);
 
+// Open duel: one bot of the given kind cell (11..14) at (8,4) vs a human at
+// (8,16) — 600px apart, clear LOS. Used by the capability sims.
+export function duelArena(kindCell: number): number[] {
+  return withBorder([
+    [8, 4, kindCell],
+    [8, 16, 3],
+  ]);
+}
+
+// One spawn of every kind + a human, bordered — the determinism/perf arena.
+export const allKindsArena = withBorder([
+  [3, 3, 11],
+  [3, 7, 12],
+  [12, 3, 13],
+  [12, 7, 14],
+  [8, 17, 3],
+]);
+
 // A vertical interior wall (col 11, rows 4..11) splitting the middle — direct
 // LOS between (8,4) and (8,18) is blocked, 1-bounce shots over the top/bottom
 // gaps exist. Used by the golden bullet cross-check and bank-shot tests.

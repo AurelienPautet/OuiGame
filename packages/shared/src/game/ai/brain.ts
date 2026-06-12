@@ -301,7 +301,17 @@ export function brainTick(
       tick - sol.acquiredTick >= ai.reactionTicks &&
       sol.quality >= ai.minQuality + QUALITY_PER_BULLET * bot.bulletcount &&
       sol.geometryVersion === s.grid.version &&
-      validateAim(s.grid, bot, room, target, brain.turretWorld, ai, sol)
+      validateAim(
+        s.grid,
+        bot,
+        room,
+        target,
+        tvx,
+        tvy,
+        brain.turretWorld,
+        ai,
+        sol
+      )
     ) {
       fire(bot, brain, room, ai);
     } else if (
