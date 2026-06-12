@@ -304,7 +304,16 @@ export function refreshSolution(
   let found = false;
 
   // ---- direct intercept ----
-  if (solveIntercept(bcx, bcy, qx, qy, tvx, tvy, s, ICPT)) {
+  // Solve from the (approximate) MUZZLE, not the tank centre: the bullet
+  // spawns 45-50px along the ray, and solving from the centre overestimates
+  // flight time — a systematic ~15px over-lead against fast strafers.
+  const mdx0 = qx - bcx;
+  const mdy0 = qy - bcy;
+  const md0 = Math.hypot(mdx0, mdy0) || 1;
+  const muzzleD = MUZZLE_OFFSET + bot.bullet_size.w;
+  const m0x = bcx + (mdx0 / md0) * muzzleD;
+  const m0y = bcy + (mdy0 / md0) * muzzleD;
+  if (solveIntercept(m0x, m0y, qx, qy, tvx, tvy, s, ICPT)) {
     leadPoint(grid, qx, qy, tvx, tvy, lam, ICPT.t, PRED);
     const ang = Math.atan2(PRED.y - bcy, PRED.x - bcx);
     const q = confirmAim(
@@ -575,7 +584,15 @@ export function desiredAngleFor(
   const qx = target.position.x + target.size.w / 2;
   const qy = target.position.y + target.size.h / 2;
   if (sol.kind === 1) {
-    if (solveIntercept(bcx, bcy, qx, qy, tvx, tvy, bot.shoot_speed, ICPT)) {
+    // Muzzle-anchored solve (see refreshSolution): the bullet starts 45-50px
+    // along the ray, and centre-anchored flight times over-lead strafers.
+    const dx = qx - bcx;
+    const dy = qy - bcy;
+    const d = Math.hypot(dx, dy) || 1;
+    const muzzleD = MUZZLE_OFFSET + bot.bullet_size.w;
+    const mx = bcx + (dx / d) * muzzleD;
+    const my = bcy + (dy / d) * muzzleD;
+    if (solveIntercept(mx, my, qx, qy, tvx, tvy, bot.shoot_speed, ICPT)) {
       leadPoint(grid, qx, qy, tvx, tvy, ai.leadFactor, ICPT.t, PRED);
       return Math.atan2(PRED.y - bcy, PRED.x - bcx);
     }

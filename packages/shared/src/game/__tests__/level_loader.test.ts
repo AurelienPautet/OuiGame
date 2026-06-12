@@ -10,7 +10,9 @@ import {
 
 // Characterization tests for level parsing + collision-box merging. The grid is
 // 23 cols × 16 rows; cell codes: 1 solid, 2 destructible, 3 spawn, 4 hole,
-// 11–14 bot spawns. Outputs (incl. the documented over-read quirk) are frozen.
+// 11–16 bot spawns. (The historical c<=23 over-read quirk was deliberately
+// FIXED — strict loop bounds — when cells 15/16 joined the format; the test
+// below now pins the fix instead of the quirk.)
 
 describe("loadlevel — grid parsing", () => {
   it("parses a single interior solid block", async () => {
@@ -47,15 +49,14 @@ describe("loadlevel — grid parsing", () => {
     expect(room.spawns).toHaveLength(2);
   });
 
-  it("double-reads column 0 of each row (the c<=23 over-read quirk)", async () => {
-    // A spawn at (row1, col0)=index 23 is read both as (l=0,c=23) and (l=1,c=0):
-    // the parse loop runs c up to 23, so index l*23+23 == (l+1)*23+0. The phantom
-    // first read stamps the wrong position. This freezes that known quirk.
+  it("reads column 0 exactly once (the c<=23 over-read quirk is fixed)", async () => {
+    // Historically the parse loop ran c up to 23, so index l*23+23 ==
+    // (l+1)*23+0 and any column-0 marker was read twice — once as a phantom
+    // at x=1150 (off the playfield). Strict bounds parse each cell once.
     const room = {};
     await loadlevel(makeGrid([[1, 0, 3]]), room);
     expect(room.spawns).toEqual([
-      { x: 23 * 50, y: 0 }, // phantom from (l=0, c=23)
-      { x: 0, y: 50 }, // real cell (row1, col0)
+      { x: 0, y: 50 }, // the real cell (row1, col0) — and nothing else
     ]);
   });
 });

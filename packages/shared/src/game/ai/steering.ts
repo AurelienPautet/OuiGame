@@ -121,10 +121,15 @@ export function solveSteering(
   let chosen = best;
   if (!forced && cur !== best) {
     const curScore = scores[cur]!;
-    const beats =
-      bestScore > curScore * SWITCH_RATIO + SWITCH_MARGIN || curScore <= -0.5; // current direction has gone properly bad
-    const heldLongEnough = tick - steer.lastDirChange >= MIN_DIR_HOLD_TICKS;
-    if (!beats || !heldLongEnough) chosen = cur;
+    // A catastrophic committed direction (deep in a bullet corridor / toward
+    // an armed mine) bypasses BOTH the switch ratio and the hold timer —
+    // holding a lethal heading 8 ticks to look smooth is how bots die.
+    const catastrophic = curScore <= -0.5;
+    if (!catastrophic) {
+      const beats = bestScore > curScore * SWITCH_RATIO + SWITCH_MARGIN;
+      const heldLongEnough = tick - steer.lastDirChange >= MIN_DIR_HOLD_TICKS;
+      if (!beats || !heldLongEnough) chosen = cur;
+    }
   }
 
   if (chosen !== steer.curDirIdx) {

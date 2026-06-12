@@ -48,6 +48,8 @@ const TANK_PALETTE: Record<string, TankColors> = {
   red: { fill: palette.red, stroke: palette.redD },
   green: { fill: palette.green, stroke: palette.greenD },
   violet: { fill: palette.purple, stroke: palette.purpleD },
+  // The bot6 Hunter's colour name (Room.bot_colors) — same hues as violet.
+  purple: { fill: palette.purple, stroke: palette.purpleD },
   yellow: { fill: palette.yellow, stroke: palette.yellowD },
   turquoise: { fill: palette.teal, stroke: palette.tealD },
   blueF: { fill: "#5ec9ee", stroke: palette.blueD },

@@ -34,7 +34,11 @@ export interface ArchetypeAI {
   maxPlanBounces: number; // wall bounces the planner may use (≤ shoot_max_bounce − 1)
   fanRays: number; // exact bounce rays per think for multi-bounce discovery
   unfoldBudget: number; // max analytic 1-bounce mirror candidates validated per think
-  minQuality: number; // base shot-quality gate (each bullet in flight raises it)
+  minQuality: number; // base shot-quality gate
+  // How much each bullet already in flight raises the bar. Interacts with
+  // max_bulletcount: keep minQuality + (max-1)*qualityPerBullet under the
+  // ~1.15 quality ceiling or the last shots become unreachable.
+  qualityPerBullet: number;
   bandMinPx: number; // preferred engagement range band (movers; 0/0 = unused)
   bandMaxPx: number;
   dodgeSkill: number; // 0..1 scales bullet-threat urgency (0 = never dodges)
@@ -86,6 +90,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       // Sentries take low-priority long shots (300 px/s across a big map
       // lives on the distance-floor side of the quality formula).
       minQuality: 0.15,
+      qualityPerBullet: 0.25,
       bandMinPx: 0,
       bandMaxPx: 0,
       dodgeSkill: 0,
@@ -122,6 +127,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       fanRays: 0,
       unfoldBudget: 4,
       minQuality: 0.2,
+      qualityPerBullet: 0.25,
       bandMinPx: 170,
       bandMaxPx: 320,
       dodgeSkill: 0.5,
@@ -158,6 +164,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       fanRays: 0,
       unfoldBudget: 0,
       minQuality: 0.45,
+      qualityPerBullet: 0.25,
       bandMinPx: 330,
       bandMaxPx: 520,
       dodgeSkill: 0.95,
@@ -194,6 +201,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       fanRays: 10,
       unfoldBudget: 10,
       minQuality: 0.35,
+      qualityPerBullet: 0.25,
       bandMinPx: 0,
       bandMaxPx: 0,
       dodgeSkill: 0,
@@ -230,6 +238,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       fanRays: 0,
       unfoldBudget: 0,
       minQuality: 1,
+      qualityPerBullet: 0,
       // Keeps a respectful middle distance while it seeds the arena.
       bandMinPx: 250,
       bandMaxPx: 450,
@@ -267,6 +276,7 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       fanRays: 4,
       unfoldBudget: 6,
       minQuality: 0.2,
+      qualityPerBullet: 0.15,
       bandMinPx: 120, // corners the player at knife range
       bandMaxPx: 260,
       dodgeSkill: 0.7,

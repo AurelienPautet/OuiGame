@@ -70,7 +70,6 @@ const EVADE_EXIT_HOLD_TICKS = 12;
 const LOS_LOST_TO_HUNT_TICKS = 30;
 const IMMINENT_TCPA_S = 0.35;
 const RESTEER_MIN_GAP_TICKS = 3;
-const QUALITY_PER_BULLET = 0.25; // each bullet in flight raises the shot bar
 const PANIC_DIST = 140;
 const PANIC_COOLDOWN_FACTOR = 0.4;
 const PANIC_TOL_FACTOR = 3;
@@ -93,6 +92,7 @@ export class Brain {
   stateSince = 0;
   threat = new ThreatSummary();
   bounceThreats: BounceThreat[] = [];
+  bounceThreatsTick = 0; // room tick the list was refreshed on (age rebasing)
   solution = new ShotSolution();
   turretWorld = 0;
   desiredWorld = 0;
@@ -139,6 +139,7 @@ export class Brain {
     this.stateSince = 0;
     this.threat.reset();
     this.bounceThreats.length = 0;
+    this.bounceThreatsTick = 0;
     this.solution.clear();
     this.turretWorld = 0;
     this.desiredWorld = 0;
@@ -197,6 +198,7 @@ export function brainTick(
       ai,
       brain.headOnSign,
       brain.bounceThreats,
+      (tick - brain.bounceThreatsTick) * dt,
       postMineActive
     );
     if (brain.threat.urgency < 0.05 && brain.rng.next() < 0.02) {
@@ -300,7 +302,7 @@ export function brainTick(
       cooldownOk &&
       aligned <= ai.aimTolRad &&
       tick - sol.acquiredTick >= ai.reactionTicks &&
-      sol.quality >= ai.minQuality + QUALITY_PER_BULLET * bot.bulletcount &&
+      sol.quality >= ai.minQuality + ai.qualityPerBullet * bot.bulletcount &&
       sol.geometryVersion === s.grid.version &&
       validateAim(
         s.grid,
@@ -357,6 +359,22 @@ function enterState(brain: Brain, next: AIState, tick: number): void {
   brain.stateSince = tick;
 }
 
+// Is the mine this brain last planted still on the field? (Mine.position is
+// the tank centre at plant time, which is exactly what we stamped.)
+function ownMineStillLive(bot: Player, room: Room, brain: Brain): boolean {
+  for (let i = 0; i < room.mines.length; i++) {
+    const m = room.mines[i]!;
+    if (
+      m.emitter === bot &&
+      Math.abs(m.position.x - brain.mineX) < 1 &&
+      Math.abs(m.position.y - brain.mineY) < 1
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Full decision pass (think cadence).
 function think(
   bot: Player,
@@ -408,6 +426,7 @@ function think(
       brain.bounceThreats,
       ai.threatHorizonS
     );
+    brain.bounceThreatsTick = tick;
   } else if (brain.bounceThreats.length > 0) {
     brain.bounceThreats.length = 0;
   }
@@ -422,12 +441,17 @@ function think(
   } else if (
     brain.state === STATE.PostMine &&
     (tick < brain.postMineUntil ||
-      Math.hypot(
-        centerX(bot) - (brain.mineX + MINE_BLAST_OFFSET),
-        centerY(bot) - (brain.mineY + MINE_BLAST_OFFSET)
-      ) < POST_MINE_CLEAR_DIST)
+      (ownMineStillLive(bot, room, brain) &&
+        Math.hypot(
+          centerX(bot) - (brain.mineX + MINE_BLAST_OFFSET),
+          centerY(bot) - (brain.mineY + MINE_BLAST_OFFSET)
+        ) < POST_MINE_CLEAR_DIST))
   ) {
-    // stay until the blast zone is genuinely cleared
+    // Stay until the blast zone is genuinely cleared — but only while the
+    // mine still EXISTS. In cramped pockets no reachable point may be
+    // 135px away (the plant gates only guarantee ~110px), so without the
+    // existence check the bot would stay in PostMine forever after the
+    // blast, never engaging or planting again.
   } else if (urgent) {
     enterState(brain, STATE.Evade, tick);
     brain.lowUrgencySince = -1;

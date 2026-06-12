@@ -1,6 +1,7 @@
 import { distance, circlesOverlap } from "./check_collision.js";
 import { SIM_STEP_S } from "./loop.js";
 import { generateBcollision } from "./level_loader.js";
+import { MINE_EXPLOSION_RADIUS, MINE_FUSE_TICKS } from "./game_constants.js";
 import { Player } from "./Player.js";
 import { Bot, type BotKind } from "./Bot.js";
 import { AIBot, type AIBotKind } from "./ai/index.js";
@@ -137,8 +138,8 @@ export class Room {
     this.spawns = [];
     this.nbliving = 0;
     this.tick = 0;
-    this.timetoeplode = 300;
-    this.mines_explsion_radius = 90;
+    this.timetoeplode = MINE_FUSE_TICKS;
+    this.mines_explsion_radius = MINE_EXPLOSION_RADIUS;
     this.waitingtime = 5000;
     this.dt = SIM_STEP_S;
     this.bot1_spawns = [];
@@ -263,17 +264,21 @@ export class Room {
             this.bot_seed
           );
         } else {
-          // bot5/bot6 exist only in the v2 system: under legacy their spawn
-          // slots stay empty, but bot_index already advanced above, so the
-          // OTHER bots keep stable ids across systems (campaign skipIds).
-          if (kind === "bot5" || kind === "bot6") continue;
+          // bot5/bot6 have no legacy brain. Skipping them entirely would make
+          // a Miner/Hunter-only level UNWINNABLE under the ?bots=legacy escape
+          // hatch (the solo win check requires at least one initial enemy), so
+          // spawn a legacy stand-in driven by the mobile bot2 config — keeping
+          // the authored name/colour and the positional id (bot_index already
+          // advanced, so ids match the v2 layout for campaign skipIds).
+          const legacyKind: BotKind =
+            kind === "bot5" || kind === "bot6" ? "bot2" : kind;
           bot = new Bot(
             { x: 0, y: 0 },
             botId,
             label,
             colors[0],
             colors[1],
-            kind
+            legacyKind
           );
         }
         this.spawn_new(bot, botId, spawns);

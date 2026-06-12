@@ -37,7 +37,7 @@ describe("senseThreats — bullets (CPA)", () => {
     const ts = new ThreatSummary();
     // Coming from the west, dead-on at 300 px/s, 150px out (0.5s to impact).
     const room = roomWith([mkBullet(350, 400, 300, 0)]);
-    senseThreats(bot, room, ts, AI, 1, [], false);
+    senseThreats(bot, room, ts, AI, 1, [], 0, false);
 
     expect(ts.urgency).toBeGreaterThan(0.2);
     expect(ts.imminentTCPA).toBeLessThan(0.6);
@@ -59,7 +59,7 @@ describe("senseThreats — bullets (CPA)", () => {
     const ts = new ThreatSummary();
     // Parallel track 120px to the side.
     const room = roomWith([mkBullet(350, 280, 300, 0)]);
-    senseThreats(bot, room, ts, AI, 1, [], false);
+    senseThreats(bot, room, ts, AI, 1, [], 0, false);
     expect(ts.urgency).toBe(0);
   });
 
@@ -68,7 +68,7 @@ describe("senseThreats — bullets (CPA)", () => {
     const ts = new ThreatSummary();
     // Muzzle distance, flying away east.
     const room = roomWith([mkBullet(545, 400, 300, 0, bot)]);
-    senseThreats(bot, room, ts, AI, 1, [], false);
+    senseThreats(bot, room, ts, AI, 1, [], 0, false);
     expect(ts.urgency).toBe(0);
   });
 
@@ -85,7 +85,7 @@ describe("senseThreats — bullets (CPA)", () => {
       t0: 0.15,
       t1: 0.9,
     };
-    senseThreats(bot, roomWith([]), ts, AI, 1, [virt], false);
+    senseThreats(bot, roomWith([]), ts, AI, 1, [virt], 0, false);
     expect(ts.urgency).toBeGreaterThan(0.1);
   });
 
@@ -93,7 +93,7 @@ describe("senseThreats — bullets (CPA)", () => {
     const bot = mkBot(500, 400);
     const ts = new ThreatSummary();
     const room = roomWith([mkBullet(350, 400, 300, 0)]);
-    senseThreats(bot, room, ts, ARCHETYPES.bot1.ai, 1, [], false);
+    senseThreats(bot, room, ts, ARCHETYPES.bot1.ai, 1, [], 0, false);
     expect(ts.urgency).toBe(0);
   });
 });
@@ -121,6 +121,7 @@ describe("senseThreats — mines", () => {
       AI,
       1,
       [],
+      0,
       false
     );
     const old = new ThreatSummary();
@@ -131,6 +132,7 @@ describe("senseThreats — mines", () => {
       AI,
       1,
       [],
+      0,
       false
     );
     expect(old.mineUrgency).toBeGreaterThan(fresh.mineUrgency * 5);
@@ -145,7 +147,7 @@ describe("senseThreats — mines", () => {
     // A bullet 60px from the mine, heading straight at it.
     const bullet = mkBullet(410, 385, 300, 0);
     const ts = new ThreatSummary();
-    senseThreats(bot, roomWith([bullet], [mine]), ts, AI, 1, [], false);
+    senseThreats(bot, roomWith([bullet], [mine]), ts, AI, 1, [], 0, false);
     expect(ts.mineUrgency).toBeGreaterThan(0.8);
   });
 
@@ -159,6 +161,7 @@ describe("senseThreats — mines", () => {
       ARCHETYPES.bot2.ai,
       1,
       [],
+      0,
       false
     );
     expect(ts.mineUrgency).toBeGreaterThan(0.5);

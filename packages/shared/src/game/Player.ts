@@ -4,6 +4,7 @@ import {
   resolveCircleCircle,
   TANK_HULL_RADIUS_FACTOR,
 } from "./check_collision.js";
+import { BARREL_LENGTH, TANK_SIZE } from "./game_constants.js";
 import { Bullet } from "./Bullet.js";
 import { Mine } from "./Mine.js";
 import { Stats } from "./Stats.js";
@@ -70,8 +71,8 @@ export class Player {
       y: 0,
     };
     this.size = {
-      w: 45,
-      h: 45,
+      w: TANK_SIZE,
+      h: TANK_SIZE,
     };
     this.turretsize = {
       w: 60,
@@ -228,11 +229,11 @@ export class Player {
     this.endpos.x =
       this.position.x +
       this.size.w / 2 -
-      (30 + this.bullet_size.w * 1) * Math.cos(this.angle);
+      (BARREL_LENGTH + this.bullet_size.w * 1) * Math.cos(this.angle);
     this.endpos.y =
       this.position.y +
       this.size.h / 2 -
-      (30 + this.bullet_size.h * 1) * Math.sin(this.angle);
+      (BARREL_LENGTH + this.bullet_size.h * 1) * Math.sin(this.angle);
   }
   CalculateAngle(): void {
     try {
