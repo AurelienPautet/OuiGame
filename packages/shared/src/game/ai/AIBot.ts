@@ -1,5 +1,7 @@
 import { Player } from "../Player.js";
 import { ARCHETYPES, type AIBotKind } from "./archetypes.js";
+import { Brain, brainTick } from "./brain.js";
+import { drawBrainDebug } from "./debug.js";
 import { fnv1a } from "./rng.js";
 import type { Vec2, DrawingContext } from "../types.js";
 import type { Room } from "../Room.js";
@@ -14,14 +16,13 @@ import type { Room } from "../Room.js";
 // enumerable field added over Player is `kind`. The serialization test pins
 // this. For the same reason players must never be structuredClone'd — #private
 // state and the prototype would be silently dropped.
-//
-// This scaffold is inert (no decisions yet): the brain lands in the next PR.
 export class AIBot extends Player {
   readonly kind: AIBotKind;
   // Per-bot RNG seed: room seed XOR a stable hash of the socketid, so a pinned
   // Room.bot_seed reproduces every bot's behaviour while bots still differ
-  // from each other. Consumed by the brain (next PR).
+  // from each other.
   #seed: number;
+  #brain: Brain;
 
   constructor(
     position: Vec2,
@@ -35,6 +36,7 @@ export class AIBot extends Player {
     super(position, socketid, name, turretc, bodyc);
     this.kind = kind;
     this.#seed = ((roomSeed >>> 0) ^ fnv1a(socketid)) >>> 0;
+    this.#brain = new Brain(this.#seed);
 
     // Chassis overrides only — same bullets/ammo as the legacy kind; the AI
     // difference is entirely in the brain.
@@ -48,25 +50,46 @@ export class AIBot extends Player {
     this.max_minecount = chassis.max_minecount;
   }
 
-  // Exposed for tests/debug only; a getter lives on the prototype, so it is
-  // not an own property and never serializes.
+  // Exposed for tests/debug only; getters live on the prototype, so they are
+  // not own properties and never serialize.
   get seedForTest(): number {
     return this.#seed;
+  }
+
+  get brainForTest(): Brain {
+    return this.#brain;
   }
 
   override update(
     room: Room,
     dt: number,
-    _ctx?: DrawingContext,
-    _debug_visual?: boolean
+    ctx?: DrawingContext,
+    debug_visual?: boolean
   ): void {
-    // The brain (next PR) runs HERE, before super.update: bullets update
-    // before players in Room.update, so deciding first lets a dodge act on
-    // this tick's bullet positions.
+    // Decide BEFORE the chassis integrates: bullets update before players in
+    // Room.update, so a dodge chosen here reacts to this tick's positions.
+    if (this.alive) {
+      brainTick(this, this.kind, this.#brain, room, dt);
+      if (ctx && debug_visual) {
+        drawBrainDebug(ctx, this, this.kind, this.#brain, room);
+      }
+    }
     super.update(room, dt);
   }
 
   // The brain owns this.angle (Player's version would overwrite it from the
   // mouse-aim point, which a bot doesn't have).
   override CalculateAngle(): void {}
+
+  // Round respawn (online respawn_the_room calls spawn() on live instances):
+  // restart the brain from its seed so behaviour stays reproducible.
+  override spawn(spawn_pos: Vec2): void {
+    super.spawn(spawn_pos);
+    this.#brain.reset();
+  }
+
+  override shoot(room: Room): void {
+    super.shoot(room);
+    this.#brain.lastShotTick = room.tick;
+  }
 }
