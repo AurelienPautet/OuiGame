@@ -44,6 +44,7 @@ import type {
 } from "@ouigame/shared/types";
 import type { ReceiveJsonFromId } from "@ouigame/shared/api";
 import { Renderer } from "./Renderer.js";
+import { resolveBotSystem } from "../lib/botSystem";
 import { InputHandler, type InputSnapshot } from "./InputHandler.js";
 import { ParticleSystem } from "./ParticleSystem.js";
 import { DebrisSystem } from "./Debris.js";
@@ -512,6 +513,8 @@ export class GameEngine {
       new LocalIO(this.particles, this.sounds, this.post)
     );
     this.localRoom.maxplayernb = 100;
+    // Which bot AI this room spawns (?bots= param / localStorage dev toggle).
+    this.localRoom.bot_system = resolveBotSystem();
 
     // Load level into the room. levelData is the flat number[] grid.
     await loadlevel(levelData, this.localRoom);

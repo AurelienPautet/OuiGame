@@ -36,6 +36,16 @@ const isInGameHistoryEntry = () =>
     (window.history.state as { ouigameInGame?: boolean } | null)?.ouigameInGame
   );
 
+// Dev-only introspection handle: lets browser automation (and a curious
+// console user) read live room state objectively — e.g. bot positions/mine
+// counts during AI verification. Stripped from production builds.
+const exposeEngineForDev = (engine: GameEngine) => {
+  if (import.meta.env.DEV) {
+    (window as unknown as { __ouitankEngine?: GameEngine }).__ouitankEngine =
+      engine;
+  }
+};
+
 export const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fadingCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -430,6 +440,7 @@ export const GameCanvas = () => {
         socket
       );
       engineRef.current = engine;
+      exposeEngineForDev(engine);
       setPostActive(engine.hasPostProcessing());
       engine.applyEffects(settingsRef.current.effects);
 
@@ -498,6 +509,7 @@ export const GameCanvas = () => {
       socket
     );
     engineRef.current = engine;
+    exposeEngineForDev(engine);
     setPostActive(engine.hasPostProcessing());
     engine.applyEffects(settingsRef.current.effects);
 
