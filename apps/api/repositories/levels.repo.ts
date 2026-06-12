@@ -195,6 +195,15 @@ async function getMinMaxPlayers(levelIds: number[]) {
   return { min: res[0]?.min, max: res[0]?.max };
 }
 
+// id/type/content for a set of level ids (one query) — the coop playlist
+// validation reads these.
+async function getTypesAndContents(levelIds: number[]) {
+  return db
+    .select({ id: levels.id, type: levels.type, content: levels.content })
+    .from(levels)
+    .where(inArray(levels.id, levelIds));
+}
+
 export {
   list,
   listMine,
@@ -207,4 +216,5 @@ export {
   selectLevelOwnedBy,
   deleteLevel,
   getMinMaxPlayers,
+  getTypesAndContents,
 };

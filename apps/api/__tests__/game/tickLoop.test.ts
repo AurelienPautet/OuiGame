@@ -260,6 +260,51 @@ test("after the wait, reloads + respawns the room and runs the countdown", async
   expect(room.countdownActive).toBe(false);
 });
 
+test("a coop respawn cycles bots out, grows spawns, respawns, then re-spawns bots", async () => {
+  const order: string[] = [];
+  const room = makeRoom(9, true);
+  Object.assign(room, {
+    mode: "coop",
+    ids: ["h1", "bot0", "bot1"],
+    players: {
+      h1: mkPlayer(),
+      bot0: { ...mkPlayer(), is_bot: true },
+      bot1: { ...mkPlayer(), is_bot: true },
+    },
+    human_count: jest.fn(() => 1),
+    remove_player_quiet: jest.fn((id: string, returnSpawn: boolean) => {
+      order.push(`remove:${id}:${returnSpawn}`);
+      delete (room.players as Record<string, unknown>)[id];
+      room.ids.splice(room.ids.indexOf(id), 1);
+    }),
+    ensure_spawn_capacity: jest.fn((n: number) => order.push(`ensure:${n}`)),
+    spawn_all_bots: jest.fn(() => order.push("spawn_all_bots")),
+  });
+  room.respawn_the_room = jest.fn(() => order.push("respawn"));
+  const roomTimers: RoomTimers = new Map();
+  const loop = createTickLoop({
+    io: makeIo() as never,
+    rooms: { 9: room } as never,
+    roomTimers,
+  });
+
+  perfSpy.mockReturnValue(1100);
+  loop.start();
+  await jest.advanceTimersByTimeAsync(20); // round end arms the respawn
+  await jest.advanceTimersByTimeAsync(5100); // respawn fires
+
+  // Dead-bot cleanup (slots NOT returned to the player pool) → pool top-up
+  // for the humans → human respawn → fresh level bots → countdown.
+  expect(order).toEqual([
+    "remove:bot0:false",
+    "remove:bot1:false",
+    "ensure:1",
+    "respawn",
+    "spawn_all_bots",
+  ]);
+  expect(room.countdownActive).toBe(true);
+});
+
 test("aborts the respawn if the room was deleted during the wait", async () => {
   const room = makeRoom(6, true);
   room.players = { p1: mkPlayer() };

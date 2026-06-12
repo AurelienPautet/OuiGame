@@ -98,6 +98,18 @@ function lobbyRoomStub(overrides: Record<string, unknown> = {}) {
       const h = room.human_players.indexOf(id);
       if (h !== -1) room.human_players.splice(h, 1);
     }),
+    human_count: jest.fn(() => {
+      return room.human_players.filter((id: string) => room.players[id]).length;
+    }),
+    add_waiting_player: jest.fn(
+      (name: string, t: string, b: string, id: string) => {
+        room.players[id] = { name, pending_spawn: true };
+        room.ids.push(id);
+        room.human_players.push(id);
+      }
+    ),
+    ensure_spawn_capacity: jest.fn(),
+    spawn_all_bots: jest.fn(),
     spawn_lobby_bot: jest.fn(() => {
       const id = `lobbybot_${room.lobby_bots.length}`;
       room.players[id] = { name: id, is_bot: true };
@@ -271,6 +283,107 @@ describe("lobby_start", () => {
     });
     rooms[1] = room;
     connect("s2").__emit("lobby_start", 1);
+    expect(room.status).toBe("lobby");
+  });
+});
+
+describe("coop join paths", () => {
+  test("a lobby join grows the spawn pool before spawning", async () => {
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({ mode: "coop" });
+    rooms[1] = room;
+
+    connect("s1").__emit("play", "Alice", "o", "b", 1);
+    await flush();
+    expect(room.ensure_spawn_capacity).toHaveBeenCalledWith(1);
+    expect(room.spawn_new_player).toHaveBeenCalledWith("Alice", "o", "b", "s1");
+    const ensureOrder = (room.ensure_spawn_capacity as jest.Mock).mock
+      .invocationCallOrder[0]!;
+    const spawnOrder = (room.spawn_new_player as jest.Mock).mock
+      .invocationCallOrder[0]!;
+    expect(ensureOrder).toBeLessThan(spawnOrder);
+  });
+
+  test("a mid-round join waits off-field instead of spawning", async () => {
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({ mode: "coop", status: "playing" });
+    rooms[1] = room;
+
+    const socket = connect("s1");
+    socket.__emit("play", "Late", "o", "b", 1);
+    await flush();
+    expect(room.add_waiting_player).toHaveBeenCalledWith(
+      "Late",
+      "o",
+      "b",
+      "s1"
+    );
+    expect(room.spawn_new_player).not.toHaveBeenCalled();
+    // Still a full join: the client gets its id and room channel.
+    expect(socket.emit).toHaveBeenCalledWith("id", 1, expect.any(Number), "s1");
+  });
+
+  test("coop capacity counts humans only — bots never block a seat", async () => {
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({ mode: "coop", maxplayernb: 4 });
+    // Ten level bots in the players map; zero humans.
+    for (let i = 0; i < 10; i++) {
+      room.players[`bot${i}`] = { is_bot: true };
+      room.ids.push(`bot${i}`);
+    }
+    rooms[1] = room;
+
+    connect("s1").__emit("play", "Alice", "o", "b", 1);
+    await flush();
+    expect(room.spawn_new_player).toHaveBeenCalled();
+  });
+
+  test("the fifth human is rejected", async () => {
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({ mode: "coop", maxplayernb: 4 });
+    for (let i = 0; i < 4; i++) {
+      room.players[`h${i}`] = {};
+      room.human_players.push(`h${i}`);
+    }
+    rooms[1] = room;
+
+    const socket = connect("s5");
+    socket.__emit("play", "Fifth", "o", "b", 1);
+    expect(socket.emit).toHaveBeenCalledWith("id-fail");
+    expect(room.spawn_new_player).not.toHaveBeenCalled();
+    expect(room.add_waiting_player).not.toHaveBeenCalled();
+  });
+});
+
+describe("lobby_start — coop", () => {
+  test("one human suffices; the level's bots spawn BEFORE the status flips", () => {
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({
+      mode: "coop",
+      hostid: "s1",
+      players: { s1: {} },
+      human_players: ["s1"],
+    });
+    let statusAtSpawn: string | undefined;
+    (room.spawn_all_bots as jest.Mock).mockImplementation(() => {
+      statusAtSpawn = room.status;
+    });
+    rooms[1] = room;
+
+    connect("s1").__emit("lobby_start", 1);
+    expect(room.spawn_all_bots).toHaveBeenCalledTimes(1);
+    // No tick may ever see a botless playing coop room (instant team win).
+    expect(statusAtSpawn).toBe("lobby");
+    expect(room.status).toBe("playing");
+    expect(room.countdownActive).toBe(true);
+  });
+
+  test("an empty coop room cannot start", () => {
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({ mode: "coop", hostid: "s1" });
+    rooms[1] = room;
+    connect("s1").__emit("lobby_start", 1);
+    expect(room.spawn_all_bots).not.toHaveBeenCalled();
     expect(room.status).toBe("lobby");
   });
 });

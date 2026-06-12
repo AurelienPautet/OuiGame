@@ -4,6 +4,7 @@
 jest.mock("../../services/levels.service", () => ({
   getLevelJson: jest.fn(),
   getLevel: jest.fn(),
+  validateCoopLevels: jest.fn(),
 }));
 jest.mock("../../repositories/levels.repo", () => ({
   getMinMaxPlayers: jest.fn(),
@@ -78,11 +79,31 @@ describe("create_room", () => {
     expect(reg.rooms[id]!.countdownActive).toBe(true);
   });
 
-  test("mode 'coop' is rejected (enabled by the coop PR) and registers nothing", async () => {
+  test("a validated coop room: lobby-held, v2 bots, human cap of 4", async () => {
     const { reg } = mkReg();
+    (levelsService.validateCoopLevels as jest.Mock).mockResolvedValue({
+      ok: true,
+    });
+    const id = asId(await reg.create_room("Arena", 10, [101], "alice", "coop"));
+    const room = reg.rooms[id]!;
+    expect(room.status).toBe("lobby");
+    expect(room.mode).toBe("coop");
+    expect(room.countdownActive).toBe(true);
+    expect(room.bot_system).toBe("v2");
+    expect(room.maxplayernb).toBe(4);
+    // The playlist's (solo) maxPlayers values are irrelevant for coop.
+    expect(levelsRepo.getMinMaxPlayers).not.toHaveBeenCalled();
+  });
+
+  test("a failed coop validation registers nothing and relays the reason", async () => {
+    const { reg } = mkReg();
+    (levelsService.validateCoopLevels as jest.Mock).mockResolvedValue({
+      ok: false,
+      reason: "no_bot_spawns",
+    });
     const before = Object.keys(reg.rooms).length;
     const result = await reg.create_room("Arena", 10, [101], "alice", "coop");
-    expect(result).toEqual({ error: "coop_unavailable" });
+    expect(result).toEqual({ error: "no_bot_spawns" });
     expect(Object.keys(reg.rooms)).toHaveLength(before);
   });
 });

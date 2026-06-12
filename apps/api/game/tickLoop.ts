@@ -72,7 +72,28 @@ function createTickLoop({
           .emit("level_change_info", level ? [level] : []);
       });
 
+      if (room.mode === "coop") {
+        // Last round's bot roster leaves before anyone respawns: a level
+        // bot's slot came from botN_spawns (never returned to the player
+        // pool), and respawn_the_room would otherwise re-deal dead bots onto
+        // PLAYER spawns. Quiet removal — no disconnect toasts. The ids array
+        // is snapshotted because removal splices it.
+        for (const id of [...room.ids]) {
+          if (room.players[id]?.is_bot) room.remove_player_quiet(id, false);
+        }
+        // loadlevel above refilled the (typically single-spawn) player pool;
+        // grow it so every human — including joiners who waited out the
+        // round — gets a deterministic slot near the authored spawn.
+        room.ensure_spawn_capacity(room.human_count());
+      }
+
       room.respawn_the_room();
+
+      if (room.mode === "coop") {
+        // Fresh bots from the level's just-reloaded spawn cells, AFTER the
+        // humans took their player slots (nbliving accounts both groups).
+        room.spawn_all_bots();
+      }
 
       // Freeze, announce and time the 3-2-1 (shared with the lobby's Start).
       beginCountdown(room, roomTimers);
