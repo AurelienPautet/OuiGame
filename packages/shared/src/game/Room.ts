@@ -32,6 +32,15 @@ interface SoundFlags {
 // the field before spawn_all_bots (same pattern as room.maxplayernb).
 export type BotSystem = "legacy" | "v2";
 
+// Online room lifecycle. "playing" is the constructor default so solo rooms
+// and every existing test are untouched; the server holds freshly created
+// rooms in "lobby" (countdownActive frozen) until the host starts the match.
+export type RoomStatus = "lobby" | "playing";
+
+// "ffa" is the historical every-tank-for-itself online mode; "coop" pits the
+// humans against the level's bots (solo-style levels, server-hosted).
+export type RoomMode = "ffa" | "coop";
+
 export class Room {
   static next_id = 1;
   // Keyed by AIBotKind (a superset of the legacy BotKind): bot5/bot6 exist
@@ -43,6 +52,7 @@ export class Room {
     bot4: ["red", "red"],
     bot5: ["yellow", "yellow"],
     bot6: ["purple", "purple"],
+    bot7: ["dimgray", "dimgray"],
   };
 
   static getNextId(): number {
@@ -91,6 +101,20 @@ export class Room {
   // from. Both are plain Room fields, never part of the `tick` broadcast.
   bot_system: BotSystem;
   bot_seed: number;
+  // Online lobby/mode state (see RoomStatus/RoomMode above). All defaults keep
+  // solo and legacy-online behaviour byte-identical; only the server's
+  // create_room/lobby handlers move them.
+  status: RoomStatus;
+  mode: RoomMode;
+  // Socketid of the lobby host (first human to join; server-transferred when
+  // they leave). "" until someone joins — meaningful only on server rooms.
+  hostid: string;
+  // Socketids of host-added FFA bots, in add order. Read by the v2 brain's
+  // allegiance helpers: members are enemies of everyone, allies of nobody.
+  lobby_bots: string[];
+  // Monotonic id counter for lobby bots; NEVER reset (an id is never reused,
+  // even after the bot it named was removed).
+  lobby_bot_counter: number;
   // Populated by loadlevel(): the flat level grid the collision pass reads.
   blocklist: number[];
   // Legacy field read by the web solo end-screen; never set by the runtime
@@ -158,6 +182,23 @@ export class Room {
     // Random by default (games should vary); tests pin it for reproducible
     // bot behaviour. Per-bot streams are derived per socketid, see AIBot.
     this.bot_seed = (Math.random() * 0x7fffffff) | 0;
+
+    this.status = "playing";
+    this.mode = "ffa";
+    this.hostid = "";
+    this.lobby_bots = [];
+    this.lobby_bot_counter = 0;
+  }
+
+  // Humans still present in the room. human_players historically accumulated
+  // stale ids (delete_player never pruned it — fixed now, but count defensively
+  // anyway): only ids that still resolve in `players` count.
+  human_count(): number {
+    let n = 0;
+    for (const id of this.human_players) {
+      if (this.players[id]) n++;
+    }
+    return n;
   }
 
   spawn_new_player(
@@ -217,6 +258,9 @@ export class Room {
     // sourced from Room.bot_colors. Preserves the exact socketid numbering: a
     // single bot_index across all kinds, spawn key === the bot's socketid
     // (bot1's old `bot${i}` key already equalled `bot${bot_index}`).
+    // bot7 has NO level cell — it is only ever added via spawn_lobby_bot — so
+    // it stays out of the `kinds` iteration; its Record entries below are the
+    // compile-forced (exhaustive-Record) placeholders.
     const kinds: AIBotKind[] = ["bot1", "bot2", "bot3", "bot4", "bot5", "bot6"];
     const labels: Record<AIBotKind, string> = {
       bot1: "Bot1",
@@ -225,6 +269,7 @@ export class Room {
       bot4: "Bot4",
       bot5: "Bot5",
       bot6: "Bot6",
+      bot7: "Bot7",
     };
     const spawnLists: Record<AIBotKind, Vec2[]> = {
       bot1: this.bot1_spawns,
@@ -233,6 +278,7 @@ export class Room {
       bot4: this.bot4_spawns,
       bot5: this.bot5_spawns,
       bot6: this.bot6_spawns,
+      bot7: [],
     };
     let bot_index = 0;
     for (const kind of kinds) {
@@ -270,8 +316,12 @@ export class Room {
           // spawn a legacy stand-in driven by the mobile bot2 config — keeping
           // the authored name/colour and the positional id (bot_index already
           // advanced, so ids match the v2 layout for campaign skipIds).
+          // bot7 can't actually occur here (it is not in the kinds array);
+          // the arm only satisfies the AIBotKind→BotKind narrowing.
           const legacyKind: BotKind =
-            kind === "bot5" || kind === "bot6" ? "bot2" : kind;
+            kind === "bot5" || kind === "bot6" || kind === "bot7"
+              ? "bot2"
+              : kind;
           bot = new Bot(
             { x: 0, y: 0 },
             botId,
@@ -282,6 +332,153 @@ export class Room {
           );
         }
         this.spawn_new(bot, botId, spawns);
+      }
+    }
+  }
+
+  // Host "Add bot": one player-equal v2 combatant (kind bot7) on a PLAYER
+  // spawn slot, exactly like a human joiner. Returns null when no player spawn
+  // is free (the join gate normally prevents that). The id is disjoint from
+  // both level-bot ids (bot<N>) and socket ids, never reused after a removal,
+  // and still contains "bot" so the deployed renderer's `includes("bot")`
+  // styling applies unchanged.
+  spawn_lobby_bot(): AIBot | null {
+    if (this.spawns.length === 0) return null;
+    const botId = `lobbybot_${this.lobby_bot_counter}`;
+    const name = `Bot ${this.lobby_bot_counter + 1}`;
+    this.lobby_bot_counter++;
+    const colors = Room.bot_colors.bot7;
+    const bot = new AIBot(
+      { x: 0, y: 0 },
+      botId,
+      name,
+      colors[0],
+      colors[1],
+      "bot7",
+      this.bot_seed
+    );
+    this.spawn_new(bot, botId, this.spawns);
+    this.lobby_bots.push(botId);
+    return bot;
+  }
+
+  // delete_player minus the side effects that are wrong for bookkeeping
+  // removals: no "player-disconnection" broadcast (a removed bot is not a
+  // disconnect toast) and no nbliving<=0 auto-respawn (callers run inside
+  // their own respawn sequencing). `return_spawn` gives the slot back to the
+  // player pool — true for a host removing a lobby bot, false for the coop
+  // round-end cleanup (a level bot's spawnpos came from botN_spawns; pushing
+  // it into `spawns` would leak a bot cell into the human pool).
+  remove_player_quiet(socketid: string, return_spawn: boolean): void {
+    const player = this.players[socketid];
+    if (!player) return;
+    delete this.players[socketid];
+    const idIdx = this.ids.indexOf(socketid);
+    if (idIdx !== -1) this.ids.splice(idIdx, 1);
+    delete this.ids_to_names[socketid];
+    const lobbyIdx = this.lobby_bots.indexOf(socketid);
+    if (lobbyIdx !== -1) this.lobby_bots.splice(lobbyIdx, 1);
+    const humanIdx = this.human_players.indexOf(socketid);
+    if (humanIdx !== -1) this.human_players.splice(humanIdx, 1);
+    if (return_spawn && !player.pending_spawn) {
+      this.spawns.push(player.spawnpos);
+    }
+    if (player.alive) {
+      this.nbliving--;
+    }
+  }
+
+  // A human joining a coop room MID-ROUND: registered everywhere (so the
+  // scoreboard, lobby panel and tick snapshot know them) but kept off the
+  // field — alive=false, no spawn slot consumed, nbliving untouched. The next
+  // respawn_the_room() spawns them like everyone else (spawn() clears
+  // pending_spawn). Parked off-canvas so clients drawing dead tanks render
+  // nothing visible.
+  add_waiting_player(
+    playerName: string,
+    turretc: string,
+    bodyc: string,
+    socketid: string
+  ): void {
+    const player = new Player(
+      { x: -100, y: -100 },
+      socketid,
+      playerName,
+      turretc,
+      bodyc
+    );
+    player.alive = false;
+    player.pending_spawn = true;
+    this.players[socketid] = player;
+    this.ids.push(socketid);
+    this.ids_to_names[socketid] = playerName;
+    this.human_players.push(socketid);
+  }
+
+  // Top up `spawns` to `needed` slots from walkable floor cells, for coop
+  // rooms playing solo levels (typically authored with ONE player spawn).
+  // Deterministic — no RNG: multi-source BFS from every code-3 anchor cell in
+  // row-major order, fixed N/E/S/W neighbour order, so teammates spawn
+  // clustered ring-by-ring around the level's intended start. Walkable floor =
+  // codes 0 (empty) and 10 (destroyed wall); traversal additionally passes
+  // through code-3 cells (the anchors themselves are floor). Cells already
+  // promised — a pooled spawn or any player's spawnpos — are skipped.
+  // Exhausting the search (pathological sealed level) returns silently with
+  // however many slots were found.
+  ensure_spawn_capacity(needed: number): void {
+    let missing = needed - this.spawns.length;
+    if (missing <= 0) return;
+
+    const COLS = 23;
+    const ROWS = 16;
+    const cellOf = (v: Vec2): number => (v.y / 50) * COLS + v.x / 50;
+
+    const occupied = new Set<number>();
+    for (const s of this.spawns) occupied.add(cellOf(s));
+    for (const socketid in this.players) {
+      const p = this.players[socketid];
+      if (p) occupied.add(cellOf(p.spawnpos));
+    }
+
+    const queue: number[] = [];
+    const seen = new Set<number>();
+    for (let i = 0; i < this.blocklist.length; i++) {
+      if (this.blocklist[i] === 3) {
+        queue.push(i);
+        seen.add(i);
+      }
+    }
+
+    let head = 0;
+    while (head < queue.length && missing > 0) {
+      const idx = queue[head]!;
+      head++;
+      const row = Math.floor(idx / COLS);
+      const col = idx % COLS;
+
+      const code = this.blocklist[idx];
+      if ((code === 0 || code === 10) && !occupied.has(idx)) {
+        this.spawns.push({ x: col * 50, y: row * 50 });
+        occupied.add(idx);
+        missing--;
+      }
+
+      // N, E, S, W — inside the border ring only (rows 1..14, cols 1..21,
+      // matching the chassis clamps), through floor/anchor cells only.
+      const neighbours = [
+        [row - 1, col],
+        [row, col + 1],
+        [row + 1, col],
+        [row, col - 1],
+      ] as const;
+      for (const [r, c] of neighbours) {
+        if (r < 1 || r > ROWS - 2 || c < 1 || c > COLS - 2) continue;
+        const nIdx = r * COLS + c;
+        if (seen.has(nIdx)) continue;
+        const nCode = this.blocklist[nIdx];
+        if (nCode !== 0 && nCode !== 10 && nCode !== 3) continue;
+        seen.add(nIdx);
+        queue.push(nIdx);
       }
     }
   }
@@ -338,6 +535,60 @@ export class Room {
   }
 
   check_for_winns_and_load_next_level(): boolean {
+    // A held lobby can never end a round: nobody can act while frozen, ≥2
+    // players idling pre-start must not trip the FFA winner, and a coop room
+    // has no bots before Start (an empty bot set would read as instant win).
+    if (this.status === "lobby") return false;
+
+    if (this.mode === "coop") {
+      if (this.waitingrespawn) return false;
+      let alive_humans = 0;
+      let alive_bots = 0;
+      for (const socketid in this.players) {
+        const p = this.players[socketid];
+        if (!p || !p.alive) continue;
+        if (p.is_bot) alive_bots++;
+        else alive_humans++;
+      }
+      // Humans first: a mutual wipe-out (last human and last bot dying on the
+      // same tick) counts as a LOSS. No ≥2-players requirement — one human vs
+      // the level's bots is a legal coop round.
+      if (alive_humans === 0) {
+        this.emit_to_room("winner", {
+          socketid: -1,
+          waitingtime: this.waitingtime,
+          player_scores: this.get_all_player_stats(),
+          ids_to_name: this.ids_to_names,
+          coop: "loss",
+        });
+        this.waitingrespawn = true;
+        return true;
+      }
+      if (alive_bots === 0) {
+        // Every surviving human wins. The payload's single socketid carries
+        // the first of them so old clients still render a sensible "X wins";
+        // new clients read the additive `coop` verdict instead.
+        let first_alive: string | number = -1;
+        for (const socketid in this.players) {
+          const p = this.players[socketid];
+          if (p && p.alive && !p.is_bot) {
+            p.round_stats.stats.wins++;
+            if (first_alive === -1) first_alive = socketid;
+          }
+        }
+        this.emit_to_room("winner", {
+          socketid: first_alive,
+          waitingtime: this.waitingtime,
+          player_scores: this.get_all_player_stats(),
+          ids_to_name: this.ids_to_names,
+          coop: "win",
+        });
+        this.waitingrespawn = true;
+        return true;
+      }
+      return false;
+    }
+
     if (this.waitingrespawn == false && this.nbliving <= 1) {
       if (Object.keys(this.players).length >= 2) {
         if (this.nbliving == 1) {
@@ -375,11 +626,24 @@ export class Room {
       delete this.players[socketid];
       this.ids.splice(this.ids.indexOf(socketid), 1);
       delete this.ids_to_names[socketid];
-      this.spawns.push(player.spawnpos);
+      // Keep the membership lists honest (human_players historically
+      // accumulated stale ids forever) so human_count()/host transfer work.
+      const humanIdx = this.human_players.indexOf(socketid);
+      if (humanIdx !== -1) this.human_players.splice(humanIdx, 1);
+      const lobbyIdx = this.lobby_bots.indexOf(socketid);
+      if (lobbyIdx !== -1) this.lobby_bots.splice(lobbyIdx, 1);
+      // A waiting coop joiner never owned a spawn slot — returning their
+      // parked {-100,-100} spawnpos would poison the pool.
+      if (!player.pending_spawn) {
+        this.spawns.push(player.spawnpos);
+      }
       if (player.alive) {
         this.nbliving--;
       }
-      if (this.nbliving <= 0) {
+      // Skip the auto-respawn while a round-end respawn is already pending:
+      // the last alive player quitting during the 5s scoreboard wait used to
+      // trigger a second, immediate respawn racing the scheduled one.
+      if (this.nbliving <= 0 && !this.waitingrespawn) {
         this.respawn_the_room();
       }
     }

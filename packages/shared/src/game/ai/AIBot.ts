@@ -35,6 +35,7 @@ export class AIBot extends Player {
   ) {
     super(position, socketid, name, turretc, bodyc);
     this.kind = kind;
+    this.is_bot = true;
     this.#seed = ((roomSeed >>> 0) ^ fnv1a(socketid)) >>> 0;
     this.#brain = new Brain(this.#seed);
 

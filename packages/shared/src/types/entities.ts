@@ -44,6 +44,10 @@ export interface Player {
   // collision check ("" | "right" | "left" | "up" | "down", or a boolean).
   rotation?: number;
   side?: string | boolean;
+  // Optional for old-server tolerance (servers before the lobby/coop work
+  // never set them): true for AI combatants / humans awaiting a coop spawn.
+  is_bot?: boolean;
+  pending_spawn?: boolean;
 }
 
 // `emitter` is a back-reference to the firing player: the FULL Player object is

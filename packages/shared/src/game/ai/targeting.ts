@@ -6,6 +6,7 @@ import {
   segCircleHit,
   type AIGrid,
 } from "./grid.js";
+import { isProtectedBot } from "./allegiance.js";
 import type { ArchetypeAI } from "./archetypes.js";
 import type { Room } from "../Room.js";
 import type { Player } from "../Player.js";
@@ -159,7 +160,10 @@ function checkPath(
     for (const socketid in room.players) {
       const p = room.players[socketid];
       if (!p || !p.alive || p.position == undefined) continue;
-      if (p !== bot && !socketid.includes("bot")) continue; // humans: no veto
+      // Only the shooter itself and PROTECTED bots veto a path. Humans never
+      // veto (a hit there is still a kill) — and neither do lobby bots, which
+      // are enemy combatants like humans.
+      if (p !== bot && !isProtectedBot(room, socketid)) continue;
       const cx = p.position.x + p.size.w / 2;
       const cy = p.position.y + p.size.h / 2;
       const s = segCircleHit(x0, y0, ux, uy, segLen, cx, cy, hazardR);
