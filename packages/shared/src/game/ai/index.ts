@@ -10,3 +10,4 @@ export {
   type ArchetypeChassis,
 } from "./archetypes.js";
 export { Rng, fnv1a } from "./rng.js";
+export { STATE, type AIState } from "./brain.js";
