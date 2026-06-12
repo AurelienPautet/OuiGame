@@ -208,9 +208,18 @@ function registerSocketHandlers({
     socket.on("lobby_start", (room_id) => {
       const room = lobbyRoomForHost(socket, room_id);
       if (!room) return;
-      // An ffa round needs two combatants (humans + bots) or the winner
-      // check would end it instantly.
-      if (Object.keys(room.players).length < 2) return;
+      if (room.mode === "coop") {
+        // One human vs the level's bots is a legal coop round.
+        if (room.human_count() < 1) return;
+        // The level's bots enter the arena now — synchronously BEFORE the
+        // status flip, so no tick can see a botless playing coop room (which
+        // the winner check would read as an instant team win).
+        room.spawn_all_bots();
+      } else if (Object.keys(room.players).length < 2) {
+        // An ffa round needs two combatants (humans + bots) or the winner
+        // check would end it instantly.
+        return;
+      }
       room.status = "playing";
       beginCountdown(room, roomTimers);
       broadcast_lobby_state(room);
@@ -231,11 +240,26 @@ function registerSocketHandlers({
         socket.emit("id-fail");
         return;
       }
-      if (
-        room.ids.includes(socket.id) == false &&
-        Object.keys(room.players).length < room.maxplayernb
-      ) {
-        room.spawn_new_player(playerName, turretc, bodyc, socket.id);
+      // Coop capacity counts humans only (level bots never take seats); ffa
+      // counts every combatant (a lobby bot holds a real spawn slot).
+      const capacityOk =
+        room.mode === "coop"
+          ? room.human_count() < room.maxplayernb
+          : Object.keys(room.players).length < room.maxplayernb;
+      if (room.ids.includes(socket.id) == false && capacityOk) {
+        if (room.mode === "coop" && room.status === "playing") {
+          // Mid-round coop joiner: registered but off-field until the next
+          // respawn deals them in (spawning into a live bot crossfire is a
+          // death sentence).
+          room.add_waiting_player(playerName, turretc, bodyc, socket.id);
+        } else {
+          if (room.mode === "coop") {
+            // Solo levels are authored with one player spawn; grow the pool
+            // deterministically around it so every teammate fits.
+            room.ensure_spawn_capacity(room.human_count() + 1);
+          }
+          room.spawn_new_player(playerName, turretc, bodyc, socket.id);
+        }
         // First human in becomes the lobby host (the creator auto-joins their
         // own room right after room_created, so in practice this is them).
         if (!room.hostid) room.hostid = socket.id;

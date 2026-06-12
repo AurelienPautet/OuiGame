@@ -13,6 +13,9 @@ import type { AppServer, AppSocket } from "../socket/types";
 // Grace period before an emptied room is actually removed (see deleteRoomIfEmpty).
 const EMPTY_ROOM_GRACE_MS = 3000;
 
+// Coop rooms host up to this many humans against the level's bots.
+const COOP_MAX_HUMANS = 4;
+
 function createRoomRegistry({
   io,
   serverid,
@@ -90,8 +93,10 @@ function createRoomRegistry({
     mode?: RoomMode
   ): Promise<number | { error: string }> {
     if (mode === "coop") {
-      // Enabled by the coop PR (playlist validation + bot setup).
-      return { error: "coop_unavailable" };
+      // Every playlist entry must be a solo-type level with at least one bot
+      // spawn cell — validated BEFORE anything is registered.
+      const verdict = await levelsService.validateCoopLevels(list_id);
+      if (!verdict.ok) return { error: verdict.reason };
     }
     const room = new Room(name, rounds, list_id, creator, io);
     if (mode !== undefined) {
@@ -99,8 +104,16 @@ function createRoomRegistry({
       room.status = "lobby";
       room.countdownActive = true; // the indefinite pre-start hold
     }
-    room.maxplayernb = (await levelsRepo.getMinMaxPlayers(list_id))
-      .min as number;
+    if (mode === "coop") {
+      // Humans vs the level's bots, with the v2 brain (the solo default).
+      // Capacity is the human cap — level bots don't take seats — so the
+      // playlist's (solo) maxPlayers values are irrelevant here.
+      room.bot_system = "v2";
+      room.maxplayernb = COOP_MAX_HUMANS;
+    } else {
+      room.maxplayernb = (await levelsRepo.getMinMaxPlayers(list_id))
+        .min as number;
+    }
     // room.levels is the list_id passed above; the entry at levelid (0 on a
     // fresh room) is present whenever the room was created with levels.
     const levelId = room.levels[room.levelid];
