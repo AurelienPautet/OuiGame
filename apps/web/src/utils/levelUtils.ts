@@ -3,12 +3,14 @@
  * Helpers for parsing level data and extracting bot information
  */
 
-// Bot color mapping (from legacy Room.bot_colors)
+// Bot color mapping (mirrors Room.bot_colors; 5/6 are the v2-only kinds)
 const BOT_COLORS: Record<number, string> = {
   1: "blue",
   2: "green",
   3: "orange",
   4: "red",
+  5: "yellow",
+  6: "purple",
 };
 
 /**
