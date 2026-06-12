@@ -12,9 +12,10 @@ import { storage } from "./storage";
 // not build shared's dist. The union must match Room.bot_system structurally.
 export type BotSystem = "legacy" | "v2";
 
-// Flipped to "v2" by the rollout PR once in-browser verification passes;
-// `?bots=legacy` stays available as the permanent escape hatch.
-export const DEFAULT_BOT_SYSTEM: BotSystem = "legacy";
+// The v2 brain is the live bot system for solo and campaign play.
+// `?bots=legacy` (or localStorage bot_system="legacy") is the permanent,
+// zero-deploy escape hatch back to the original AI.
+export const DEFAULT_BOT_SYSTEM: BotSystem = "v2";
 
 function normalize(value: string | null): BotSystem | null {
   return value === "v2" || value === "legacy" ? value : null;
