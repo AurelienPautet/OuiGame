@@ -2,6 +2,7 @@ import { HULL_R, MINE_TRIGGER_R, MUZZLE_OFFSET, TILE } from "./constants.js";
 import {
   BouncePath,
   castBounceRay,
+  clampPredictPoint,
   segCircleHit,
   type AIGrid,
 } from "./grid.js";
@@ -258,6 +259,25 @@ function confirmAim(
 }
 
 const CANDIDATE = new ShotSolution();
+const PRED = { x: 0, y: 0 };
+
+// The lead point every candidate aims at: the target's position after t
+// seconds of its (smoothed, λ-scaled) velocity — CLAMPED against the movement
+// grid, modelling the chassis' wall slide. A straight q + λvt projects
+// through walls, making bots aim at spots a wall-bound target can never
+// reach (and shoot the wall in front of wall-huggers).
+function leadPoint(
+  grid: AIGrid,
+  qx: number,
+  qy: number,
+  tvx: number,
+  tvy: number,
+  lam: number,
+  t: number,
+  out: { x: number; y: number }
+): void {
+  clampPredictPoint(grid, qx, qy, qx + lam * tvx * t, qy + lam * tvy * t, out);
+}
 
 // Full targeting refresh (think cadence). Writes the best confirmed solution
 // for `target` into `sol` (clearing it when nothing qualifies). `fanPhase` is
@@ -285,10 +305,19 @@ export function refreshSolution(
 
   // ---- direct intercept ----
   if (solveIntercept(bcx, bcy, qx, qy, tvx, tvy, s, ICPT)) {
-    const aimX = qx + lam * tvx * ICPT.t;
-    const aimY = qy + lam * tvy * ICPT.t;
-    const ang = Math.atan2(aimY - bcy, aimX - bcx);
-    const q = confirmAim(grid, bot, room, ang, 0, aimX, aimY, CANDIDATE, true);
+    leadPoint(grid, qx, qy, tvx, tvy, lam, ICPT.t, PRED);
+    const ang = Math.atan2(PRED.y - bcy, PRED.x - bcx);
+    const q = confirmAim(
+      grid,
+      bot,
+      room,
+      ang,
+      0,
+      PRED.x,
+      PRED.y,
+      CANDIDATE,
+      true
+    );
     if (q > bestQ) {
       bestQ = q;
       copySolution(CANDIDATE, sol, target.socketid);
@@ -319,8 +348,10 @@ export function refreshSolution(
           solveIntercept(bcx, bcy, mqx, qy, mvx, tvy, s, ICPT) &&
           ICPT.t * s < MAX_PLAN_DIST
         ) {
-          const dirX = ICPT.x - bcx;
-          const dirY = ICPT.y - bcy;
+          // Clamp the lead in WORLD space, then mirror the clamped point.
+          leadPoint(grid, qx, qy, tvx, tvy, lam, ICPT.t, PRED);
+          const dirX = 2 * plane - PRED.x - bcx;
+          const dirY = PRED.y - bcy;
           const tb = (plane - bcx) / dirX;
           if (tb > 0 && tb < 1) {
             const hitY = bcy + tb * dirY;
@@ -334,8 +365,8 @@ export function refreshSolution(
                 room,
                 ang,
                 ai.maxPlanBounces,
-                qx + lam * tvx * ICPT.t,
-                qy + lam * tvy * ICPT.t,
+                PRED.x,
+                PRED.y,
                 CANDIDATE,
                 false
               );
@@ -359,8 +390,9 @@ export function refreshSolution(
           solveIntercept(bcx, bcy, qx, mqy, tvx, mvy, s, ICPT) &&
           ICPT.t * s < MAX_PLAN_DIST
         ) {
-          const dirX = ICPT.x - bcx;
-          const dirY = ICPT.y - bcy;
+          leadPoint(grid, qx, qy, tvx, tvy, lam, ICPT.t, PRED);
+          const dirX = PRED.x - bcx;
+          const dirY = 2 * plane - PRED.y - bcy;
           const tb = (plane - bcy) / dirY;
           if (tb > 0 && tb < 1) {
             const hitX = bcx + tb * dirX;
@@ -372,8 +404,8 @@ export function refreshSolution(
                 room,
                 ang,
                 ai.maxPlanBounces,
-                qx + lam * tvx * ICPT.t,
-                qy + lam * tvy * ICPT.t,
+                PRED.x,
+                PRED.y,
                 CANDIDATE,
                 false
               );
@@ -437,13 +469,12 @@ export function refreshSolution(
       }
       if (arc < 0) continue;
 
-      // Refine: lead the target by the discovered flight time, re-aim at the
-      // unfolded lead point, confirm the exact path.
+      // Refine: lead the target by the discovered flight time (wall-clamped),
+      // re-aim at the unfolded lead point, confirm the exact path.
       const tFlight = arc / s;
-      const px = qx + lam * tvx * tFlight;
-      const py = qy + lam * tvy * tFlight;
-      const ux = CONFIRM_PATH.sx[seg]! * px + CONFIRM_PATH.tx[seg]!;
-      const uy = CONFIRM_PATH.sy[seg]! * py + CONFIRM_PATH.ty[seg]!;
+      leadPoint(grid, qx, qy, tvx, tvy, lam, tFlight, PRED);
+      const ux = CONFIRM_PATH.sx[seg]! * PRED.x + CONFIRM_PATH.tx[seg]!;
+      const uy = CONFIRM_PATH.sy[seg]! * PRED.y + CONFIRM_PATH.ty[seg]!;
       const refined = Math.atan2(uy - my, ux - mx);
       const q = confirmAim(
         grid,
@@ -451,8 +482,8 @@ export function refreshSolution(
         room,
         refined,
         ai.maxPlanBounces,
-        px,
-        py,
+        PRED.x,
+        PRED.y,
         CANDIDATE,
         false
       );
@@ -509,8 +540,7 @@ export function validateAim(
 ): boolean {
   const qx = target.position.x + target.size.w / 2;
   const qy = target.position.y + target.size.h / 2;
-  const px = qx + ai.leadFactor * tvx * sol.tFlight;
-  const py = qy + ai.leadFactor * tvy * sol.tFlight;
+  leadPoint(grid, qx, qy, tvx, tvy, ai.leadFactor, sol.tFlight, PRED);
   return (
     confirmAim(
       grid,
@@ -518,8 +548,8 @@ export function validateAim(
       room,
       worldAngle,
       ai.maxPlanBounces,
-      px,
-      py,
+      PRED.x,
+      PRED.y,
       CANDIDATE,
       sol.kind === 1
     ) > 0
@@ -528,8 +558,10 @@ export function validateAim(
 
 // Per-tick micro-aim: desired world angle for the cached solution against the
 // live target state. Direct solutions re-solve the intercept (~30 flops);
-// banked ones map the lead point through the cached unfold transform.
+// banked ones map the lead point through the cached unfold transform. Lead
+// points are wall-clamped like every planning prediction.
 export function desiredAngleFor(
+  grid: AIGrid,
   bot: Player,
   target: Player,
   tvx: number,
@@ -544,19 +576,16 @@ export function desiredAngleFor(
   const qy = target.position.y + target.size.h / 2;
   if (sol.kind === 1) {
     if (solveIntercept(bcx, bcy, qx, qy, tvx, tvy, bot.shoot_speed, ICPT)) {
-      return Math.atan2(
-        qy + ai.leadFactor * tvy * ICPT.t - bcy,
-        qx + ai.leadFactor * tvx * ICPT.t - bcx
-      );
+      leadPoint(grid, qx, qy, tvx, tvy, ai.leadFactor, ICPT.t, PRED);
+      return Math.atan2(PRED.y - bcy, PRED.x - bcx);
     }
     return Math.atan2(qy - bcy, qx - bcx);
   }
   // Bank: lead with the cached flight time, unfold, aim from the muzzle the
   // turret is already tracking toward (second-order error only).
-  const px = qx + ai.leadFactor * tvx * sol.tFlight;
-  const py = qy + ai.leadFactor * tvy * sol.tFlight;
-  const ux = sol.usx * px + sol.utx;
-  const uy = sol.usy * py + sol.uty;
+  leadPoint(grid, qx, qy, tvx, tvy, ai.leadFactor, sol.tFlight, PRED);
+  const ux = sol.usx * PRED.x + sol.utx;
+  const uy = sol.usy * PRED.y + sol.uty;
   return Math.atan2(
     uy - muzzleY(bot, prevDesired),
     ux - muzzleX(bot, prevDesired)
