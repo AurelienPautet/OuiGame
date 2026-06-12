@@ -17,6 +17,7 @@ import type {
   WinnerPayload,
   PlayerKillPayload,
   CountdownStartPayload,
+  LobbyState,
 } from "../types";
 // The level DTOs double as the "level_change_info" / "recieve_json_from_id"
 // socket payloads, so they live in api/ (the plan's home for response DTOs).
@@ -28,12 +29,23 @@ export interface ClientToServerEvents {
   authenticate: (token: string) => void;
   deauthenticate: () => void;
   get_json_from_id: (level_id: number | string) => void;
+  // The appended optional 5th arg is BOTH the game mode and the lobby opt-in:
+  // when present the server holds the new room in a pre-game lobby until the
+  // creator starts it; absent (old clients) the room keeps the historical
+  // immediate-play behaviour. New clients always send it ("ffa" or "coop").
   "new-room": (
     name: string,
     rounds: number,
     list_id: number[],
-    creator: string
+    creator: string,
+    mode?: "ffa" | "coop"
   ) => void;
+  // Lobby controls — host-only (the server verifies against room.hostid) and
+  // only while the room status is "lobby". Adding bots is "ffa" rooms only
+  // (coop rooms get their bots from the level on start).
+  lobby_add_bot: (room_id: number | string) => void;
+  lobby_remove_bot: (room_id: number | string, bot_socketid: string) => void;
+  lobby_start: (room_id: number | string) => void;
   // room_id is whatever id the client holds; the server indexes rooms[room_id],
   // which accepts a numeric id or its string form (rooms are also joined as
   // String(room.id)). The web GameContext likewise types roomId as number|string.
@@ -80,6 +92,13 @@ export interface ServerToClientEvents {
   recieve_json_from_id: (level: ReceiveJsonFromId | null) => void;
   error_getting_json: (message: string) => void;
   room_created: (room_id: number) => void;
+  // Room creation rejected (today: coop playlist validation — non-solo level
+  // or no bot spawns). Only mode-sending clients can trigger it.
+  room_create_failed: (reason: string) => void;
+  // Pre-game lobby snapshot: broadcast to the room on every membership/host/
+  // status change while status is "lobby" (and once with status "playing" on
+  // start, so clients drop the lobby panel). Never emitted per tick.
+  lobby_state: (state: LobbyState) => void;
   // POSITIONAL: (room_id, playerIndex, socketid)
   id: (room_id: number, playerIndex: number, socketid: string) => void;
   "id-fail": () => void;

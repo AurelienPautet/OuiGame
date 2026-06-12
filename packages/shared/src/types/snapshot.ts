@@ -51,11 +51,40 @@ export interface PositionEvent {
 
 // The `winner` payload. `socketid` is -1 (number) for a DRAW. The key
 // "ids_to_name" (singular) drops the trailing "s" vs the Room field.
+// `coop` is present only on coop-mode rounds: the team verdict ("win" = all
+// bots destroyed, "loss" = all humans dead — mutual wipe counts as loss).
+// On a coop win `socketid` carries the first surviving human so old clients
+// still render a name. FFA rounds omit the key entirely.
 export interface WinnerPayload {
   socketid: string | number;
   waitingtime: number;
   player_scores: Record<string, StatsCounters>;
   ids_to_name: Record<string, string>;
+  coop?: "win" | "loss";
+}
+
+// One row of the `lobby_state` member list (humans and host-added bots, in
+// join order). Colors use the same name vocabulary as play/tock.
+export interface LobbyMember {
+  socketid: string;
+  name: string;
+  turretc: string;
+  bodyc: string;
+  is_bot: boolean;
+  is_host: boolean;
+}
+
+// The `lobby_state` payload — broadcast to a room on every membership/host/
+// status change while it sits in the pre-game lobby (never per tick).
+// `max_players` is the room's capacity gate: total combatants for "ffa",
+// humans only for "coop".
+export interface LobbyState {
+  room_id: number;
+  name: string;
+  status: "lobby" | "playing";
+  mode: "ffa" | "coop";
+  max_players: number;
+  members: LobbyMember[];
 }
 
 // The `player-kill` payload. `players` is a [killerName, killedName] tuple.

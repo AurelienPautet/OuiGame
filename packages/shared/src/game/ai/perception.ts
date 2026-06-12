@@ -10,6 +10,7 @@ import {
 } from "./constants.js";
 import { castRay, makeRayHit, segmentClear, type AIGrid } from "./grid.js";
 import { FLOW_INF } from "./flow.js";
+import { targetIds } from "./allegiance.js";
 import type { AIRoomState } from "./room_state.js";
 import type { ArchetypeAI } from "./archetypes.js";
 import type { Room } from "../Room.js";
@@ -303,8 +304,9 @@ export function refreshBounceThreats(
 // the 23x16 grid is well under this).
 const UNREACHABLE_PENALTY = 1000;
 
-// Flow-distance-based nearest live human, with stickiness so the bot doesn't
-// oscillate between two equidistant players.
+// Flow-distance-based nearest live enemy (humans, plus lobby bots in FFA
+// rooms), with stickiness so the bot doesn't oscillate between two
+// equidistant players.
 export function pickTarget(
   bot: Player,
   room: Room,
@@ -319,7 +321,8 @@ export function pickTarget(
   let current: Player | null = null;
   let currentScore = Infinity;
 
-  for (const id of room.human_players) {
+  for (const id of targetIds(room)) {
+    if (id === bot.socketid) continue; // a lobby bot is in the target set
     const p = room.players[id];
     if (!p || !p.alive || p.position == undefined) continue;
     const flow = s.flows.get(id);

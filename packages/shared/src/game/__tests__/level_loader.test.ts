@@ -1,4 +1,8 @@
-import { loadlevel, generateBcollision } from "../level_loader.js";
+import {
+  loadlevel,
+  generateBcollision,
+  countBotSpawnCells,
+} from "../level_loader.js";
 import {
   interiorBlock,
   mixedArena,
@@ -113,5 +117,28 @@ describe("generateBcollision — merging adjacent blocks", () => {
     ]);
     const boxes = boxesFor(grid);
     expect(boxes).toHaveLength(2);
+  });
+});
+
+describe("countBotSpawnCells", () => {
+  it("counts exactly the bot cells (codes 11-16)", () => {
+    const grid = makeGrid([
+      [3, 3, 11],
+      [3, 6, 12],
+      [3, 9, 13],
+      [3, 12, 14],
+      [5, 3, 15],
+      [5, 6, 16],
+      [7, 3, 1], // wall
+      [7, 6, 2], // destructible
+      [7, 9, 3], // player spawn
+      [7, 12, 4], // hole
+    ]);
+    grid[8 * 23 + 5] = 10; // destroyed-wall floor
+    expect(countBotSpawnCells(grid)).toBe(6);
+  });
+
+  it("returns 0 for a bot-less grid", () => {
+    expect(countBotSpawnCells(makeGrid([[3, 3, 3]]))).toBe(0);
   });
 });

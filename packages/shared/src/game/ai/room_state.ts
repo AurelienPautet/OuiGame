@@ -1,6 +1,7 @@
 import { TILE } from "./constants.js";
 import { AIGrid } from "./grid.js";
 import { FlowField } from "./flow.js";
+import { targetIds } from "./allegiance.js";
 import type { Room } from "../Room.js";
 import type { CollisionBox } from "../CollisionBox.js";
 
@@ -49,7 +50,10 @@ export function refreshPerTick(room: Room, s: AIRoomState): void {
     s.lastBlocklist = room.blocklist;
   }
 
-  for (const id of room.human_players) {
+  // Velocity EMAs and flow fields exist for every targetable tank — humans
+  // plus lobby bots — so bots can lead and chase each other in FFA rooms.
+  const targets = targetIds(room);
+  for (const id of targets) {
     const p = room.players[id];
     if (!p || !p.alive) continue;
     let e = s.velEMA.get(id);
@@ -63,7 +67,7 @@ export function refreshPerTick(room: Room, s: AIRoomState): void {
 
   if (geomChanged || room.tick - s.lastFlowTick >= FLOW_PERIOD_TICKS) {
     s.lastFlowTick = room.tick;
-    for (const id of room.human_players) {
+    for (const id of targets) {
       const p = room.players[id];
       if (!p || !p.alive || p.position == undefined) continue;
       let f = s.flows.get(id);

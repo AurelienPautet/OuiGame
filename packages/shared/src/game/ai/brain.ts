@@ -17,6 +17,7 @@ import {
 } from "./constants.js";
 import { isMoveBlockedAtPx } from "./grid.js";
 import { FLOW_INF, FlowField } from "./flow.js";
+import { isProtectedBot } from "./allegiance.js";
 import {
   ThreatSummary,
   hasLOS,
@@ -680,9 +681,10 @@ function maybePlantMine(
       return;
     }
   }
-  // Never sacrifice a teammate to the 5s fuse.
+  // Never sacrifice a teammate to the 5s fuse. (Lobby bots have no teammates
+  // — an enemy lobby bot standing close is a target, not a reason to hold.)
   for (const socketid in room.players) {
-    if (!socketid.includes("bot")) continue;
+    if (!isProtectedBot(room, socketid)) continue;
     const other = room.players[socketid];
     if (!other || other === bot || !other.alive || other.position == undefined)
       continue;

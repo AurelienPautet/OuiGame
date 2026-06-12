@@ -37,6 +37,13 @@ export class Player {
   minecount: number;
   aim: Vec2;
   alive: boolean;
+  // True for every AI-driven combatant (AIBot sets it in its constructor).
+  // Enumerable on purpose: it rides the tick snapshot so clients can style
+  // bots, and the server's stats recorder skips bot rows by it.
+  is_bot: boolean;
+  // A human who joined a coop room mid-round: registered but not on the field
+  // until the next respawn_the_room() spawns them (spawn() clears the flag).
+  pending_spawn: boolean;
   max_bulletcount: number;
   max_minecount: number;
   mvtspeed: number;
@@ -94,6 +101,8 @@ export class Player {
       y: 0,
     };
     this.alive = true;
+    this.is_bot = false;
+    this.pending_spawn = false;
     this.max_bulletcount = 5;
     this.max_minecount = 3;
     // Speeds are in px/second (integrated as `velocity * dt`). 180 px/s and
@@ -110,6 +119,7 @@ export class Player {
   spawn(spawn_pos: Vec2): void {
     console.log("Spawning player at", spawn_pos);
     this.alive = true;
+    this.pending_spawn = false;
     this.minecount = 0;
     this.bulletcount = 0;
     this.position = structuredClone(spawn_pos);

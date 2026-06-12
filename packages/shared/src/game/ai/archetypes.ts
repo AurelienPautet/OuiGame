@@ -6,7 +6,14 @@ import type { Size } from "../types.js";
 // code. Kinds map to the same level cells / colors as the legacy system
 // (11→bot1 … 14→bot4); the Wii Play Tanks! roster is the tuning reference.
 
-export type AIBotKind = "bot1" | "bot2" | "bot3" | "bot4" | "bot5" | "bot6";
+export type AIBotKind =
+  | "bot1"
+  | "bot2"
+  | "bot3"
+  | "bot4"
+  | "bot5"
+  | "bot6"
+  | "bot7";
 
 // Player-chassis overrides applied in the AIBot constructor. These mirror the
 // legacy BOT_CONFIGS chassis values kind-for-kind so a v2 bot *shoots the same
@@ -64,6 +71,8 @@ export interface Archetype {
 //   bot4 (red)    stationary ricochet master — fast turret, full lead, deadly precise
 //   bot5 (yellow) miner — no gun at all; fast, mine-obsessed area denial (Wii yellow)
 //   bot6 (purple) hunter — fast closer with 5 bullets + mines, corners the player
+//   bot7 (dimgray) match bot — host-added FFA combatant on an exactly-human
+//                 chassis (no level cell; spawned via Room.spawn_lobby_bot)
 export const ARCHETYPES: Record<AIBotKind, Archetype> = {
   bot1: {
     chassis: {
@@ -279,6 +288,48 @@ export const ARCHETYPES: Record<AIBotKind, Archetype> = {
       qualityPerBullet: 0.15,
       bandMinPx: 120, // corners the player at knife range
       bandMaxPx: 260,
+      dodgeSkill: 0.7,
+      threatHorizonS: 0.8,
+      bounceAwareDodge: true,
+      minesEnabled: true,
+      mineCooldownTicks: 500,
+      chokeP: 0.15,
+      fleeDropP: 0.25,
+      breachEnabled: false,
+      idleScanRadS: 0.9,
+    },
+  },
+  bot7: {
+    // The chassis IS the contract: every value equals the Player constructor
+    // default (a lobby bot drives exactly the tank a human gets) — pinned by
+    // room-lobby-bots.test.ts. The brain is a bot6 tuned for fair play at a
+    // human's 180 px/s: same reactions, slightly wider engagement band, and
+    // two usable banks (player bullets die on their 3rd wall contact).
+    chassis: {
+      canMove: true,
+      mvtspeed: 180,
+      shoot_speed: 300,
+      shoot_max_bounce: 3,
+      bullet_type: 1,
+      bullet_size: { w: 15, h: 15 },
+      max_bulletcount: 5,
+      max_minecount: 3,
+    },
+    ai: {
+      thinkPeriod: 6,
+      turretSlewRadS: 3.0,
+      cooldownTicks: 45,
+      reactionTicks: 8,
+      aimTolRad: 0.06,
+      leadFactor: 0.85,
+      aimSigmaRad: 0.03,
+      maxPlanBounces: 2,
+      fanRays: 4,
+      unfoldBudget: 6,
+      minQuality: 0.2,
+      qualityPerBullet: 0.15,
+      bandMinPx: 150,
+      bandMaxPx: 350,
       dodgeSkill: 0.7,
       threatHorizonS: 0.8,
       bounceAwareDodge: true,

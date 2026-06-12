@@ -144,6 +144,17 @@ export function generateBcollision(room: Room): void {
   }
 }
 
+// Bot spawn cells (codes 11–16) in a flat level grid. The coop room creation
+// gate uses this: a coop playlist may only contain solo levels with at least
+// one enemy on them.
+export function countBotSpawnCells(level_json: number[]): number {
+  let n = 0;
+  for (const cell of level_json) {
+    if (cell >= 11 && cell <= 16) n++;
+  }
+  return n;
+}
+
 export async function loadlevel(
   level_json: number[],
   room: Room
