@@ -104,6 +104,67 @@ export function makeRayHit(): RayHit {
   return { x: 0, y: 0, t: 0, axis: 0, grazed: false };
 }
 
+// Walk a predicted tank-centre displacement against the MOVE grid the way the
+// chassis actually behaves: stop at blocking geometry, but keep the motion's
+// free component when only one axis is blocked (Player.resolveCollisions makes
+// tanks SLIDE along walls, not stop dead). Used to clamp intercept-lead
+// points so bots never aim at spots behind a wall the target cannot reach.
+// 10px sampling: coarser than the physics but bounded by the ~20px hull slack
+// the engine's own clamp adds on top. Writes the reachable end point to `out`.
+const PREDICT_STEP = 10;
+
+export function clampPredictPoint(
+  g: AIGrid,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  out: { x: number; y: number }
+): void {
+  let dx = toX - fromX;
+  let dy = toY - fromY;
+  const len = Math.hypot(dx, dy);
+  out.x = fromX;
+  out.y = fromY;
+  if (len < 1e-6) return;
+  dx /= len;
+  dy /= len;
+
+  let x = fromX;
+  let y = fromY;
+  let remaining = len;
+  let slid = false;
+  while (remaining > 0) {
+    const step = remaining < PREDICT_STEP ? remaining : PREDICT_STEP;
+    const nx = x + dx * step;
+    const ny = y + dy * step;
+    if (!isMoveBlockedAtPx(g, nx, ny)) {
+      x = nx;
+      y = ny;
+      remaining -= step;
+      continue;
+    }
+    if (slid) break; // already sliding and blocked again: pinned in a corner
+    // Try the wall-slide: keep whichever axis of motion is still free.
+    const xFree =
+      dx !== 0 && !isMoveBlockedAtPx(g, x + Math.sign(dx) * step, y);
+    const yFree =
+      dy !== 0 && !isMoveBlockedAtPx(g, x, y + Math.sign(dy) * step);
+    if (xFree && !yFree) {
+      dx = Math.sign(dx);
+      dy = 0;
+    } else if (yFree && !xFree) {
+      dx = 0;
+      dy = Math.sign(dy);
+    } else {
+      break; // fully blocked (or ambiguous corner): stop here
+    }
+    slid = true;
+  }
+  out.x = x;
+  out.y = y;
+}
+
 // March a circle of radius r from (ox,oy) along the unit direction (dx,dy)
 // until it touches a wall (true, `out` filled) or maxDist is covered (false;
 // out.t = maxDist, out.grazed still meaningful). O(cells crossed).

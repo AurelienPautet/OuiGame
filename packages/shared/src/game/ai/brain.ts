@@ -259,6 +259,7 @@ export function brainTick(
   const tvy = ema ? ema.vy : 0;
   if (brain.solution.kind !== 0 && target) {
     brain.desiredWorld = desiredAngleFor(
+      s.grid,
       bot,
       target,
       tvx,

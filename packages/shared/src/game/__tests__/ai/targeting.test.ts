@@ -1,7 +1,7 @@
 import { Room } from "../../Room.js";
 import { Player } from "../../Player.js";
 import { loadlevel } from "../../level_loader.js";
-import { AIGrid } from "../../ai/grid.js";
+import { AIGrid, clampPredictPoint } from "../../ai/grid.js";
 import {
   ShotSolution,
   desiredAngleFor,
@@ -10,6 +10,7 @@ import {
 } from "../../ai/targeting.js";
 import { ARCHETYPES } from "../../ai/archetypes.js";
 import { bankWallArena, openArena } from "../fixtures/ai-levels.js";
+import { makeGrid } from "../fixtures/levels.js";
 
 const ICPT = { t: 0, x: 0, y: 0 };
 
@@ -168,16 +169,96 @@ describe("refreshSolution", () => {
 
 describe("desiredAngleFor", () => {
   it("re-leads a direct solution from live target state", () => {
+    const grid = new AIGrid();
+    grid.rebuild(makeGrid());
     const bot = new Player({ x: 0, y: 0 }, "bot0", "B", "o", "o");
     const target = new Player({ x: 0, y: 0 }, "h1", "H", "o", "o");
-    place(bot, 0 + 22.5, 0 + 22.5);
-    place(target, 400 + 22.5, 0 + 22.5);
+    place(bot, 222.5, 422.5);
+    place(target, 622.5, 422.5);
     const sol = new ShotSolution();
     sol.kind = 1;
     const ai = { ...ARCHETYPES.bot4.ai }; // leadFactor 1
-    const ang = desiredAngleFor(bot, target, 0, 180, ai, sol, 0);
-    // Aim point leads DOWN (+y): angle strictly positive, below the x-axis.
+    const ang = desiredAngleFor(grid, bot, target, 0, 180, ai, sol, 0);
+    // Target runs DOWN (+y) in open field: the aim leads below the x-axis.
     expect(ang).toBeGreaterThan(0.3);
     expect(ang).toBeLessThan(Math.PI / 2);
+  });
+});
+
+describe("wall-aware lead prediction", () => {
+  it("clampPredictPoint stops at walls, slides along them, ignores open field", () => {
+    const grid = new AIGrid();
+    // Wall column at col 16 (x 800..850), rows 6..10 (y 300..550).
+    grid.rebuild(
+      makeGrid([
+        [6, 16, 1],
+        [7, 16, 1],
+        [8, 16, 1],
+        [9, 16, 1],
+        [10, 16, 1],
+      ] as never)
+    );
+    const out = { x: 0, y: 0 };
+
+    // Open field: untouched.
+    clampPredictPoint(grid, 300, 425, 500, 425, out);
+    expect(out).toEqual({ x: 500, y: 425 });
+
+    // Straight into the wall: clamped in front of the face (x < 800).
+    clampPredictPoint(grid, 740, 425, 950, 425, out);
+    expect(out.x).toBeLessThan(800);
+    expect(out.x).toBeGreaterThan(740);
+    expect(out.y).toBe(425);
+
+    // Diagonal into the wall: the free axis keeps going (wall slide).
+    clampPredictPoint(grid, 740, 425, 940, 625, out);
+    expect(out.x).toBeLessThan(800);
+    expect(out.y).toBeGreaterThan(500); // slid downward along the wall
+
+    // Holes block tank movement too.
+    const holes = new AIGrid();
+    holes.rebuild(makeGrid([[8, 16, 4]] as never));
+    clampPredictPoint(holes, 740, 425, 950, 425, out);
+    expect(out.x).toBeLessThan(800);
+  });
+
+  it("keeps a firing solution on a target running into a wall (strike in front of it)", async () => {
+    const room = mkRoom();
+    await loadlevel(
+      makeGrid([
+        [6, 16, 1],
+        [7, 16, 1],
+        [8, 16, 1],
+        [9, 16, 1],
+        [10, 16, 1],
+      ] as never),
+      room
+    );
+    const bot = new Player({ x: 0, y: 0 }, "bot0", "B", "o", "o");
+    const target = new Player({ x: 0, y: 0 }, "h1", "H", "o", "o");
+    place(bot, 300, 425);
+    place(target, 740, 425);
+    room.players = { bot0: bot, h1: target };
+    room.human_players = ["h1"];
+    bot.shoot_speed = 600;
+
+    const sol = new ShotSolution();
+    // Full-lead archetype, target sprinting +x straight at the wall: the
+    // unclamped prediction (x ≈ 930) is INSIDE the wall — pre-fix this either
+    // produced no solution or aimed at an unreachable point.
+    refreshSolution(
+      gridOf(room),
+      bot,
+      room,
+      target,
+      180,
+      0,
+      ARCHETYPES.bot4.ai,
+      sol,
+      { phase: 0 }
+    );
+    expect(sol.kind).toBe(1);
+    // Strike lands before the wall face, where the target will actually be.
+    expect(sol.tFlight * 600).toBeLessThan(520);
   });
 });
