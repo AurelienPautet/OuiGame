@@ -110,7 +110,10 @@
     "noRooms": "Nessuna stanza disponibile",
     "createToStart": "Creane una per iniziare!",
     "full": "PIENA",
-    "passwordProtected": "Protetta da password"
+    "passwordProtected": "Protetta da password",
+    "inLobby": "In lobby",
+    "inGame": "In gioco",
+    "coop": "Coop"
   },
   "createRoom": {
     "title": "Crea Stanza",
@@ -118,7 +121,17 @@
     "rounds": "Round",
     "creating": "Creazione…",
     "createWithCount": "Crea Stanza ({{count}} livelli)",
-    "mustLogin": "Devi essere connesso per creare una stanza."
+    "mustLogin": "Devi essere connesso per creare una stanza.",
+    "mode": "Modalità di gioco",
+    "modeClassic": "Classica",
+    "modeCoop": "Coop",
+    "coopHint": "Coop: fino a 4 giocatori si alleano contro i bot del livello. Solo livelli singolo giocatore con nemici.",
+    "failed": "Impossibile creare la stanza",
+    "failReason": {
+      "level_not_found": "Un livello selezionato non esiste più.",
+      "not_solo": "Le stanze coop giocano solo livelli singolo giocatore.",
+      "no_bot_spawns": "Ogni livello coop deve avere almeno un nemico."
+    }
   },
   "levelSelector": {
     "searchPlaceholder": "Cerca il nome del livello…",
@@ -241,7 +254,9 @@
     "needLoginRate": "Devi essere connesso per valutare un livello",
     "noLevelRate": "Nessun livello da valutare",
     "playAgain": "Gioca di Nuovo",
-    "quit": "Esci"
+    "quit": "Esci",
+    "coopVictory": "Vittoria — tutti i bot distrutti!",
+    "coopDefeat": "Sconfitta — la tua squadra è stata eliminata"
   },
   "campaignEnd": {
     "complete": "Campagna Completata!",
@@ -387,5 +402,16 @@
     "title": "Qualcosa è andato storto",
     "message": "Il gioco ha riscontrato un errore imprevisto. Di solito ricaricarlo lo risolve.",
     "reload": "Ricarica"
+  },
+  "lobby": {
+    "classic": "Classica",
+    "coop": "Coop",
+    "addBot": "Aggiungi bot",
+    "removeBot": "Rimuovi bot",
+    "start": "Avvia partita",
+    "leave": "Esci",
+    "bot": "Bot",
+    "host": "Host",
+    "waitingForHost": "In attesa che l'host avvii…"
   }
 }

@@ -11,7 +11,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { LevelCard } from "./LevelCard";
-import { hexToDataUrl } from "../../utils/levelUtils";
+import { hexToDataUrl, hasBotSpawns } from "../../utils/levelUtils";
 import { useLevels, useMyLevels } from "../../hooks/api";
 import { storage } from "../../lib/storage";
 import type { LevelDTO } from "@ouigame/shared/api";
@@ -38,6 +38,9 @@ interface LevelSelectorProps {
   onCreate?: () => void; // "Create New" clicked (myLevels mode)
   onPick?: (level: LevelDTO) => void; // full level object picked (pick mode)
   pickedIds?: number[]; // already-picked ids, shown as "Added" (pick mode)
+  // Coop room creation browses SOLO levels in room (multi-select) mode:
+  levelTypeOverride?: "solo" | "online"; // wins over the mode-derived type
+  requireBotSpawns?: boolean; // keep only levels with bot cells (11-16)
 }
 
 export function LevelSelector({
@@ -50,6 +53,8 @@ export function LevelSelector({
   onCreate,
   onPick,
   pickedIds = [],
+  levelTypeOverride,
+  requireBotSpawns = false,
 }: LevelSelectorProps) {
   const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -94,10 +99,13 @@ export function LevelSelector({
 
   // Determine API parameters based on mode
   const isPick = mode === "pick";
-  const showPlayerFilter = mode === "room" || mode === "myLevels";
+  // The max-players filter is meaningless over solo levels (1-player rows).
+  const showPlayerFilter =
+    (mode === "room" || mode === "myLevels") && !requireBotSpawns;
   const isMultiSelect = mode === "room";
   const showActions = mode === "myLevels";
-  const levelType = mode === "solo" || isPick ? "solo" : "online";
+  const levelType =
+    levelTypeOverride ?? (mode === "solo" || isPick ? "solo" : "online");
   const showSoloFilters = mode === "solo" || isPick;
 
   // Use appropriate hook based on mode
@@ -106,8 +114,16 @@ export function LevelSelector({
       ? useMyLevels({ name: searchName, players: maxPlayers })
       : useLevels({ name: searchName, players: maxPlayers, type: levelType });
 
-  const rawLevels = levelsQuery.data || [];
+  const fetchedLevels = levelsQuery.data || [];
   const isLoading = levelsQuery.isLoading;
+
+  // Coop rooms need an enemy on every level: keep only grids with bot cells.
+  const rawLevels = useMemo(() => {
+    if (!requireBotSpawns) return fetchedLevels;
+    return fetchedLevels.filter((level) =>
+      hasBotSpawns((level.level_json as { data?: number[] } | null)?.data)
+    );
+  }, [fetchedLevels, requireBotSpawns]);
 
   // Sort levels client-side for solo mode
   const levels = useMemo(() => {

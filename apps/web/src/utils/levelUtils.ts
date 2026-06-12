@@ -36,6 +36,15 @@ export function extractBotCounts(
 }
 
 /**
+ * Whether a level grid contains at least one bot spawn cell (codes 11-16).
+ * The coop room creator filters its level list with this — a botless level
+ * can't host a humans-vs-bots round.
+ */
+export function hasBotSpawns(levelJson: number[] | null | undefined): boolean {
+  return Object.keys(extractBotCounts(levelJson)).length > 0;
+}
+
+/**
  * Get color name for a bot type
  * @param {number} botType - Bot type (1-4)
  * @returns {string} Color name

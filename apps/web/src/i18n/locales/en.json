@@ -112,7 +112,10 @@
     "noRooms": "No rooms available",
     "createToStart": "Create one to get started!",
     "full": "FULL",
-    "passwordProtected": "Password protected"
+    "passwordProtected": "Password protected",
+    "inLobby": "In lobby",
+    "inGame": "In game",
+    "coop": "Co-op"
   },
   "createRoom": {
     "title": "Create Room",
@@ -120,7 +123,17 @@
     "rounds": "Rounds",
     "creating": "Creating…",
     "createWithCount": "Create Room ({{count}} levels)",
-    "mustLogin": "You must be logged in to create a room."
+    "mustLogin": "You must be logged in to create a room.",
+    "mode": "Game mode",
+    "modeClassic": "Classic",
+    "modeCoop": "Co-op",
+    "coopHint": "Co-op: up to 4 players team up against the level's bots. Solo levels with enemies only.",
+    "failed": "Couldn't create the room",
+    "failReason": {
+      "level_not_found": "A selected level no longer exists.",
+      "not_solo": "Co-op rooms can only play solo levels.",
+      "no_bot_spawns": "Every co-op level needs at least one enemy on it."
+    }
   },
   "levelSelector": {
     "searchPlaceholder": "Search level name…",
@@ -243,7 +256,9 @@
     "needLoginRate": "You need to be logged in to rate a level",
     "noLevelRate": "No level to rate",
     "playAgain": "Play Again",
-    "quit": "Quit"
+    "quit": "Quit",
+    "coopVictory": "Victory — all bots destroyed!",
+    "coopDefeat": "Defeat — your team was wiped out"
   },
   "campaignEnd": {
     "complete": "Campaign Complete!",
@@ -468,5 +483,16 @@
     "title": "Something went wrong",
     "message": "The game hit an unexpected error. Reloading usually fixes it.",
     "reload": "Reload"
+  },
+  "lobby": {
+    "classic": "Classic",
+    "coop": "Co-op",
+    "addBot": "Add bot",
+    "removeBot": "Remove bot",
+    "start": "Start game",
+    "leave": "Leave",
+    "bot": "Bot",
+    "host": "Host",
+    "waitingForHost": "Waiting for the host to start…"
   }
 }

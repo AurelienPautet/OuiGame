@@ -110,7 +110,10 @@
     "noRooms": "Keine Räume verfügbar",
     "createToStart": "Erstelle einen, um zu beginnen!",
     "full": "VOLL",
-    "passwordProtected": "Passwortgeschützt"
+    "passwordProtected": "Passwortgeschützt",
+    "inLobby": "In der Lobby",
+    "inGame": "Im Spiel",
+    "coop": "Koop"
   },
   "createRoom": {
     "title": "Raum erstellen",
@@ -118,7 +121,17 @@
     "rounds": "Runden",
     "creating": "Erstelle…",
     "createWithCount": "Raum erstellen ({{count}} Level)",
-    "mustLogin": "Du musst angemeldet sein, um einen Raum zu erstellen."
+    "mustLogin": "Du musst angemeldet sein, um einen Raum zu erstellen.",
+    "mode": "Spielmodus",
+    "modeClassic": "Klassisch",
+    "modeCoop": "Koop",
+    "coopHint": "Koop: bis zu 4 Spieler treten gemeinsam gegen die Bots des Levels an. Nur Solo-Level mit Gegnern.",
+    "failed": "Raum konnte nicht erstellt werden",
+    "failReason": {
+      "level_not_found": "Ein ausgewähltes Level existiert nicht mehr.",
+      "not_solo": "Koop-Räume spielen nur Solo-Level.",
+      "no_bot_spawns": "Jedes Koop-Level braucht mindestens einen Gegner."
+    }
   },
   "levelSelector": {
     "searchPlaceholder": "Levelnamen durchsuchen…",
@@ -241,7 +254,9 @@
     "needLoginRate": "Du musst angemeldet sein, um einen Level zu bewerten",
     "noLevelRate": "Kein Level zum Bewerten",
     "playAgain": "Nochmal spielen",
-    "quit": "Beenden"
+    "quit": "Beenden",
+    "coopVictory": "Sieg — alle Bots zerstört!",
+    "coopDefeat": "Niederlage — euer Team wurde ausgelöscht"
   },
   "campaignEnd": {
     "complete": "Kampagne abgeschlossen!",
@@ -387,5 +402,16 @@
     "title": "Etwas ist schief gelaufen",
     "message": "Das Spiel ist auf einen unerwarteten Fehler gestoßen. Neuladen behebt es meist.",
     "reload": "Neu laden"
+  },
+  "lobby": {
+    "classic": "Klassisch",
+    "coop": "Koop",
+    "addBot": "Bot hinzufügen",
+    "removeBot": "Bot entfernen",
+    "start": "Spiel starten",
+    "leave": "Verlassen",
+    "bot": "Bot",
+    "host": "Host",
+    "waitingForHost": "Warten, bis der Host startet…"
   }
 }

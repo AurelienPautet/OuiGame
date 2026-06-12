@@ -15,7 +15,8 @@ interface RoomCardProps {
 /** Arcade room preview card. */
 export function RoomCard({ room, onClick }: RoomCardProps) {
   const { t } = useTranslation();
-  const { id, name, creator, players, maxPlayers, hasPassword } = room;
+  const { id, name, creator, players, maxPlayers, hasPassword, status, mode } =
+    room;
   const isFull = players >= maxPlayers;
 
   return (
@@ -46,11 +47,29 @@ export function RoomCard({ room, onClick }: RoomCardProps) {
             {t("common.by", { name: creator })}
           </span>
         </div>
-        {hasPassword && (
-          <Tooltip content={t("rooms.passwordProtected")} side="left">
-            <Lock className="text-yellow-d" size={20} />
-          </Tooltip>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Lobby/coop badges — older servers omit status/mode entirely. */}
+          {mode === "coop" && (
+            <span className="text-[10px] font-bold uppercase border-2 border-ink rounded-md px-1.5 py-0.5 bg-blue text-white">
+              {t("rooms.coop")}
+            </span>
+          )}
+          {status === "lobby" && (
+            <span className="text-[10px] font-bold uppercase border-2 border-ink rounded-md px-1.5 py-0.5 bg-green text-white">
+              {t("rooms.inLobby")}
+            </span>
+          )}
+          {status === "playing" && (
+            <span className="text-[10px] font-bold uppercase border-2 border-ink rounded-md px-1.5 py-0.5 bg-field text-ink">
+              {t("rooms.inGame")}
+            </span>
+          )}
+          {hasPassword && (
+            <Tooltip content={t("rooms.passwordProtected")} side="left">
+              <Lock className="text-yellow-d" size={20} />
+            </Tooltip>
+          )}
+        </div>
       </div>
 
       <div
