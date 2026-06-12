@@ -13,7 +13,7 @@ type RoomListEntry = {
   maxplayernb: number;
   status?: "lobby" | "playing";
   mode?: "ffa" | "coop";
-  human_count?: () => number;
+  seat_count?: () => number;
 };
 
 let rooms: Record<number, unknown> = {};
@@ -28,12 +28,11 @@ router.get("/", (req: Request, res: Response) => {
     id: room.id,
     name: room.name,
     creator: room.creator,
-    // Coop capacity is humans-only (level bots don't take seats); ffa counts
-    // every combatant (a lobby bot holds a real spawn slot).
-    players:
-      room.mode === "coop" && room.human_count
-        ? room.human_count()
-        : Object.keys(room.players).length,
+    // seat_count owns the capacity rule (coop: humans; ffa: combatants);
+    // legacy stubs without the method fall back to the raw player count.
+    players: room.seat_count
+      ? room.seat_count()
+      : Object.keys(room.players).length,
     maxPlayers: room.maxplayernb,
     ...(room.status !== undefined && { status: room.status }),
     ...(room.mode !== undefined && { mode: room.mode }),

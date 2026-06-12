@@ -101,6 +101,12 @@ function lobbyRoomStub(overrides: Record<string, unknown> = {}) {
     human_count: jest.fn(() => {
       return room.human_players.filter((id: string) => room.players[id]).length;
     }),
+    // Mirrors Room.seat_count (coop: humans; ffa: every combatant).
+    seat_count: jest.fn(() =>
+      room.mode === "coop"
+        ? room.human_count()
+        : Object.keys(room.players).length
+    ),
     add_waiting_player: jest.fn(
       (name: string, t: string, b: string, id: string) => {
         room.players[id] = { name, pending_spawn: true };
@@ -306,7 +312,13 @@ describe("coop join paths", () => {
 
   test("a mid-round join waits off-field instead of spawning", async () => {
     const { rooms, connect } = setup();
-    const room = lobbyRoomStub({ mode: "coop", status: "playing" });
+    // countdownActive false = the round is LIVE (the stub default true means
+    // "held lobby"); only a live round parks the joiner.
+    const room = lobbyRoomStub({
+      mode: "coop",
+      status: "playing",
+      countdownActive: false,
+    });
     rooms[1] = room;
 
     const socket = connect("s1");
@@ -321,6 +333,29 @@ describe("coop join paths", () => {
     expect(room.spawn_new_player).not.toHaveBeenCalled();
     // Still a full join: the client gets its id and room channel.
     expect(socket.emit).toHaveBeenCalledWith("id", 1, expect.any(Number), "s1");
+  });
+
+  test("a join during the 3s start countdown spawns straight in", async () => {
+    // Friend clicks Join as the host clicks Start: nothing moves and no
+    // bullets exist during the countdown, so parking them for the whole
+    // first round would be pure spectating for no safety gain.
+    const { rooms, connect } = setup();
+    const room = lobbyRoomStub({
+      mode: "coop",
+      status: "playing",
+      countdownActive: true,
+    });
+    rooms[1] = room;
+
+    connect("s1").__emit("play", "JustInTime", "o", "b", 1);
+    await flush();
+    expect(room.spawn_new_player).toHaveBeenCalledWith(
+      "JustInTime",
+      "o",
+      "b",
+      "s1"
+    );
+    expect(room.add_waiting_player).not.toHaveBeenCalled();
   });
 
   test("coop capacity counts humans only — bots never block a seat", async () => {

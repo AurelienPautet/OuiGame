@@ -137,6 +137,13 @@ async function validateCoopLevels(
     if (!Array.isArray(grid) || countBotSpawnCells(grid as number[]) === 0) {
       return { ok: false, reason: "no_bot_spawns" };
     }
+    // The editor enforces a player spawn client-side, but level content is
+    // never validated at save (levelData is unknown on the wire), so the coop
+    // gate is the only server-side line of defense: without a code-3 cell the
+    // spawn pool starts empty and the capacity BFS has no anchor to grow from.
+    if (!(grid as number[]).includes(3)) {
+      return { ok: false, reason: "no_player_spawn" };
+    }
   }
   return { ok: true };
 }

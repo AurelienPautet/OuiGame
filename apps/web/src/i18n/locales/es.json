@@ -130,7 +130,8 @@
     "failReason": {
       "level_not_found": "Un nivel seleccionado ya no existe.",
       "not_solo": "Las salas coop solo juegan niveles en solitario.",
-      "no_bot_spawns": "Cada nivel coop necesita al menos un enemigo."
+      "no_bot_spawns": "Cada nivel coop necesita al menos un enemigo.",
+      "no_player_spawn": "Cada nivel coop necesita un punto de aparición de jugador."
     }
   },
   "levelSelector": {

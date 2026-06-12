@@ -57,7 +57,8 @@ function registerSocketHandlers({
     rounds: number,
     list_id: number[],
     creator: string,
-    mode?: RoomMode
+    mode?: RoomMode,
+    creator_socket_id?: string
   ) => Promise<number | { error: string }>;
   broadcast_lobby_state: (room: Room) => void;
   deleteRoomIfEmpty: (room: Room) => void;
@@ -173,7 +174,17 @@ function registerSocketHandlers({
     });
 
     socket.on("new-room", async (name, rounds, list_id, creator, mode) => {
-      const result = await create_room(name, 10, list_id, creator, mode);
+      // The creator's socket id pre-assigns the lobby host, closing the
+      // window where the room is listed hostless and a faster (or scripted)
+      // joiner could claim it before the creator's own `play` lands.
+      const result = await create_room(
+        name,
+        10,
+        list_id,
+        creator,
+        mode,
+        socket.id
+      );
       if (typeof result === "number") {
         socket.emit("room_created", result);
       } else {
@@ -189,7 +200,7 @@ function registerSocketHandlers({
       // Coop rooms get their bots from the level on start; in ffa a bot holds
       // a real spawn slot, so capacity counts every combatant.
       if (room.mode === "coop") return;
-      if (Object.keys(room.players).length >= room.maxplayernb) return;
+      if (room.seat_count() >= room.maxplayernb) return;
       if (room.spawn_lobby_bot() === null) return;
       broadcast_lobby_state(room);
       room_list(0);
@@ -240,14 +251,17 @@ function registerSocketHandlers({
         socket.emit("id-fail");
         return;
       }
-      // Coop capacity counts humans only (level bots never take seats); ffa
-      // counts every combatant (a lobby bot holds a real spawn slot).
-      const capacityOk =
-        room.mode === "coop"
-          ? room.human_count() < room.maxplayernb
-          : Object.keys(room.players).length < room.maxplayernb;
+      // seat_count owns the capacity rule (coop counts humans only; ffa
+      // counts every combatant — a lobby bot holds a real spawn slot).
+      const capacityOk = room.seat_count() < room.maxplayernb;
       if (room.ids.includes(socket.id) == false && capacityOk) {
-        if (room.mode === "coop" && room.status === "playing") {
+        if (
+          room.mode === "coop" &&
+          room.status === "playing" &&
+          // During a countdown nothing moves and no bullets exist, so a
+          // joiner can spawn straight in — only a LIVE round parks them.
+          !room.countdownActive
+        ) {
           // Mid-round coop joiner: registered but off-field until the next
           // respawn deals them in (spawning into a live bot crossfire is a
           // death sentence).

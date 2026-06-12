@@ -130,7 +130,8 @@
     "failReason": {
       "level_not_found": "Ein ausgewähltes Level existiert nicht mehr.",
       "not_solo": "Koop-Räume spielen nur Solo-Level.",
-      "no_bot_spawns": "Jedes Koop-Level braucht mindestens einen Gegner."
+      "no_bot_spawns": "Jedes Koop-Level braucht mindestens einen Gegner.",
+      "no_player_spawn": "Jedes Koop-Level braucht einen Spieler-Spawnpunkt."
     }
   },
   "levelSelector": {

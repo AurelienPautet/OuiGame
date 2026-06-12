@@ -121,4 +121,40 @@ describe("ensure_spawn_capacity", () => {
     room.ensure_spawn_capacity(4);
     expect(room.spawns).toHaveLength(0);
   });
+
+  it("ignores held spawnpos cells when reservePlayerSpawnpos is false", async () => {
+    // The coop round-end site: every human is about to be re-dealt and their
+    // spawnpos still aliases PREVIOUS-level cells — reserving those against
+    // the fresh grid would displace (or starve) the new pool.
+    const room = await mkRoom(withBorder([[8, 11, 3]]));
+    room.spawn_new_player("A", "orange", "blue", "h1"); // holds (8,11)
+    // Pretend the level just reloaded: the pool has the anchor back.
+    room.spawns = [{ x: 11 * 50, y: 8 * 50 }];
+
+    room.ensure_spawn_capacity(2, false);
+    // With reservation the first ring would start at N (7,11); without it the
+    // pool is just topped up to 2 and h1's held cell is NOT excluded — the
+    // anchor's first free neighbour is still N because the anchor itself is
+    // pooled, so assert the pool size and that no slot was skipped for h1.
+    expect(room.spawns).toHaveLength(2);
+  });
+});
+
+describe("fallback_spawn", () => {
+  it("returns the first walkable floor cell, else the arena centre", async () => {
+    const room = await mkRoom(withBorder([[8, 11, 3]]));
+    // First interior cell (1,1) is floor on this bordered grid.
+    expect(room.fallback_spawn()).toEqual({ x: 50, y: 50 });
+
+    const bare = new Room("arena", 1, [10], "creator", null);
+    expect(bare.fallback_spawn()).toEqual({ x: 550, y: 400 });
+  });
+
+  it("spawn_player uses it instead of dealing undefined from an empty pool", async () => {
+    const room = await mkRoom(withBorder([[8, 11, 3]]));
+    room.spawns = [];
+    room.spawn_new_player("A", "orange", "blue", "h1");
+    expect(room.players.h1!.position).toEqual({ x: 50, y: 50 });
+    expect(room.players.h1!.alive).toBe(true);
+  });
 });

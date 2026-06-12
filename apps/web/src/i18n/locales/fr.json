@@ -132,7 +132,8 @@
     "failReason": {
       "level_not_found": "Un niveau sélectionné n'existe plus.",
       "not_solo": "Les salons coop ne jouent que des niveaux solo.",
-      "no_bot_spawns": "Chaque niveau coop doit contenir au moins un ennemi."
+      "no_bot_spawns": "Chaque niveau coop doit contenir au moins un ennemi.",
+      "no_player_spawn": "Chaque niveau coop doit contenir un point d'apparition de joueur."
     }
   },
   "levelSelector": {

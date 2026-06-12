@@ -233,13 +233,43 @@ export class Room {
   }
 
   spawn_player(player: Player, spawns: Vec2[]): void {
-    const spawnid = Math.floor(Math.random() * spawns.length);
-    //console.log("caca:", this.spawns, "at spawn id:", this.spawns[spawnid]);
-
     this.nbliving += 1;
+    // Never hand spawn() an empty slot: an alive player without a position is
+    // a "ghost" — its own update guards, but every OTHER entity's collision
+    // pass dereferences its position and the uncaught TypeError takes the
+    // whole tick loop (i.e. the server) down. Degenerate pools fall back to
+    // the first walkable cell instead.
+    if (spawns.length === 0) {
+      player.spawn(this.fallback_spawn());
+      return;
+    }
+    const spawnid = Math.floor(Math.random() * spawns.length);
     player.spawn(spawns[spawnid]!);
-
     spawns.splice(spawnid, 1);
+  }
+
+  // Last-resort spawn for an exhausted pool / degenerate level: the first
+  // walkable interior floor cell (row-major), else the arena centre.
+  fallback_spawn(): Vec2 {
+    for (let row = 1; row <= 14; row++) {
+      for (let col = 1; col <= 21; col++) {
+        const code = this.blocklist[row * 23 + col];
+        if (code === 0 || code === 10) {
+          return { x: col * 50, y: row * 50 };
+        }
+      }
+    }
+    return { x: 550, y: 400 };
+  }
+
+  // Seats taken toward maxplayernb — THE capacity rule, in one place: coop
+  // counts humans (level bots never occupy seats), ffa counts every combatant
+  // (a lobby bot holds a real spawn slot). Join gates and both room lists
+  // (socket + HTTP) all read this.
+  seat_count(): number {
+    return this.mode === "coop"
+      ? this.human_count()
+      : Object.keys(this.players).length;
   }
 
   // `skipIds` lets a caller suppress specific bots by socketid while keeping the
@@ -424,8 +454,14 @@ export class Room {
   // through code-3 cells (the anchors themselves are floor). Cells already
   // promised — a pooled spawn or any player's spawnpos — are skipped.
   // Exhausting the search (pathological sealed level) returns silently with
-  // however many slots were found.
-  ensure_spawn_capacity(needed: number): void {
+  // however many slots were found (spawn_player's fallback covers the rest).
+  //
+  // `reservePlayerSpawnpos` keeps cells already held by spawned players out of
+  // the pool — right at JOIN time (everyone else keeps their slot), wrong at
+  // the coop round-end respawn (every human is about to be re-dealt from the
+  // fresh pool, and their spawnpos still aliases PREVIOUS-level cells): that
+  // call site passes false.
+  ensure_spawn_capacity(needed: number, reservePlayerSpawnpos = true): void {
     let missing = needed - this.spawns.length;
     if (missing <= 0) return;
 
@@ -435,9 +471,11 @@ export class Room {
 
     const occupied = new Set<number>();
     for (const s of this.spawns) occupied.add(cellOf(s));
-    for (const socketid in this.players) {
-      const p = this.players[socketid];
-      if (p) occupied.add(cellOf(p.spawnpos));
+    if (reservePlayerSpawnpos) {
+      for (const socketid in this.players) {
+        const p = this.players[socketid];
+        if (p && p.spawnpos) occupied.add(cellOf(p.spawnpos));
+      }
     }
 
     const queue: number[] = [];

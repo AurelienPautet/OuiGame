@@ -78,6 +78,10 @@ function roomStub(overrides: Record<string, unknown> = {}) {
     delete_player: jest.fn(),
     spawn_lobby_bot: jest.fn(),
     remove_player_quiet: jest.fn(),
+    // Mirrors Room.seat_count (coop: humans; ffa: every combatant).
+    seat_count(this: { players: Record<string, unknown> }) {
+      return Object.keys(this.players).length;
+    },
     ...overrides,
   };
 }
@@ -332,7 +336,8 @@ describe("get_json_from_id / new-room", () => {
       10,
       [101],
       "alice",
-      undefined
+      undefined,
+      "s1" // the creator's socket pre-assigns the lobby host
     );
     expect(socket.emit).toHaveBeenCalledWith("room_created", 99);
   });
@@ -346,7 +351,8 @@ describe("get_json_from_id / new-room", () => {
       10,
       [101],
       "alice",
-      "coop"
+      "coop",
+      "s1"
     );
     expect(socket.emit).toHaveBeenCalledWith(
       "room_create_failed",

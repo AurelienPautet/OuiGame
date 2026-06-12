@@ -47,14 +47,8 @@ function createRoomRegistry({
     for (const room of Object.values(rooms)) {
       room_ids.push(room.id);
       room_names.push(room.name);
-      // Capacity-relevant count: coop rooms gate on humans (level bots don't
-      // consume seats); ffa counts every combatant (lobby bots hold real
-      // spawn slots).
-      room_players.push(
-        room.mode === "coop"
-          ? room.human_count()
-          : Object.keys(room.players).length
-      );
+      // seat_count owns the capacity rule (coop: humans; ffa: combatants).
+      room_players.push(room.seat_count());
       room_players_max.push(room.maxplayernb);
       room_creator_name.push(room.creator);
     }
@@ -90,11 +84,12 @@ function createRoomRegistry({
     rounds: number,
     list_id: number[],
     creator: string,
-    mode?: RoomMode
+    mode?: RoomMode,
+    creator_socket_id?: string
   ): Promise<number | { error: string }> {
     if (mode === "coop") {
       // Every playlist entry must be a solo-type level with at least one bot
-      // spawn cell — validated BEFORE anything is registered.
+      // spawn cell AND a player spawn — validated BEFORE anything registers.
       const verdict = await levelsService.validateCoopLevels(list_id);
       if (!verdict.ok) return { error: verdict.reason };
     }
@@ -103,6 +98,12 @@ function createRoomRegistry({
       room.mode = mode;
       room.status = "lobby";
       room.countdownActive = true; // the indefinite pre-start hold
+      // Pre-assign the host so the room is never listed hostless: between
+      // registration and the creator's own `play` (one RTT + a render away),
+      // a faster joiner would otherwise claim the lobby controls.
+      if (creator_socket_id !== undefined) {
+        room.hostid = creator_socket_id;
+      }
     }
     if (mode === "coop") {
       // Humans vs the level's bots, with the v2 brain (the solo default).

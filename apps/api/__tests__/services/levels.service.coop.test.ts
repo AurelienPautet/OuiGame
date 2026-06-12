@@ -15,24 +15,51 @@ function grid(cells: Array<[number, number]> = []): number[] {
 }
 
 describe("validateCoopLevels", () => {
-  test("accepts a playlist of solo levels with bot spawns", async () => {
+  test("accepts a playlist of solo levels with bot AND player spawns", async () => {
     const creator = await createPlayer();
     const a = await createLevel(creator.id, {
       type: "solo",
-      content: { data: grid([[100, 11]]) },
+      content: {
+        data: grid([
+          [100, 11],
+          [200, 3],
+        ]),
+      },
     });
     const b = await createLevel(creator.id, {
       type: "solo",
-      content: { data: grid([[120, 16]]) },
+      content: {
+        data: grid([
+          [120, 16],
+          [220, 3],
+        ]),
+      },
     });
     expect(await validateCoopLevels([a.id, b.id])).toEqual({ ok: true });
+  });
+
+  test("rejects a level without a player spawn (the pool could never grow)", async () => {
+    const creator = await createPlayer();
+    const lvl = await createLevel(creator.id, {
+      type: "solo",
+      content: { data: grid([[100, 11]]) }, // bots, but no code-3 anchor
+    });
+    expect(await validateCoopLevels([lvl.id])).toEqual({
+      ok: false,
+      reason: "no_player_spawn",
+    });
   });
 
   test("rejects an online-type level", async () => {
     const creator = await createPlayer();
     const lvl = await createLevel(creator.id, {
       type: "online",
-      content: { data: grid([[100, 11]]) },
+      content: {
+        data: grid([
+          [100, 11],
+          [200, 3],
+        ]),
+      },
     });
     expect(await validateCoopLevels([lvl.id])).toEqual({
       ok: false,
@@ -67,7 +94,12 @@ describe("validateCoopLevels", () => {
     const creator = await createPlayer();
     const good = await createLevel(creator.id, {
       type: "solo",
-      content: { data: grid([[100, 12]]) },
+      content: {
+        data: grid([
+          [100, 12],
+          [200, 3],
+        ]),
+      },
     });
     const bad = await createLevel(creator.id, {
       type: "solo",
