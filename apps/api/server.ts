@@ -170,8 +170,10 @@ registerSocketHandlers({
   io,
   serverid,
   rooms: registry.rooms,
+  roomTimers: registry.roomTimers,
   room_list: registry.room_list,
   create_room: registry.create_room,
+  broadcast_lobby_state: registry.broadcast_lobby_state,
   deleteRoomIfEmpty: registry.deleteRoomIfEmpty,
 });
 registerOnlineCount({ io });

@@ -29,20 +29,31 @@ function setup({ token }: { token?: string } = {}) {
   const rooms: Record<number, any> = {};
   const room_list = jest.fn();
   const create_room = jest.fn().mockResolvedValue(99);
+  const broadcast_lobby_state = jest.fn();
   const deleteRoomIfEmpty = jest.fn();
 
   registerSocketHandlers({
     io: io as never,
     serverid: SERVER_ID,
     rooms,
+    roomTimers: new Map(),
     room_list,
     create_room,
+    broadcast_lobby_state,
     deleteRoomIfEmpty,
   });
 
   const socket = makeSocket("s1", token ? { token } : {});
   connectHandler!(socket);
-  return { io, rooms, room_list, create_room, deleteRoomIfEmpty, socket };
+  return {
+    io,
+    rooms,
+    room_list,
+    create_room,
+    broadcast_lobby_state,
+    deleteRoomIfEmpty,
+    socket,
+  };
 }
 
 function roomStub(overrides: Record<string, unknown> = {}) {
@@ -50,14 +61,23 @@ function roomStub(overrides: Record<string, unknown> = {}) {
     id: 1,
     ids: [] as string[],
     players: {} as Record<string, any>,
+    human_players: [] as string[],
+    lobby_bots: [] as string[],
     maxplayernb: 2,
     levels: [101],
     levelid: 0,
     blocks: [],
     Bcollision: [],
     countdownActive: false,
+    status: "playing",
+    mode: "ffa",
+    hostid: "",
+    countdownDuration: 3000,
+    io: makeIo(),
     spawn_new_player: jest.fn(),
     delete_player: jest.fn(),
+    spawn_lobby_bot: jest.fn(),
+    remove_player_quiet: jest.fn(),
     ...overrides,
   };
 }
@@ -307,7 +327,34 @@ describe("get_json_from_id / new-room", () => {
   test("new-room creates the room (rounds forced to 10) and echoes the id", async () => {
     const { socket, create_room } = setup();
     await socket.__emit("new-room", "Arena", 3, [101], "alice");
-    expect(create_room).toHaveBeenCalledWith("Arena", 10, [101], "alice");
+    expect(create_room).toHaveBeenCalledWith(
+      "Arena",
+      10,
+      [101],
+      "alice",
+      undefined
+    );
     expect(socket.emit).toHaveBeenCalledWith("room_created", 99);
+  });
+
+  test("new-room forwards the mode arg and relays a creation failure", async () => {
+    const { socket, create_room } = setup();
+    (create_room as jest.Mock).mockResolvedValue({ error: "coop_unavailable" });
+    await socket.__emit("new-room", "Arena", 3, [101], "alice", "coop");
+    expect(create_room).toHaveBeenCalledWith(
+      "Arena",
+      10,
+      [101],
+      "alice",
+      "coop"
+    );
+    expect(socket.emit).toHaveBeenCalledWith(
+      "room_create_failed",
+      "coop_unavailable"
+    );
+    expect(socket.emit).not.toHaveBeenCalledWith(
+      "room_created",
+      expect.anything()
+    );
   });
 });

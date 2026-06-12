@@ -128,6 +128,34 @@ test("on round end, records each player's round then schedules a respawn", async
   expect(roomTimers.get(2)?.respawn).toBeDefined();
 });
 
+test("skips bots and waiting joiners when recording rounds", async () => {
+  const human = mkPlayer();
+  const bot = { ...mkPlayer(), is_bot: true };
+  const waiting = { ...mkPlayer(), pending_spawn: true };
+  const room = makeRoom(8, true);
+  room.players = { anon: human, lobbybot_0: bot, late: waiting };
+  const loop = createTickLoop({
+    io: makeIo() as never,
+    rooms: { 8: room } as never,
+    roomTimers: new Map(),
+  });
+
+  perfSpy.mockReturnValue(1100);
+  loop.start();
+  await jest.advanceTimersByTimeAsync(20);
+
+  // Only the real, fielded human produced a row; the bot and the joiner who
+  // sat the round out are skipped entirely (no insert, no stats reset).
+  expect(statsRepo.insertRound).toHaveBeenCalledTimes(1);
+  expect(statsRepo.insertRound).toHaveBeenCalledWith(
+    null,
+    101,
+    human.round_stats.stats
+  );
+  expect(bot.round_stats.reset).not.toHaveBeenCalled();
+  expect(waiting.round_stats.reset).not.toHaveBeenCalled();
+});
+
 test("records a null playerId for a socket with no logged-in user", async () => {
   const player = mkPlayer();
   const room = makeRoom(3, true);
@@ -220,6 +248,13 @@ test("after the wait, reloads + respawns the room and runs the countdown", async
 
   expect(room.respawn_the_room).toHaveBeenCalledTimes(1);
   expect(room.countdownActive).toBe(true);
+  // Socket.io rooms are string-keyed: both post-respawn broadcasts must
+  // target String(id) (the numeric id is a different, empty channel — the
+  // historical bug silently dropped them).
+  const cd = room.io.__emits.find((e) => e.event === "countdown_start");
+  expect(cd?.target).toBe("5");
+  const info = room.io.__emits.find((e) => e.event === "level_change_info");
+  expect(info?.target).toBe("5");
 
   await jest.advanceTimersByTimeAsync(3100); // countdownDuration = 3000
   expect(room.countdownActive).toBe(false);

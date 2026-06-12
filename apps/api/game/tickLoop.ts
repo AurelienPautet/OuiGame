@@ -14,6 +14,7 @@ import * as levelsService from "../services/levels.service";
 import * as ratingsRepo from "../repositories/ratings.repo";
 import * as statsRepo from "../repositories/stats.repo";
 import * as achievementsService from "../services/achievements.service";
+import { beginCountdown } from "./countdown";
 import { users } from "../shared_state";
 import type { AppServer } from "../socket/types";
 import type { RoundStats } from "@ouigame/shared/api";
@@ -64,25 +65,17 @@ function createTickLoop({
 
       levelsService.getLevel(levelId).then((level) => {
         // Server rooms are always constructed with a real io (only solo/web
-        // rooms pass null), so the broadcast handle is present here.
-        room.io!.to(room.id).emit("level_change_info", level ? [level] : []);
+        // rooms pass null), so the broadcast handle is present here. Socket.io
+        // rooms are STRING-keyed — the numeric id targeted an empty channel.
+        room
+          .io!.to(String(room.id))
+          .emit("level_change_info", level ? [level] : []);
       });
 
       room.respawn_the_room();
 
-      // Activate countdown - players can see but not act
-      room.countdownActive = true;
-      room
-        .io!.to(room.id)
-        .emit("countdown_start", { duration: room.countdownDuration });
-
-      // End countdown after duration
-      const countdown = setTimeout(() => {
-        room.countdownActive = false;
-      }, room.countdownDuration);
-      const tracked = roomTimers.get(room.id) || {};
-      tracked.countdown = countdown;
-      roomTimers.set(room.id, tracked);
+      // Freeze, announce and time the 3-2-1 (shared with the lobby's Start).
+      beginCountdown(room, roomTimers);
 
       for (const socketid in room.players) {
         const user = users[socketid];
@@ -138,6 +131,10 @@ function createTickLoop({
         for (const socketid in room.players) {
           const player = room.players[socketid];
           if (player === undefined || levelId === undefined) continue;
+          // Bots have no account and no meaningful per-round row (they would
+          // insert as anonymous junk); a waiting coop joiner sat the round
+          // out, so recording their zeroed stats would skew averages.
+          if (player.is_bot || player.pending_spawn) continue;
           const user = users[socketid];
           const playerId = user ? user.playerId : null;
           // Snapshot the stats before reset so the async recorder reads the

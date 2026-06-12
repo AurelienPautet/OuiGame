@@ -41,4 +41,54 @@ describe("GET /api/rooms", () => {
       },
     ]);
   });
+
+  test("surfaces status/mode and counts humans only for coop rooms", async () => {
+    roomsRoutes.setRoomsRef({
+      1: {
+        id: 1,
+        name: "Lobby Room",
+        creator: "alice",
+        players: { s1: {}, lobbybot_0: {} },
+        maxplayernb: 4,
+        status: "lobby",
+        mode: "ffa",
+        human_count: () => 1,
+      },
+      2: {
+        id: 2,
+        name: "Coop Run",
+        creator: "bob",
+        players: { s2: {}, bot0: {}, bot1: {} },
+        maxplayernb: 4,
+        status: "playing",
+        mode: "coop",
+        human_count: () => 1,
+      },
+    });
+
+    const res = await request(app).get("/api/rooms");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      {
+        id: 1,
+        name: "Lobby Room",
+        creator: "alice",
+        // ffa counts every combatant — a lobby bot holds a real seat.
+        players: 2,
+        maxPlayers: 4,
+        status: "lobby",
+        mode: "ffa",
+      },
+      {
+        id: 2,
+        name: "Coop Run",
+        creator: "bob",
+        // coop counts humans only — level bots don't take seats.
+        players: 1,
+        maxPlayers: 4,
+        status: "playing",
+        mode: "coop",
+      },
+    ]);
+  });
 });
