@@ -83,19 +83,27 @@ describe("spawning the new kinds", () => {
     expect(room.nbliving).toBe(3);
   });
 
-  it("legacy skips the new kinds but keeps bot_index numbering stable", () => {
+  it("legacy spawns bot2-driven stand-ins for the new kinds (levels stay winnable)", () => {
     const room = mkRoom();
     // default bot_system === "legacy"
     room.spawn_all_bots();
 
-    // Only the bot1 sentry spawns; the bot5/bot6 slots (bot1, bot2 ids) stay
-    // empty so ids match the v2 layout for campaign skipIds.
-    expect(Object.keys(room.players)).toEqual(["bot0"]);
-    expect(room.players.bot0).toBeInstanceOf(Bot);
-    expect(room.nbliving).toBe(1);
-
-    // Same arena under v2: the surviving sentry keeps id bot0, new kinds get
-    // bot1/bot2 — numbering parity verified above.
+    // A Miner/Hunter-only level must not be UNWINNABLE under ?bots=legacy
+    // (the solo win check needs at least one initial enemy), so legacy gets
+    // a Bot driven by the mobile bot2 config — keeping the authored
+    // name/colour and the positional ids (parity with the v2 layout).
+    expect(Object.keys(room.players)).toEqual(["bot0", "bot1", "bot2"]);
+    const standInMiner = room.players.bot1 as Bot;
+    const standInHunter = room.players.bot2 as Bot;
+    expect(standInMiner).toBeInstanceOf(Bot);
+    expect(standInMiner).not.toBeInstanceOf(AIBot);
+    expect(standInMiner.name).toBe("Bot5_ 0");
+    expect(standInMiner.turretc).toBe("yellow");
+    // bot2 config: mobile, 300 px/s bullets (vs bot1's stationary sentry).
+    expect(standInMiner.can.move).toBe(true);
+    expect(standInHunter.name).toBe("Bot6_ 0");
+    expect(standInHunter.turretc).toBe("purple");
+    expect(room.nbliving).toBe(3);
   });
 
   it("skipIds keep working across the new slots", () => {

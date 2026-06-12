@@ -159,8 +159,12 @@ export async function loadlevel(
   room.bot5_spawns = [];
   room.bot6_spawns = [];
 
-  for (let l = 0; l <= 16; l++) {
-    for (let c = 0; c <= 23; c++) {
+  // Strict bounds (l < 16, c < 23): the historical `<=` over-read made the
+  // loop visit index l*23+23 — which aliases the NEXT row's column 0 — so any
+  // marker in column 0 was parsed twice (a phantom spawn/block at x=1150,
+  // off the playfield). Fixed when cells 15/16 joined the format.
+  for (let l = 0; l < 16; l++) {
+    for (let c = 0; c < 23; c++) {
       if (room.blocklist[l * 23 + c] == 1) {
         room.blocks.push(new Block({ x: c * 50, y: l * 50 }, 1));
       } else if (room.blocklist[l * 23 + c] == 2) {

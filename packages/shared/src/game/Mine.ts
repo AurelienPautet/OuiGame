@@ -1,3 +1,4 @@
+import { MINE_TRIGGER_RADIUS } from "./game_constants.js";
 import type { Vec2 } from "./types.js";
 import type { Player } from "./Player.js";
 import type { Room } from "./Room.js";
@@ -16,7 +17,7 @@ export class Mine {
   constructor(position: Vec2, emitter: Player, room: Room) {
     this.id = Mine._nextId++;
     this.position = position;
-    this.radius = 15;
+    this.radius = MINE_TRIGGER_RADIUS;
     this.timealive = 0;
     this.color = "yellow";
     this.emitter = emitter;

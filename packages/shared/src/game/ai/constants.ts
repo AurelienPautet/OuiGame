@@ -1,8 +1,17 @@
 import { TANK_HULL_RADIUS_FACTOR } from "../check_collision.js";
+import {
+  BARREL_LENGTH,
+  MINE_EXPLOSION_RADIUS,
+  MINE_FUSE_TICKS as GAME_MINE_FUSE_TICKS,
+  MINE_TRIGGER_RADIUS,
+  TANK_SIZE as GAME_TANK_SIZE,
+} from "../game_constants.js";
 
-// Shared numeric facts of the simulation the AI reasons about. Each value
-// mirrors a source-of-truth literal elsewhere in the runtime (noted per line);
-// the AI never redefines behaviour, it only predicts it.
+// Numeric facts of the simulation the AI reasons about. Everything the
+// runtime exports is IMPORTED from game_constants.ts (single source of truth
+// — a rebalance there moves the game and the bots' predictions together);
+// only facts with no exported owner (grid geometry, the distance() blast
+// offset) live here as documented mirrors.
 
 // Map: 23 x 16 grid of 50 px tiles (level_loader.ts reads blocklist[row*23+col]).
 export const COLS = 23;
@@ -10,28 +19,24 @@ export const ROWS = 16;
 export const TILE = 50;
 export const CELLS = COLS * ROWS;
 
-// Tank chassis: 45x45 box (Player.ts), circular hull used for all collisions.
-export const TANK_SIZE = 45;
+// Tank chassis box (Player.size) + the circular hull used for all collisions.
+export const TANK_SIZE = GAME_TANK_SIZE;
 export const HULL_R = TANK_SIZE * TANK_HULL_RADIUS_FACTOR; // 20.7
 
-// Player.update clamps tank top-left to x∈[50, 1100-45], y∈[50, 800-45] — tank
-// centers therefore stay in cols 1..21 / rows 1..15; col 0/22 and row 0 are
-// unreachable for movement even when their cells are empty.
-export const TANK_MIN_C = 72.5;
-
-// Mines (Mine.ts + Room.update_mines): no proximity trigger — a fixed fuse of
-// 300 ticks, then a 90 px blast measured from mine.position + (15,15) (the
-// `distance()` helper adds size/2 to each position; mine "size" is 30x30).
-// The blast pierces walls, chains mines and destroys type-2 blocks. Bullets
-// trigger mines by touching the circle around mine.position with r=15.
-export const MINE_FUSE_TICKS = 300;
-export const MINE_BLAST_R = 90;
+// Mines (Mine.ts + Room.update_mines): no proximity trigger — a fixed fuse,
+// then a blast measured from mine.position + (15,15) (the `distance()` helper
+// adds size/2 to each position; mine "size" is 30x30 — no exported owner, so
+// the offset is mirrored here). The blast pierces walls, chains mines and
+// destroys type-2 blocks. Bullets trigger mines by touching the circle around
+// mine.position with r = MINE_TRIGGER_R.
+export const MINE_FUSE_TICKS = GAME_MINE_FUSE_TICKS;
+export const MINE_BLAST_R = MINE_EXPLOSION_RADIUS;
 export const MINE_BLAST_OFFSET = 15;
-export const MINE_TRIGGER_R = 15;
+export const MINE_TRIGGER_R = MINE_TRIGGER_RADIUS;
 
-// Player.endofbarrel(): bullets spawn (30 + bullet_w) px from the tank center
-// along the aim direction.
-export const MUZZLE_OFFSET = 30;
+// Player.endofbarrel(): bullets spawn (BARREL_LENGTH + bullet_w) px from the
+// tank center along the aim direction.
+export const MUZZLE_OFFSET = BARREL_LENGTH;
 
 // The 8 steering/movement directions, matching Player.update's sign-only 8-way
 // quantization (E, NE, N, NW, W, SW, S, SE). Float vectors for scoring math,

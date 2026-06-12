@@ -132,6 +132,10 @@ export function senseThreats(
   ai: ArchetypeAI,
   headOnSign: 1 | -1,
   bounceThreats: readonly BounceThreat[],
+  // Seconds since the bounce-threat list was refreshed (think cadence). The
+  // stored windows/origins are relative to the refresh tick; rebasing them
+  // here keeps post-ricochet timing exact on the ticks BETWEEN thinks.
+  bounceAgeS: number,
   postMineActive: boolean
 ): void {
   ts.reset();
@@ -161,14 +165,19 @@ export function senseThreats(
     }
     for (let i = 0; i < bounceThreats.length; i++) {
       const v = bounceThreats[i]!;
+      // Rebase the refresh-relative window to "now": the virtual bullet has
+      // already flown bounceAgeS seconds of it.
+      const t1 = Math.min(v.t1, horizon) - bounceAgeS;
+      if (t1 <= 0) continue;
+      const t0 = Math.max(v.t0 - bounceAgeS, 0);
       accumulateBulletThreat(
         ts,
-        v.x - bcx,
-        v.y - bcy,
+        v.x + v.vx * bounceAgeS - bcx,
+        v.y + v.vy * bounceAgeS - bcy,
         v.vx - bot.velocity.x,
         v.vy - bot.velocity.y,
-        v.t0,
-        Math.min(v.t1, horizon),
+        t0,
+        t1,
         7.5,
         ai.dodgeSkill,
         horizon,
@@ -290,6 +299,10 @@ export function refreshBounceThreats(
   }
 }
 
+// Any reachable target outranks every unreachable one (max flow distance on
+// the 23x16 grid is well under this).
+const UNREACHABLE_PENALTY = 1000;
+
 // Flow-distance-based nearest live human, with stickiness so the bot doesn't
 // oscillate between two equidistant players.
 export function pickTarget(
@@ -315,11 +328,17 @@ export function pickTarget(
     if (fd < FLOW_INF) {
       score = fd;
     } else {
+      // Unreachable (sealed-off) humans only matter when NOBODY is reachable:
+      // without the penalty a close walled-off player outscores a reachable
+      // one (flow tiles vs euclidean tiles are the same scale) and the bot
+      // locks onto a target it can neither path to nor engage.
       score =
+        UNREACHABLE_PENALTY +
         Math.hypot(
           p.position.x - bot.position.x,
           p.position.y - bot.position.y
-        ) / TILE;
+        ) /
+          TILE;
     }
     if (id === currentId) {
       current = p;
