@@ -3,6 +3,7 @@ import { SIM_STEP_S } from "./loop.js";
 import { generateBcollision } from "./level_loader.js";
 import { Player } from "./Player.js";
 import { Bot, type BotKind } from "./Bot.js";
+import { AIBot } from "./ai/index.js";
 import type {
   Vec2,
   RoomIo,
@@ -24,6 +25,11 @@ interface SoundFlags {
   ricochet: boolean;
   explose: boolean;
 }
+
+// Which bot AI a room spawns. "legacy" is the constructor default FOREVER so
+// every existing host/test keeps its behaviour; hosts opt into "v2" by setting
+// the field before spawn_all_bots (same pattern as room.maxplayernb).
+export type BotSystem = "legacy" | "v2";
 
 export class Room {
   static next_id = 1;
@@ -74,6 +80,10 @@ export class Room {
   bot4_spawns: Vec2[];
   countdownActive: boolean;
   countdownDuration: number;
+  // v2 bot AI opt-in (see BotSystem above) + the seed its per-bot RNGs derive
+  // from. Both are plain Room fields, never part of the `tick` broadcast.
+  bot_system: BotSystem;
+  bot_seed: number;
   // Populated by loadlevel(): the flat level grid the collision pass reads.
   blocklist: number[];
   // Legacy field read by the web solo end-screen; never set by the runtime
@@ -134,6 +144,11 @@ export class Room {
     // Countdown state - when true, render but skip player input/actions
     this.countdownActive = false;
     this.countdownDuration = 3000; // 3 seconds
+
+    this.bot_system = "legacy";
+    // Random by default (games should vary); tests pin it for reproducible
+    // bot behaviour. Per-bot streams are derived per socketid, see AIBot.
+    this.bot_seed = (Math.random() * 0x7fffffff) | 0;
   }
 
   spawn_new_player(
@@ -220,14 +235,22 @@ export class Room {
         // Already defeated this run: don't respawn it (but a spawn slot is left
         // unused, which is harmless — surviving bots still pick a random spawn).
         if (skipIds.has(botId)) continue;
-        const bot = new Bot(
-          { x: 0, y: 0 },
-          botId,
-          `${labels[kind]}_ ${i}`,
-          colors[0],
-          colors[1],
-          kind
-        );
+        // Identical ids/names/colors/spawn flow for both systems — only the
+        // class (i.e. the brain) differs, so campaign skipIds, the renderer's
+        // `socketId.includes("bot")` check and the kill feed see no change.
+        const label = `${labels[kind]}_ ${i}`;
+        const bot: Player =
+          this.bot_system === "v2"
+            ? new AIBot(
+                { x: 0, y: 0 },
+                botId,
+                label,
+                colors[0],
+                colors[1],
+                kind,
+                this.bot_seed
+              )
+            : new Bot({ x: 0, y: 0 }, botId, label, colors[0], colors[1], kind);
         this.spawn_new(bot, botId, spawns);
       }
     }
