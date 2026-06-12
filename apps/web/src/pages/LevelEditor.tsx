@@ -59,6 +59,8 @@ const BLOCKS = {
   BOT_GREEN: 12,
   BOT_ORANGE: 13,
   BOT_RED: 14,
+  BOT_YELLOW: 15, // Miner (v2 bot system)
+  BOT_PURPLE: 16, // Hunter (v2 bot system)
 };
 
 // Bot block id → tank colour name (shared with the game palette).
@@ -67,6 +69,8 @@ const BOT_COLOR: Record<number, string> = {
   [BLOCKS.BOT_GREEN]: "green",
   [BLOCKS.BOT_ORANGE]: "orange",
   [BLOCKS.BOT_RED]: "red",
+  [BLOCKS.BOT_YELLOW]: "yellow",
+  [BLOCKS.BOT_PURPLE]: "purple",
 };
 
 // Draw a single editor cell via the SHARED arcade primitives (engine/shapes) —
@@ -582,6 +586,8 @@ export const LevelEditor = () => {
     { id: BLOCKS.BOT_GREEN, label: t("levelEditor.blocks.botGreen") },
     { id: BLOCKS.BOT_ORANGE, label: t("levelEditor.blocks.botOrange") },
     { id: BLOCKS.BOT_RED, label: t("levelEditor.blocks.botRed") },
+    { id: BLOCKS.BOT_YELLOW, label: t("levelEditor.blocks.botYellow") },
+    { id: BLOCKS.BOT_PURPLE, label: t("levelEditor.blocks.botPurple") },
   ];
 
   return (

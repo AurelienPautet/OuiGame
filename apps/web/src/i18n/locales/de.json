@@ -335,7 +335,9 @@
       "botBlue": "Blauer Bot",
       "botGreen": "Grüner Bot",
       "botOrange": "Oranger Bot",
-      "botRed": "Roter Bot"
+      "botRed": "Roter Bot",
+      "botYellow": "Gelber Bot (Minenleger)",
+      "botPurple": "Lila Bot (Jäger)"
     },
     "toast": {
       "title": "Level",

@@ -335,7 +335,9 @@
       "botBlue": "Bot Azul",
       "botGreen": "Bot Verde",
       "botOrange": "Bot Naranja",
-      "botRed": "Bot Rojo"
+      "botRed": "Bot Rojo",
+      "botYellow": "Bot Amarillo (Minador)",
+      "botPurple": "Bot Morado (Cazador)"
     },
     "toast": {
       "title": "Nivel",
