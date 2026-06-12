@@ -10,6 +10,11 @@ import { defineConfig, globalIgnores } from "eslint/config";
 export default defineConfig([
   globalIgnores([
     "node_modules",
+    // Claude Code's agent worktrees live under .claude/ (gitignored). They hold
+    // full copies of the repo on other branches, so `eslint .` would otherwise
+    // lint a second, stale tree — and miss the relaxed test overrides (whose
+    // root-anchored globs don't match the nested path), producing phantom errors.
+    ".claude",
     "apps/web",
     "Public",
     "dist",
