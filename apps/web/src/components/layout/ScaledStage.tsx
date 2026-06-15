@@ -22,7 +22,12 @@ interface ScaledStageProps {
 export const ScaledStage = ({ children, touchAction }: ScaledStageProps) => {
   const scale = useWindowScale();
   return (
-    <div className="w-screen h-screen overflow-hidden bg-ink flex items-center justify-center">
+    // The fixed 1150×800 arena is contain-fit into the window, so a viewport
+    // wider/taller than its 23:16 ratio (most phones in landscape) leaves
+    // letterbox bars. Paint them with the same graph-paper field the arena and
+    // menus use, so the arena reads as sitting on a larger field instead of
+    // being framed by dark "black borders".
+    <div className="w-screen h-screen overflow-hidden graph-paper flex items-center justify-center">
       <div
         className="relative overflow-hidden"
         style={{
