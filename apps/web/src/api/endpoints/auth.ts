@@ -1,5 +1,9 @@
 import { apiClient } from "../client";
-import type { AuthResponse, VerifySessionResponse } from "@ouigame/shared/api";
+import type {
+  AuthResponse,
+  VerifySessionResponse,
+  SuccessResponse,
+} from "@ouigame/shared/api";
 
 // Phase 1b adoption demo #1: typing the auth response end-to-end. useAuth.js
 // already reads exactly data.sessionToken / data.username / data.email, so the
@@ -19,4 +23,13 @@ export const authApi = {
 
   verifySession: () =>
     apiClient.get<VerifySessionResponse>("/auth/verify-session"),
+
+  forgotPassword: (email: string) =>
+    apiClient.post<SuccessResponse>("/auth/forgot-password", { email }),
+
+  resetPassword: (token: string, password: string) =>
+    apiClient.post<SuccessResponse>("/auth/reset-password", {
+      token,
+      password,
+    }),
 };

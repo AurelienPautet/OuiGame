@@ -50,6 +50,14 @@ function assertEnv() {
   if (!process.env.GOOGLE_CLIENT_ID) {
     console.warn("GOOGLE_CLIENT_ID is not set — Google sign-in will not work.");
   }
+  // Transactional email is optional; without it the password-reset flow runs but
+  // skips sending the email (it's logged instead). Warn so this isn't a silent
+  // surprise in production.
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(
+      "RESEND_API_KEY is not set — password-reset emails will not be sent."
+    );
+  }
 }
 assertEnv();
 

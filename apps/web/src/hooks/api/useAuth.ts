@@ -69,6 +69,24 @@ export const useGoogleLogin = () => {
   });
 };
 
+// Requests a password-reset email. The endpoint always succeeds (it never
+// reveals whether the address is registered), so there's no session/cache to
+// update — the component just reads isPending / isSuccess.
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: (email: string) => authApi.forgotPassword(email),
+  });
+};
+
+// Sets a new password from a reset token. The server invalidates all existing
+// sessions, so this does NOT log the user in — they sign in fresh afterwards.
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: ({ token, password }: { token: string; password: string }) =>
+      authApi.resetPassword(token, password),
+  });
+};
+
 export const useLogout = () => {
   const queryClient = useQueryClient();
 

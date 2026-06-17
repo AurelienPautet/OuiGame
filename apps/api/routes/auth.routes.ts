@@ -3,12 +3,20 @@ import type { Request, Response } from "express";
 const router = express.Router();
 import bcrypt from "bcryptjs";
 import { db, schema } from "@ouigame/db";
-const { players, logings } = schema;
+const { players, logings, playerSessions } = schema;
 import { eq } from "drizzle-orm";
 import { verifyToken } from "../auth_server";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { createSession, deleteSession } from "../auth/session";
+import { createResetToken, consumeResetToken } from "../auth/passwordReset";
+import { sendPasswordResetEmail } from "../services/email.service";
 import { HttpError } from "../errors";
+
+// Public base URL of the web client, used to build the password-reset link that
+// goes in the email. The client uses a HashRouter, so the route lives after the
+// '#'. Overridable via WEB_URL (set it to the Vite dev origin locally); the
+// fallback targets production.
+const WEB_URL = process.env.WEB_URL ?? "https://wiitank.pautet.net";
 
 // Linear (non-backtracking) email check: domain labels exclude '.', so there
 // is no overlapping-quantifier ambiguity and no polynomial-time worst case.
@@ -234,6 +242,96 @@ router.post("/logout", authMiddleware, async (req: Request, res: Response) => {
   const sessionToken = req.headers.authorization?.replace("Bearer ", "");
   await deleteSession(sessionToken);
   await logAttempt(req.user!.email, req.ip, "logout_success");
+  res.json({ success: true });
+});
+
+// POST /api/auth/forgot-password
+// Always returns the same generic success response whether or not the email is
+// registered, so the endpoint can't be used to enumerate accounts. The actual
+// work (issuing a token + sending the email) happens only for existing "db"-type
+// accounts. Email/provider failures are swallowed for the same reason — they
+// must not change the response. Abuse is bounded by the global API rate limiter
+// (see server.ts) and by createResetToken invalidating prior tokens.
+router.post("/forgot-password", async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const ipAddress = req.ip;
+
+  const invalid = validateCredentials({ email });
+  if (invalid) {
+    throw new HttpError(400, { error: "email", message: invalid });
+  }
+
+  const result = await db
+    .select()
+    .from(players)
+    .where(eq(players.email, email));
+  const user = result[0];
+
+  // Google accounts have no password to reset; they sign in via Google. Skip
+  // them silently (still returning the uniform response below).
+  if (user !== undefined && user.type === "db") {
+    try {
+      const token = await createResetToken(user.id);
+      const resetUrl = `${WEB_URL}/#/reset-password?token=${token}`;
+      await sendPasswordResetEmail(user.email, user.username, resetUrl);
+      await logAttempt(email, ipAddress, "password_reset_requested");
+    } catch (err) {
+      // Never surface email/provider errors: doing so would both leak that the
+      // address exists and break the uniform response.
+      console.error("Error sending password reset email:", err);
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// POST /api/auth/reset-password
+// Consumes a one-time token (single-use, atomic) and sets the new password. All
+// of the user's existing sessions are then invalidated so a session that was
+// open before the reset can't outlive it.
+router.post("/reset-password", async (req: Request, res: Response) => {
+  const { token, password } = req.body;
+  const ipAddress = req.ip;
+
+  const invalid = validateCredentials({ password });
+  if (invalid) {
+    throw new HttpError(400, { error: "password", message: invalid });
+  }
+  if (typeof token !== "string" || token.length === 0) {
+    throw new HttpError(400, {
+      error: "token",
+      message: "Invalid or expired reset link",
+    });
+  }
+
+  const playerId = await consumeResetToken(token);
+  if (playerId === null) {
+    throw new HttpError(400, {
+      error: "token",
+      message: "Invalid or expired reset link",
+    });
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  await db
+    .update(players)
+    .set({ passwordHash: hashedPassword })
+    .where(eq(players.id, playerId));
+
+  // Invalidate every existing session for this user — a password reset should
+  // log out anyone (including an attacker) holding an old token.
+  await db.delete(playerSessions).where(eq(playerSessions.playerId, playerId));
+
+  const rows = await db
+    .select({ email: players.email })
+    .from(players)
+    .where(eq(players.id, playerId));
+  const userEmail = rows[0]?.email;
+  if (userEmail)
+    await logAttempt(userEmail, ipAddress, "password_reset_success");
+
   res.json({ success: true });
 });
 

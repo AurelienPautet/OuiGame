@@ -7,9 +7,25 @@ jest.mock("../../auth_server", () => ({
   signupbis: jest.fn(),
 }));
 
+// Mock the email service so /forgot-password never hits Resend; we assert on the
+// call args (the reset link) instead of sending real mail.
+jest.mock("../../services/email.service", () => ({
+  sendPasswordResetEmail: jest.fn(),
+  isEmailConfigured: jest.fn(() => true),
+  sendEmail: jest.fn(),
+}));
+
 import { verifyToken } from "../../auth_server";
+import { sendPasswordResetEmail } from "../../services/email.service";
+import { createResetToken } from "../../auth/passwordReset";
 import { buildApp } from "../helpers/app";
-import { db, schema, cleanDb, createPlayer } from "../helpers/db";
+import {
+  db,
+  schema,
+  cleanDb,
+  createPlayer,
+  createSession,
+} from "../helpers/db";
 import { eq } from "drizzle-orm";
 
 const app = buildApp();
@@ -215,5 +231,152 @@ describe("POST /api/auth/google", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.username).toBe("heidi");
+  });
+});
+
+describe("POST /api/auth/forgot-password", () => {
+  test("issues a token and sends an email for an existing db account", async () => {
+    const player = await createPlayer({
+      username: "ivy",
+      email: "ivy@example.com",
+    });
+
+    const res = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "ivy@example.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+
+    // A reset token row was created for the player.
+    const tokens = await db
+      .select()
+      .from(schema.passwordResetTokens)
+      .where(eq(schema.passwordResetTokens.playerId, player.id));
+    expect(tokens).toHaveLength(1);
+
+    // The email was sent with a link carrying a token.
+    expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+    const [to, username, resetUrl] = sendPasswordResetEmail.mock.calls[0];
+    expect(to).toBe("ivy@example.com");
+    expect(username).toBe("ivy");
+    expect(resetUrl).toContain("/reset-password?token=");
+  });
+
+  test("returns success but does nothing for an unknown email", async () => {
+    const res = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "nobody@example.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+
+    const tokens = await db.select().from(schema.passwordResetTokens);
+    expect(tokens).toHaveLength(0);
+  });
+
+  test("does not send a reset email to a Google account", async () => {
+    await createPlayer({
+      username: "glen",
+      email: "glen@example.com",
+      type: "google",
+      googleId: "google-glen",
+      passwordHash: null,
+    });
+
+    const res = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "glen@example.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  test("rejects an invalid email (400)", async () => {
+    const res = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "not-an-email" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("email");
+  });
+});
+
+describe("POST /api/auth/reset-password", () => {
+  test("sets a new password and invalidates existing sessions", async () => {
+    const player = await createPlayer({
+      username: "jane",
+      email: "jane@example.com",
+      password: "old-password",
+    });
+    // A session opened before the reset — it must not survive it.
+    const oldToken = await createSession(player.id);
+    const resetToken = await createResetToken(player.id);
+
+    const res = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: resetToken, password: "brand-new-pass" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+
+    // Old password no longer works; the new one does.
+    const oldLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "jane@example.com", password: "old-password" });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "jane@example.com", password: "brand-new-pass" });
+    expect(newLogin.status).toBe(200);
+
+    // The pre-reset session is gone.
+    const verify = await request(app)
+      .get("/api/auth/verify-session")
+      .set("Authorization", `Bearer ${oldToken}`);
+    expect(verify.status).toBe(401);
+  });
+
+  test("rejects an invalid token (400)", async () => {
+    const res = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: "not-a-real-token", password: "whatever123" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("token");
+  });
+
+  test("rejects a token that was already used (single-use)", async () => {
+    const player = await createPlayer({ email: "ken@example.com" });
+    const resetToken = await createResetToken(player.id);
+
+    const first = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: resetToken, password: "first-new-pass" });
+    expect(first.status).toBe(200);
+
+    const second = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: resetToken, password: "second-new-pass" });
+    expect(second.status).toBe(400);
+    expect(second.body.error).toBe("token");
+  });
+
+  test("rejects a short password without consuming the token", async () => {
+    const player = await createPlayer({ email: "liz@example.com" });
+    const resetToken = await createResetToken(player.id);
+
+    const short = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: resetToken, password: "short" });
+    expect(short.status).toBe(400);
+    expect(short.body.error).toBe("password");
+
+    // The token was not consumed, so it still works with a valid password.
+    const ok = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: resetToken, password: "valid-password" });
+    expect(ok.status).toBe(200);
   });
 });
