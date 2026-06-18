@@ -20,6 +20,7 @@ import {
   CampaignEditor,
   LevelsScreen,
   RankingsScreen,
+  ResetPasswordPage,
 } from "./pages";
 
 // In-game stage: also owns the theme-cycle (T) shortcut.
@@ -72,6 +73,14 @@ const AppRouter = () => {
         element={
           <MenuLayout>
             <RankingsScreen />
+          </MenuLayout>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <MenuLayout>
+            <ResetPasswordPage />
           </MenuLayout>
         }
       />

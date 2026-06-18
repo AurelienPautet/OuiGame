@@ -20,6 +20,7 @@
     "express-rate-limit": "^8.2.2",
     "google-auth-library": "^10.6.2",
     "helmet": "^8.1.0",
+    "nodemailer": "^9.0.1",
     "pg": "^8.21.0",
     "socket.io": "^4.8.1",
     "tsx": "^4.22.4",
@@ -29,6 +30,7 @@
     "@ouigame/config-ts": "workspace:*",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.11.0",
     "@types/supertest": "^6.0.0",
     "typescript": "~6.0.3"

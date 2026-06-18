@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useModal, useAuth } from "../../contexts";
+import { useForgotPassword } from "../../hooks/api";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,11 @@ export const AuthModal = () => {
   } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
+  // The "forgot password" sub-view (enter email → request reset link) lives
+  // inside this modal, toggled from a link on the login tab.
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const forgotPassword = useForgotPassword();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -188,6 +194,23 @@ export const AuthModal = () => {
     if (googleUsername.trim()) submitGoogleUsername(googleUsername.trim());
   };
 
+  const handleForgotSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (forgotEmail.trim()) forgotPassword.mutate(forgotEmail.trim());
+  };
+
+  const openForgot = () => {
+    clearAuthError();
+    setForgotEmail(formData.email);
+    setForgotMode(true);
+  };
+
+  const closeForgot = () => {
+    setForgotMode(false);
+    setForgotEmail("");
+    forgotPassword.reset();
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     clearAuthError();
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -243,6 +266,68 @@ export const AuthModal = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (forgotMode) {
+    return (
+      <Dialog open onOpenChange={close}>
+        <DialogContent
+          widthClassName="w-[min(94vw,420px)]"
+          aria-describedby={undefined}
+        >
+          <DialogTitle className="text-xl font-bold mb-2">
+            {t("auth.forgotPasswordTitle")}
+          </DialogTitle>
+          {forgotPassword.isSuccess ? (
+            <>
+              <p className="mb-6 text-ink-soft">{t("auth.resetLinkSent")}</p>
+              <div className="flex justify-end">
+                <Button type="button" variant="blue" onClick={closeForgot}>
+                  {t("auth.backToLogin")}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="mb-4 text-ink-soft">
+                {t("auth.forgotPasswordPrompt")}
+              </p>
+              <form onSubmit={handleForgotSubmit}>
+                <label className="block mb-4">
+                  <Label>{t("auth.email")}</Label>
+                  <Input
+                    className="mt-1"
+                    type="email"
+                    placeholder={t("auth.enterEmail")}
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </label>
+                {forgotPassword.isError && (
+                  <div className="mb-4 rounded-lg border-2 border-red bg-red/10 px-3 py-2 text-sm font-semibold text-red">
+                    {t("auth.resetRequestError")}
+                  </div>
+                )}
+                <div className="flex justify-between gap-3 mt-6">
+                  <Button type="button" variant="ghost" onClick={closeForgot}>
+                    {t("auth.backToLogin")}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="blue"
+                    disabled={forgotPassword.isPending}
+                  >
+                    {t("auth.sendResetLink")}
+                  </Button>
+                </div>
+              </form>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     );
@@ -325,6 +410,16 @@ export const AuthModal = () => {
               <span className="text-red text-sm">{fieldError("password")}</span>
             )}
           </label>
+
+          {isLogin && (
+            <button
+              type="button"
+              onClick={openForgot}
+              className="text-sm font-semibold text-blue hover:underline"
+            >
+              {t("auth.forgotPasswordLink")}
+            </button>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={closeModal}>

@@ -36,6 +36,25 @@ export const GoogleLoginRequestSchema = z.object({
 });
 export type GoogleLoginRequest = z.infer<typeof GoogleLoginRequestSchema>;
 
+// Password-reset flow. /forgot-password takes an email and always responds with
+// the same generic success (no account enumeration); /reset-password takes the
+// emailed one-time token plus the new password.
+export const ForgotPasswordRequestSchema = z.object({
+  email: z.string(),
+});
+export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequestSchema>;
+
+export const ResetPasswordRequestSchema = z.object({
+  token: z.string(),
+  password: z.string(),
+});
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
+
+// NOTE: the `{ success: true }` ack returned by /forgot-password and
+// /reset-password reuses the shared SuccessResponse defined in ./campaigns
+// (exposed through the ./api barrel) — no duplicate is declared here, which
+// would collide under the barrel's `export *`.
+
 // Error envelopes. The auth routes use { error, message }; every other route
 // uses { error } only — so the general envelope keeps `message` optional.
 export const AuthErrorSchema = z.object({

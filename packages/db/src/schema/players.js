@@ -42,4 +42,20 @@ const playerSessions = pgTable("OuiTank-player_sessions", {
   ),
 });
 
-module.exports = { players, playerSessions };
+// Single-use, short-lived tokens for the "forgot password" flow. Like sessions,
+// only the SHA-256 hash of the token is stored (the plaintext lives only in the
+// email link), so a leaked database can't be used to hijack a reset. The token
+// is consumed (row deleted) on use; the 1-hour expiry bounds the window.
+const passwordResetTokens = pgTable("OuiTank-password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id")
+    .notNull()
+    // OWNERSHIP: a reset token is meaningless without its player.
+    .references(() => players.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 120 }).notNull().unique(),
+  expirationTimestamp: timestamp("expiration_timestamp").default(
+    sql`NOW() + INTERVAL '1 hour'`
+  ),
+});
+
+module.exports = { players, playerSessions, passwordResetTokens };
