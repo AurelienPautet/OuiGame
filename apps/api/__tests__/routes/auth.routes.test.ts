@@ -7,8 +7,8 @@ jest.mock("../../auth_server", () => ({
   signupbis: jest.fn(),
 }));
 
-// Mock the email service so /forgot-password never hits Resend; we assert on the
-// call args (the reset link) instead of sending real mail.
+// Mock the email service so /forgot-password never opens an SMTP connection; we
+// assert on the call args (the reset link) instead of sending real mail.
 jest.mock("../../services/email.service", () => ({
   sendPasswordResetEmail: jest.fn(),
   isEmailConfigured: jest.fn(() => true),

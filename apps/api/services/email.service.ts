@@ -1,22 +1,48 @@
-// Transactional email via Resend's REST API. We call the HTTP endpoint directly
-// with the built-in fetch (Node 24) rather than pulling in the `resend` SDK —
-// one less dependency, and nothing to bundle. Email is OPTIONAL: when
-// RESEND_API_KEY is unset (e.g. local dev, tests, or a misconfigured deploy) the
-// helpers no-op with a warning instead of throwing, so the auth flow degrades
-// gracefully rather than 500-ing.
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// Transactional email over SMTP (Nodemailer). Configured for OVH's mail
+// (pautet.net) but works with any SMTP server via env vars:
+//   SMTP_HOST   e.g. ssl0.ovh.net
+//   SMTP_PORT   465 (implicit TLS) or 587 (STARTTLS)
+//   SMTP_USER   the full mailbox address, e.g. ouigame@pautet.net
+//   SMTP_PASS   that mailbox's password
+//   EMAIL_FROM  the "From" header — with OVH it must be the authenticated
+//               mailbox (or one of its aliases), e.g. "OuiTank <ouigame@pautet.net>"
+//
+// Email is OPTIONAL: when SMTP isn't configured (local dev, tests, or a
+// half-set-up deploy) the helpers no-op with a warning instead of throwing, so
+// the auth flow degrades gracefully rather than 500-ing.
+import nodemailer from "nodemailer";
 
-// Must be an address on a domain verified in Resend. The default uses Resend's
-// shared onboarding domain, which works out of the box for testing but should be
-// overridden with a real "from" (e.g. "OuiTank <noreply@pautet.net>") in prod.
-const EMAIL_FROM = process.env.EMAIL_FROM ?? "OuiTank <onboarding@resend.dev>";
-
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const EMAIL_FROM = process.env.EMAIL_FROM ?? "OuiTank <ouigame@pautet.net>";
 
 // Whether outbound email is configured. Callers can branch on this, but the
 // senders below already no-op safely when it's false.
 function isEmailConfigured() {
-  return !!RESEND_API_KEY;
+  return !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
+}
+
+// The transport is created lazily and reused (it keeps a connection pool). It's
+// null until the first send, and stays null while SMTP is unconfigured.
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter() {
+  // The guard narrows the module-level env vars to `string` for the rest of the
+  // function (and proves to TS they aren't undefined under exactOptionalPropertyTypes).
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
+  if (!transporter) {
+    const port = Number(SMTP_PORT ?? 465);
+    transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port,
+      // 465 uses implicit TLS; 587 (and others) upgrade via STARTTLS.
+      secure: port === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+  }
+  return transporter;
 }
 
 interface SendEmailOptions {
@@ -27,26 +53,14 @@ interface SendEmailOptions {
 }
 
 async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
-  if (!RESEND_API_KEY) {
+  const tx = getTransporter();
+  if (!tx) {
     console.warn(
-      `RESEND_API_KEY is not set — skipping email "${subject}" to ${to}.`
+      `SMTP is not configured — skipping email "${subject}" to ${to}.`
     );
     return;
   }
-
-  const response = await fetch(RESEND_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: EMAIL_FROM, to, subject, html, text }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Resend API error ${response.status}: ${body}`);
-  }
+  await tx.sendMail({ from: EMAIL_FROM, to, subject, html, text });
 }
 
 // Escapes the few characters that could break out of an HTML attribute/text
@@ -62,7 +76,7 @@ function escapeHtml(value: string) {
 }
 
 // Sends the password-reset email containing the one-time link. Resolves once the
-// mail is accepted by Resend (or immediately, if email isn't configured).
+// mail is accepted by the SMTP server (or immediately, if email isn't configured).
 async function sendPasswordResetEmail(
   to: string,
   username: string,
