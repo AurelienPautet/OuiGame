@@ -22,6 +22,7 @@ import {
   TankAvatar,
 } from "../ui/primitives";
 import { cn } from "../../lib/cn";
+import { humanizeLabel } from "./labels";
 
 // Locale date+time for the login log; plain date for created/rows.
 const fmtDate = (iso: string | null): string =>
@@ -328,6 +329,7 @@ const Empty = ({ children }: { children: ReactNode }) => (
 );
 
 const StatusBadge = ({ status }: { status: string }) => {
+  // Colour decision stays on the raw enum string; only the text is humanised.
   const ok = status === "success";
   return (
     <span
@@ -338,7 +340,7 @@ const StatusBadge = ({ status }: { status: string }) => {
           : "bg-red text-white border-red-d"
       )}
     >
-      {status}
+      {humanizeLabel(status)}
     </span>
   );
 };

@@ -10,6 +10,7 @@ import {
 } from "../ui/primitives";
 import { useAdminLogins, useAdminAudit } from "../../hooks/api";
 import { cn } from "../../lib/cn";
+import { humanizeLabel } from "./labels";
 
 type Section = "logins" | "audit";
 type LoginStatusFilter = "all" | "success" | "failed";
@@ -218,7 +219,10 @@ function LoginsSection() {
                   {row.ip}
                 </span>
                 <span>
-                  <Badge tone={statusTone(row.status)}>{row.status}</Badge>
+                  {/* Colour from the raw enum string; show a humanised label. */}
+                  <Badge tone={statusTone(row.status)}>
+                    {humanizeLabel(row.status)}
+                  </Badge>
                 </span>
               </div>
             ))
@@ -302,7 +306,7 @@ function AuditSection() {
                 </span>
                 <span>
                   <Badge tone="bg-purple text-white border-purple-d">
-                    {row.action}
+                    {humanizeLabel(row.action)}
                   </Badge>
                 </span>
                 <span className="text-sm text-white/70 font-medium truncate">

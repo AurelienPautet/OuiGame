@@ -63,15 +63,16 @@ describe("SecurityTab", () => {
     expect(screen.getByText("commander")).toBeTruthy();
     expect(screen.getByText("10.0.0.1")).toBeTruthy();
 
-    const success = screen.getByText("success");
+    // Status text is humanised, but the colour still derives from the raw enum.
+    const success = screen.getByText("Success");
     expect(success.className).toContain("bg-green");
-    const failed = screen.getByText("failed");
+    const failed = screen.getByText("Failed");
     expect(failed.className).toContain("bg-red");
 
     // Flip to the audit section and assert the action + target render.
     fireEvent.click(screen.getByRole("button", { name: "Audit" }));
 
-    const action = screen.getByText("promote_user");
+    const action = screen.getByText("Promote user");
     expect(action.className).toContain("bg-purple");
     expect(screen.getByText("user #42")).toBeTruthy();
     // details JSON renders compactly.
@@ -84,7 +85,7 @@ describe("SecurityTab", () => {
 
     // The null-actor row renders the "system" fallback…
     expect(screen.getByText("system")).toBeTruthy();
-    expect(screen.getByText("purge_levels")).toBeTruthy();
+    expect(screen.getByText("Purge levels")).toBeTruthy();
     // …with em-dash target and details (null targetType + null details).
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
