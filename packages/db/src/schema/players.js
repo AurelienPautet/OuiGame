@@ -4,6 +4,7 @@ const {
   varchar,
   timestamp,
   integer,
+  boolean,
   check,
 } = require("drizzle-orm/pg-core");
 const { sql } = require("drizzle-orm");
@@ -17,6 +18,7 @@ const players = pgTable(
     type: varchar("type", { length: 10 }).notNull(),
     passwordHash: varchar("password_hash", { length: 250 }),
     googleId: varchar("google_id", { length: 500 }),
+    isAdmin: boolean("is_admin").notNull().default(false),
     creationTimestamp: timestamp("creation_timestamp").defaultNow(),
   },
   (table) => ({

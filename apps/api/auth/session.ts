@@ -36,6 +36,7 @@ async function verifySession(token: string | null | undefined) {
       playerId: players.id,
       username: players.username,
       email: players.email,
+      isAdmin: players.isAdmin,
     })
     .from(playerSessions)
     .innerJoin(players, eq(players.id, playerSessions.playerId))

@@ -44,6 +44,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate-data": "tsx apps/api/scripts/migrate_data.ts",
+    "set-admin": "tsx apps/api/scripts/set-admin.ts",
     "prepare": "husky"
   },
   "lint-staged": {

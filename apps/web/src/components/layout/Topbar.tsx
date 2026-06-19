@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Pencil, Swords, Settings } from "lucide-react";
+import { Pencil, Swords, Settings, Shield } from "lucide-react";
 import { useModal, useAuth, useSocket, MODALS } from "../../contexts";
 import { storage } from "../../lib/storage";
 import { colorFromIndex } from "../../constants/tankColors";
@@ -67,6 +67,16 @@ export const Topbar = () => {
           >
             <Swords size={15} strokeWidth={2.5} /> {t("nav.campaigns")}
           </button>
+          {user?.isAdmin && (
+            <NavLink
+              to="/admin"
+              className={(state) =>
+                cn(navClass(state), "inline-flex items-center gap-1.5")
+              }
+            >
+              <Shield size={15} strokeWidth={2.5} /> {t("nav.admin")}
+            </NavLink>
+          )}
         </nav>
 
         <div className="flex-1" />

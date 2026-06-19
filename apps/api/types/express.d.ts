@@ -8,7 +8,12 @@ import "express";
 declare global {
   namespace Express {
     interface Request {
-      user?: { playerId: number; username: string; email: string };
+      user?: {
+        playerId: number;
+        username: string;
+        email: string;
+        isAdmin: boolean;
+      };
       validatedQuery?: unknown;
     }
   }

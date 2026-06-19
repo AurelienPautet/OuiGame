@@ -126,7 +126,11 @@ describe("GET /api/auth/verify-session", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ username: "erin", email: "erin@example.com" });
+    expect(res.body).toEqual({
+      username: "erin",
+      email: "erin@example.com",
+      isAdmin: false,
+    });
   });
 
   test("rejects without a token (401)", async () => {

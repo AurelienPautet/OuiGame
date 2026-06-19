@@ -24,6 +24,7 @@ export const useLogin = () => {
       queryClient.setQueryData(["auth", "session"], {
         username: data.username,
         email: data.email,
+        isAdmin: data.isAdmin,
       });
       notifyAuthChange();
     },
@@ -41,6 +42,7 @@ export const useSignup = () => {
       queryClient.setQueryData(["auth", "session"], {
         username: data.username,
         email: data.email,
+        isAdmin: data.isAdmin,
       });
       notifyAuthChange();
     },
@@ -63,6 +65,7 @@ export const useGoogleLogin = () => {
       queryClient.setQueryData(["auth", "session"], {
         username: data.username,
         email: data.email,
+        isAdmin: data.isAdmin,
       });
       notifyAuthChange();
     },

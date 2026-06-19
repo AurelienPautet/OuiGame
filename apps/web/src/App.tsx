@@ -20,7 +20,9 @@ import {
   CampaignEditor,
   LevelsScreen,
   RankingsScreen,
+  AdminDashboard,
 } from "./pages";
+import { ProtectedAdminRoute } from "./components/admin/ProtectedAdminRoute";
 
 // In-game stage: also owns the theme-cycle (T) shortcut.
 const GameView = () => {
@@ -72,6 +74,16 @@ const AppRouter = () => {
         element={
           <MenuLayout>
             <RankingsScreen />
+          </MenuLayout>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <MenuLayout>
+            <ProtectedAdminRoute>
+              <AdminDashboard />
+            </ProtectedAdminRoute>
           </MenuLayout>
         }
       />
