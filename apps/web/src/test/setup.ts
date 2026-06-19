@@ -8,6 +8,45 @@
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
 
+// Guarantee a working Storage. jsdom normally provides one, but Node 25 exposes
+// its own experimental `localStorage` global that shadows jsdom's and lacks the
+// Storage methods (getItem/setItem/clear), which makes every `storage.*` call —
+// and the afterEach reset below — throw. Detect that broken global and replace
+// it (on both `globalThis` and `window`) with a real in-memory Storage. On
+// Node 24 / CI, jsdom's own localStorage already works, so this is a no-op.
+if (typeof globalThis.localStorage?.clear !== "function") {
+  class MemoryStorage implements Storage {
+    #map = new Map<string, string>();
+    get length(): number {
+      return this.#map.size;
+    }
+    clear(): void {
+      this.#map.clear();
+    }
+    getItem(key: string): string | null {
+      return this.#map.has(key) ? (this.#map.get(key) as string) : null;
+    }
+    key(index: number): string | null {
+      return Array.from(this.#map.keys())[index] ?? null;
+    }
+    removeItem(key: string): void {
+      this.#map.delete(key);
+    }
+    setItem(key: string, value: string): void {
+      this.#map.set(key, String(value));
+    }
+  }
+  const store = new MemoryStorage();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: store,
+  });
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: store,
+  });
+}
+
 afterEach(() => {
   cleanup();
   // Reset persisted browser state between tests. The i18n LanguageDetector and

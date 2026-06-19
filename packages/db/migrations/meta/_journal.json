@@ -36,6 +36,13 @@
       "when": 1781206775505,
       "tag": "0004_natural_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781824915185,
+      "tag": "0005_admin_dashboard",
+      "breakpoints": true
     }
   ]
 }

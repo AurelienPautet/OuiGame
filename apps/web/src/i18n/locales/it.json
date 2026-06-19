@@ -24,7 +24,8 @@
     "playSolo": "Gioca Solo",
     "rankings": "Classifiche",
     "editor": "Editor",
-    "campaigns": "Campagne"
+    "campaigns": "Campagne",
+    "admin": "Admin"
   },
   "topbar": {
     "online": "online",

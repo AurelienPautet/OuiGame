@@ -97,6 +97,12 @@ async function createUserWithSession(overrides: any = {}) {
   return { player, token, authHeader: `Bearer ${token}` };
 }
 
+// Same as createUserWithSession but the player is an admin (is_admin = true),
+// for exercising the admin-only routes/middleware.
+async function createAdminWithSession(overrides: any = {}) {
+  return createUserWithSession({ ...overrides, isAdmin: true });
+}
+
 async function createLevel(creatorId: number, overrides: any = {}) {
   userCounter += 1;
   const values = {
@@ -212,6 +218,7 @@ export {
   createPlayer,
   createSession,
   createUserWithSession,
+  createAdminWithSession,
   createLevel,
   createRound,
   createSoloRound,

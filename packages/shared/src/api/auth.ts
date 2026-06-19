@@ -7,12 +7,14 @@ export const AuthResponseSchema = z.object({
   username: z.string(),
   email: z.string(),
   sessionToken: z.string(),
+  isAdmin: z.boolean(),
 });
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 
 export const VerifySessionResponseSchema = z.object({
   username: z.string(),
   email: z.string(),
+  isAdmin: z.boolean(),
 });
 export type VerifySessionResponse = z.infer<typeof VerifySessionResponseSchema>;
 

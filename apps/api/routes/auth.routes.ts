@@ -116,7 +116,7 @@ router.post("/signup", async (req: Request, res: Response) => {
 
   await logAttempt(email, ipAddress, "sign_up_success");
 
-  res.json({ username, email, sessionToken });
+  res.json({ username, email, sessionToken, isAdmin: false });
 });
 
 // POST /api/auth/login
@@ -152,7 +152,12 @@ router.post("/login", async (req: Request, res: Response) => {
   const sessionToken = await createSession(user.id);
   await logAttempt(email, ipAddress, "login_success");
 
-  res.json({ username: user.username, email: user.email, sessionToken });
+  res.json({
+    username: user.username,
+    email: user.email,
+    sessionToken,
+    isAdmin: user.isAdmin,
+  });
 });
 
 // POST /api/auth/google
@@ -177,6 +182,7 @@ router.post("/google", async (req: Request, res: Response) => {
       username: user.username,
       email: user.email,
       sessionToken,
+      isAdmin: user.isAdmin,
     });
   }
 
@@ -221,12 +227,16 @@ router.post("/google", async (req: Request, res: Response) => {
   const sessionToken = await createSession(insertResult[0]!.id);
   await logAttempt(email, ipAddress, "signup_success_google");
 
-  res.json({ username, email, sessionToken });
+  res.json({ username, email, sessionToken, isAdmin: false });
 });
 
 // GET /api/auth/verify-session
 router.get("/verify-session", authMiddleware, (req: Request, res: Response) => {
-  res.json({ username: req.user!.username, email: req.user!.email });
+  res.json({
+    username: req.user!.username,
+    email: req.user!.email,
+    isAdmin: req.user!.isAdmin,
+  });
 });
 
 // POST /api/auth/logout

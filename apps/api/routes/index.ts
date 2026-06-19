@@ -9,6 +9,7 @@ import roomsRoutes from "./rooms.routes";
 import soloRoutes from "./solo.routes";
 import campaignsRoutes from "./campaigns.routes";
 import achievementsRoutes from "./achievements.routes";
+import adminRoutes from "./admin";
 
 router.use("/auth", authRoutes);
 router.use("/levels", levelsRoutes);
@@ -18,5 +19,6 @@ router.use("/rooms", roomsRoutes);
 router.use("/solo", soloRoutes);
 router.use("/campaigns", campaignsRoutes);
 router.use("/achievements", achievementsRoutes);
+router.use("/admin", adminRoutes);
 
 export default router;
