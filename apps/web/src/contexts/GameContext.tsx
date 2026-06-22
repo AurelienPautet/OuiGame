@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
   type ReactNode,
 } from "react";
 import { colorFromIndex } from "../constants/tankColors";
@@ -290,6 +291,17 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       theme: prev.theme < 6 ? prev.theme + 1 : 1,
     }));
   }, []);
+
+  // Dev-only handle (stripped from production builds, same convention as
+  // GameCanvas's window.__ouitankEngine): lets browser automation start a solo
+  // "test" game from a prebuilt in-memory layout — used by the itch-assets
+  // gameplay-GIF capture (itch-assets/capture.mjs).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (
+      window as unknown as { __ouitankStartTest?: (l: number[]) => void }
+    ).__ouitankStartTest = startTestGame;
+  }, [startTestGame]);
 
   const value = useMemo<GameContextValue>(
     () => ({
