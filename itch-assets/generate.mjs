@@ -10,21 +10,40 @@ const OUT = dirname(fileURLToPath(import.meta.url));
 
 // --- official palette (mirror of apps/web/src/theme/palette.ts) ---------------
 const P = {
-  blue: "#00b2e1", blueD: "#0085a8",
-  red: "#f14e54", redD: "#b8383d",
-  green: "#00e06a", greenD: "#00a64e",
-  yellow: "#ffe869", yellowD: "#c9b53f",
-  purple: "#bf7ff5", purpleD: "#9355c9",
-  orange: "#ffb142", orangeD: "#c98821",
-  teal: "#2dd4bf", tealD: "#1c9c8d",
-  ink: "#2b2f36", inkSoft: "#555b66",
-  field: "#c9cdd2", fieldLine: "#b8bdc4", panelDark: "#1f232a", white: "#fff",
+  blue: "#00b2e1",
+  blueD: "#0085a8",
+  red: "#f14e54",
+  redD: "#b8383d",
+  green: "#00e06a",
+  greenD: "#00a64e",
+  yellow: "#ffe869",
+  yellowD: "#c9b53f",
+  purple: "#bf7ff5",
+  purpleD: "#9355c9",
+  orange: "#ffb142",
+  orangeD: "#c98821",
+  teal: "#2dd4bf",
+  tealD: "#1c9c8d",
+  ink: "#2b2f36",
+  inkSoft: "#555b66",
+  field: "#c9cdd2",
+  fieldLine: "#b8bdc4",
+  panelDark: "#1f232a",
+  white: "#fff",
 };
 const INK = P.ink;
 
 // --- tank: faithful port of drawTank (barrel first, then hull) ----------------
-function tank(cx, cy, r, fill, { angle = 0, isBot = false, barrel = fill } = {}) {
-  const baseW = r * 0.62, tipW = r * 0.54, len = r * 1.55;
+function tank(
+  cx,
+  cy,
+  r,
+  fill,
+  { angle = 0, isBot = false, barrel = fill } = {}
+) {
+  const baseW = r * 0.62,
+    tipW = r * 0.54,
+    len = r * 1.55;
   const pts = `0,${-baseW / 2} ${len},${-tipW / 2} ${len},${tipW / 2} 0,${baseW / 2}`;
   return `
   <g transform="translate(${cx},${cy})">
@@ -42,19 +61,82 @@ function shot(cx, cy, r, fill) {
   return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${INK}" stroke-width="${r * 0.5}"/>`;
 }
 
-// arcade explosion: layered starburst
-function boom(cx, cy, R) {
-  const spikes = 12;
-  let pts = "";
-  for (let i = 0; i < spikes * 2; i++) {
-    const rad = (i % 2 === 0 ? R : R * 0.52);
-    const a = (Math.PI * i) / spikes - Math.PI / 2;
-    pts += `${cx + Math.cos(a) * rad},${cy + Math.sin(a) * rad} `;
+// --- color helpers (port of palette.mixHex) for the explosion gradient -------
+function hexToRgb(h) {
+  h = h.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+function mixHex(a, b, t) {
+  const ca = hexToRgb(a),
+    cb = hexToRgb(b);
+  const ch = (x, y) =>
+    Math.round(x + (y - x) * t)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${ch(ca[0], cb[0])}${ch(ca[1], cb[1])}${ch(ca[2], cb[2])}`;
+}
+// warm debris gradient sampled at t∈[0,1]: yellow → orange → red → charred ink,
+// exactly the warmDebris() steps from ParticleSystem.ts.
+function warmAt(t) {
+  const stops = [
+    [0, P.yellow],
+    [0.4, P.orange],
+    [0.7, P.red],
+    [1, INK],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [p0, c0] = stops[i],
+      [p1, c1] = stops[i + 1];
+    if (t <= p1) return mixHex(c0, c1, (t - p0) / (p1 - p0));
   }
-  return `
-    <polygon points="${pts.trim()}" fill="${P.orange}" stroke="${INK}" stroke-width="${R * 0.06}" stroke-linejoin="round"/>
-    <circle cx="${cx}" cy="${cy}" r="${R * 0.5}" fill="${P.yellow}"/>
-    <circle cx="${cx}" cy="${cy}" r="${R * 0.22}" fill="${P.white}"/>`;
+  return INK;
+}
+// deterministic RNG so the same explosion renders every run
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// REAL explosion: a burst cloud of round debris particles (warm yellow→orange→
+// red→ink, brighter toward the core) + an expanding white/yellow shockwave ring,
+// matching ParticleSystem.explosion() instead of a cartoon starburst.
+function boom(cx, cy, R, seed = 7) {
+  const rnd = mulberry32(seed);
+  let s = "";
+  // shockwave ring (Chockwave: white→yellow annulus)
+  s += `<circle cx="${cx}" cy="${cy}" r="${R * 0.92}" fill="none"
+          stroke="${mixHex(P.white, P.yellow, 0.4)}" stroke-width="${R * 0.1}" opacity="0.85"/>`;
+  // debris particles — denser & hotter near the centre
+  const N = 50;
+  for (let i = 0; i < N; i++) {
+    const a = rnd() * Math.PI * 2;
+    const dist = Math.pow(rnd(), 0.55) * R; // bias toward centre
+    const px = cx + Math.cos(a) * dist;
+    const py = cy + Math.sin(a) * dist;
+    const pr = 4 + rnd() * 9;
+    const t = Math.min(1, dist / R);
+    s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${pr.toFixed(1)}" fill="${warmAt(t)}"/>`;
+  }
+  // a few tiny white-hot sparks flung out past the cloud
+  for (let i = 0; i < 6; i++) {
+    const a = rnd() * Math.PI * 2;
+    const dist = R * (0.9 + rnd() * 0.35);
+    s += `<circle cx="${(cx + Math.cos(a) * dist).toFixed(1)}" cy="${(cy + Math.sin(a) * dist).toFixed(1)}"
+            r="${(2 + rnd() * 2).toFixed(1)}" fill="${P.white}"/>`;
+  }
+  // bright core
+  s += `<circle cx="${cx}" cy="${cy}" r="${R * 0.2}" fill="${P.white}"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${R * 0.34}" fill="${P.yellow}" opacity="0.55"/>`;
+  return s;
 }
 
 // rounded obstacle block
@@ -66,8 +148,10 @@ function block(x, y, s, fill = "#9aa0a8") {
 // field + grid, clipped to a rounded rect of given size
 function field(w, h, cell = 56) {
   let lines = "";
-  for (let x = cell; x < w; x += cell) lines += `<line x1="${x}" y1="0" x2="${x}" y2="${h}"/>`;
-  for (let y = cell; y < h; y += cell) lines += `<line x1="0" y1="${y}" x2="${w}" y2="${y}"/>`;
+  for (let x = cell; x < w; x += cell)
+    lines += `<line x1="${x}" y1="0" x2="${x}" y2="${h}"/>`;
+  for (let y = cell; y < h; y += cell)
+    lines += `<line x1="0" y1="${y}" x2="${w}" y2="${y}"/>`;
   return `
     <rect width="${w}" height="${h}" fill="${P.field}"/>
     <g stroke="${P.fieldLine}" stroke-width="2">${lines}</g>`;
@@ -93,28 +177,23 @@ async function render(svg, w, h, file) {
 // 1. COVER 630×500  — chaotic multiplayer scene
 // =============================================================================
 {
-  const w = 630, h = 500;
+  const w = 630,
+    h = 500;
   const scene = `
     ${field(w, h)}
-    <!-- obstacles -->
-    ${block(70, 70, 70)}
-    ${block(480, 330, 84)}
-    ${block(300, 60, 60, "#8e959e")}
-    <!-- shots in flight -->
-    ${shot(250, 250, 13, P.blue)}
-    ${shot(300, 235, 11, P.blue)}
-    ${shot(395, 300, 12, P.red)}
-    ${shot(150, 360, 10, P.green)}
-    <!-- bots (dotted) -->
-    ${tank(120, 380, 40, P.green, { angle: -35, isBot: true })}
-    ${tank(540, 130, 40, P.purple, { angle: 150, isBot: true })}
-    ${tank(470, 410, 36, P.yellow, { angle: 200, isBot: true })}
-    <!-- player tanks duelling -->
-    ${tank(180, 250, 52, P.blue, { angle: -18 })}
-    ${tank(450, 290, 50, P.red, { angle: 165 })}
-    ${tank(360, 150, 44, P.orange, { angle: 60 })}
-    <!-- impact -->
-    ${boom(330, 250, 60)}
+    <!-- sparse obstacles, kept clear of the tanks -->
+    ${block(40, 50, 60)}
+    ${block(530, 60, 64)}
+    <!-- two duelling tanks, well spaced, barrels aimed at the impact -->
+    ${tank(140, 210, 50, P.blue, { angle: 0 })}
+    ${tank(490, 220, 48, P.red, { angle: 180 })}
+    <!-- one bot up top, aiming down into the action -->
+    ${tank(330, 78, 38, P.purple, { angle: 110, isBot: true })}
+    <!-- shots converging on the impact -->
+    ${shot(232, 209, 12, P.blue)}
+    ${shot(400, 216, 11, P.red)}
+    <!-- real particle-cloud explosion between them -->
+    ${boom(315, 208, 58, 11)}
     <!-- title band -->
     <rect x="0" y="${h - 96}" width="${w}" height="96" fill="${P.ink}" opacity="0.88"/>
     ${wordmark(w / 2, h - 32, 64, { oui: P.white, tank: P.blue })}`;
@@ -125,7 +204,8 @@ async function render(svg, w, h, file) {
 // 2. BACKGROUND 1920×1080 — subtle, low-contrast for page legibility
 // =============================================================================
 {
-  const w = 1920, h = 1080;
+  const w = 1920,
+    h = 1080;
   const faint = (t) => `<g opacity="0.10">${t}</g>`;
   const scene = `
     ${field(w, h, 64)}
@@ -147,7 +227,8 @@ async function render(svg, w, h, file) {
 // 3. LOGO (transparent) — wordmark + a little tank
 // =============================================================================
 {
-  const w = 1200, h = 360;
+  const w = 1200,
+    h = 360;
   const scene = `
     ${tank(190, 200, 86, P.blue, { angle: -20 })}
     <text x="640" y="232" font-family="DejaVu Sans" font-weight="bold"
@@ -160,18 +241,23 @@ async function render(svg, w, h, file) {
 // 4. OG SHARE IMAGE 1200×630 — wide hero + tagline
 // =============================================================================
 {
-  const w = 1200, h = 630;
+  const w = 1200,
+    h = 630;
   const scene = `
     ${field(w, h, 60)}
-    ${block(120, 110, 90)}
-    ${block(960, 410, 100)}
-    ${shot(520, 300, 16, P.blue)}
-    ${shot(640, 330, 14, P.red)}
-    ${tank(250, 360, 70, P.green, { angle: -25, isBot: true })}
-    ${tank(940, 230, 64, P.purple, { angle: 150, isBot: true })}
-    ${tank(420, 300, 82, P.blue, { angle: -10 })}
-    ${tank(760, 350, 80, P.red, { angle: 170 })}
-    ${boom(600, 310, 78)}
+    <!-- sparse obstacles -->
+    ${block(110, 80, 88)}
+    ${block(990, 360, 92)}
+    <!-- two duelling tanks, generous spacing -->
+    ${tank(300, 250, 72, P.blue, { angle: 0 })}
+    ${tank(900, 270, 70, P.red, { angle: 180 })}
+    <!-- one bot up top -->
+    ${tank(620, 92, 52, P.purple, { angle: 110, isBot: true })}
+    <!-- converging shots -->
+    ${shot(470, 252, 15, P.blue)}
+    ${shot(760, 266, 14, P.red)}
+    <!-- real particle-cloud explosion -->
+    ${boom(600, 256, 86, 23)}
     <rect x="0" y="${h - 150}" width="${w}" height="150" fill="${P.ink}" opacity="0.9"/>
     <text x="${w / 2}" y="${h - 78}" font-family="DejaVu Sans" font-weight="bold"
       font-size="84" text-anchor="middle" fill="${P.white}">Oui<tspan fill="${P.blue}">Tank</tspan></text>
