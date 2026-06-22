@@ -272,10 +272,13 @@ async function render(svg, w, h, file) {
 {
   const make = (size, file) => {
     const r = size;
+    const sw = r * 0.06; // border stroke; inset by half so it isn't clipped
+    const i = sw / 2;
     const scene = `
-      <rect width="${r}" height="${r}" rx="${r * 0.22}" fill="${P.field}"/>
-      <rect width="${r}" height="${r}" rx="${r * 0.22}" fill="none" stroke="${INK}" stroke-width="${r * 0.06}"/>
-      ${tank(r / 2, r / 2, r * 0.3, P.blue, { angle: -30 })}`;
+      <rect x="${i}" y="${i}" width="${r - sw}" height="${r - sw}" rx="${r * 0.2}" fill="${P.field}"/>
+      <rect x="${i}" y="${i}" width="${r - sw}" height="${r - sw}" rx="${r * 0.2}"
+            fill="none" stroke="${INK}" stroke-width="${sw}"/>
+      ${tank(r / 2, r / 2, r * 0.27, P.blue, { angle: -30 })}`;
     return render(scene, r, r, file);
   };
   await make(256, "favicon-256.png");
