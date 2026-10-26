@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useModal, useAuth } from "../../contexts";
 import {
@@ -59,7 +59,29 @@ const Label = ({ children }: { children: React.ReactNode }) => (
   </span>
 );
 
-export const AuthModal = () => {
+let activeCredentialHandler:
+  | ((response: GoogleCredentialResponse) => void)
+  | null = null;
+let gsiInitialized = false;
+
+function ensureGsiInitialized() {
+  if (gsiInitialized || typeof google === "undefined") return;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: (response) => {
+      activeCredentialHandler?.(response);
+    },
+    auto_select: false,
+  });
+  gsiInitialized = true;
+}
+
+function resetGsiStateForTesting() {
+  gsiInitialized = false;
+  activeCredentialHandler = null;
+}
+
+function AuthModalComponent() {
   const { t, i18n } = useTranslation();
   const { closeModal } = useModal();
   const {
@@ -80,13 +102,24 @@ export const AuthModal = () => {
     password: "",
   });
   const [googleUsername, setGoogleUsername] = useState("");
+
   // The Google Identity script is injected `async defer` (see index.html), so on
   // first mount `google` is usually still undefined. Track when it becomes
-  // available so the button effect can run as soon as the script loads instead
-  // of only when the user happens to toggle the Login/Register tab.
+  // available so the button effect can run as soon as the script loads.
   const [gsiReady, setGsiReady] = useState(() => typeof google !== "undefined");
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
-  const gsiInitialized = useRef(false);
+
+  // Radix's DialogContent renders inside a Portal (<RadixDialog.Portal>).
+  // On initial mount, Radix Portal delays rendering its children until its layout
+  // effect has mounted. Because AuthModal's initial commit runs before Radix's
+  // Portal mounts children into the DOM, a standard useRef (googleButtonRef.current)
+  // is still null during AuthModal's initial useEffect commit. Since useRef
+  // mutations do not trigger a re-render, the button render effect never ran on
+  // initial open — it only ran when the user changed state by toggling tabs.
+  // Using a callback ref with useState (setGoogleButtonContainer) ensures that as
+  // soon as Radix's Portal mounts the DOM element, AuthModal re-renders with the
+  // attached node, immediately triggering the button render on first modal open.
+  const [googleButtonContainer, setGoogleButtonContainer] =
+    useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (user) closeModal();
@@ -107,49 +140,27 @@ export const AuthModal = () => {
     googleLogin(response.credential, "");
   };
 
-  // GSI captures the callback once at initialize() time, so route it through a
-  // ref that always points at the latest handler. This keeps the closure
-  // current (e.g. if `googleLogin` changes) without re-initializing GSI on
-  // every render.
-  const credentialHandlerRef = useRef(handleCredentialResponse);
+  // Route GSI callbacks to the current modal instance's handler without
+  // re-initializing GSI on every render.
   useEffect(() => {
-    credentialHandlerRef.current = handleCredentialResponse;
+    activeCredentialHandler = handleCredentialResponse;
+    return () => {
+      if (activeCredentialHandler === handleCredentialResponse) {
+        activeCredentialHandler = null;
+      }
+    };
   });
 
-  // Initialize GSI exactly once. Calling initialize() again on every tab/locale
-  // change (the old behaviour) logs "called multiple times" and orphans the
-  // already-rendered button — "only the last initialized instance will be
-  // used" — which is why the button only appeared after toggling the tab.
+  // (Re)render the button once GSI is ready and the container node is mounted,
+  // as well as on tab (isLogin) or locale (i18n.language) changes.
   useEffect(() => {
-    if (!gsiReady || gsiInitialized.current) return;
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: (response) => credentialHandlerRef.current(response),
-      auto_select: false,
-    });
-    gsiInitialized.current = true;
-  }, [gsiReady]);
-
-  // (Re)render the button once GSI is ready and on tab/locale change. This runs
-  // after the initialize effect above on the same commit, so it never renders
-  // against an uninitialized instance.
-  useEffect(() => {
-    if (!gsiReady || !gsiInitialized.current || !googleButtonRef.current)
-      return;
-    const node = googleButtonRef.current;
+    if (!gsiReady || !googleButtonContainer) return;
+    ensureGsiInitialized();
+    const node = googleButtonContainer;
     let cancelled = false;
     let timer = 0;
     let attempts = 0;
 
-    // On the modal's first open — while it's still animating in and GSI is
-    // freshly initialized — renderButton() often injects only an empty
-    // placeholder that never fills on its own. That's why the button used to
-    // appear only after the user toggled the Login/Register tab, which forces a
-    // fresh render once GSI is ready. We reproduce that automatically with a
-    // few GENTLE re-renders: the interval is much longer than GSI's own async
-    // render (~0.5s) so we never clear one mid-flight, the empty-check runs
-    // BEFORE re-rendering so a painted button is never wiped, and we stop as
-    // soon as the real [role=button] appears.
     const render = () => {
       if (cancelled || !node.isConnected) return;
       node.innerHTML = "";
@@ -165,7 +176,9 @@ export const AuthModal = () => {
       attempts += 1;
       if (attempts < 6) {
         timer = window.setTimeout(() => {
-          if (!cancelled && !node.querySelector('[role="button"]')) render();
+          if (!cancelled && !node.querySelector('[role="button"], iframe')) {
+            render();
+          }
         }, 1800);
       }
     };
@@ -175,7 +188,7 @@ export const AuthModal = () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [gsiReady, isLogin, i18n.language]);
+  }, [gsiReady, isLogin, i18n.language, googleButtonContainer]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -349,10 +362,14 @@ export const AuthModal = () => {
           <span className="flex-1 h-0.5 bg-ink/15" /> {t("auth.or")}
           <span className="flex-1 h-0.5 bg-ink/15" />
         </div>
-        <div className="flex justify-center">
-          <div ref={googleButtonRef} />
+        <div className="flex justify-center min-h-[44px]">
+          <div ref={setGoogleButtonContainer} />
         </div>
       </DialogContent>
     </Dialog>
   );
-};
+}
+
+export const AuthModal = Object.assign(AuthModalComponent, {
+  _resetGsiStateForTesting: resetGsiStateForTesting,
+});
