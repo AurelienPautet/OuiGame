@@ -9,18 +9,19 @@ import type {
   SuccessResponse,
 } from "@ouigame/shared/api";
 
-export const useCampaigns = (params: { name?: string }) => {
+export const useCampaigns = (params: { name?: string }, enabled = true) => {
   return useQuery({
     queryKey: ["campaigns", params],
     queryFn: () => campaignsApi.getCampaigns(params),
+    enabled,
   });
 };
 
-export const useMyCampaigns = (params: { name?: string }) => {
+export const useMyCampaigns = (params: { name?: string }, enabled = true) => {
   return useQuery({
     queryKey: ["campaigns", "my", params],
     queryFn: () => campaignsApi.getMyCampaigns(params),
-    enabled: storage.hasSession(),
+    enabled: enabled && storage.hasSession(),
   });
 };
 

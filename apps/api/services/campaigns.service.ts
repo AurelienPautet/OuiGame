@@ -19,52 +19,16 @@ interface CampaignMetaRow {
   creatorId: number;
 }
 
-/**
- * Determine a campaign's difficulty tier and 1-10 numeric score based on enemy bot composition,
- * campaign length, and historical player clear rates.
- */
+// Difficulty describes observed full-run completion, not a fabricated bot score.
+// Require ten finished runs before assigning a tier; small samples stay unknown.
 function calculateDifficulty(
-  enemyStats:
-    | { totalEnemies: number; threatScore: number; levelCount: number }
-    | undefined,
-  levelCount: number,
-  runStats: { timesPlayed: number; clearRate: number } | undefined
-): {
-  difficulty: "easy" | "medium" | "hard" | "expert";
-  difficultyScore: number;
-} {
-  if (levelCount === 0) {
-    return { difficulty: "easy", difficultyScore: 1 };
-  }
-
-  const threat = enemyStats?.threatScore || 0;
-  const avgThreatPerLevel = levelCount > 0 ? threat / levelCount : 0;
-
-  // Base difficulty from enemy threat per level (scaled) and endurance length bonus
-  let rawScore =
-    avgThreatPerLevel / 1.5 + (levelCount > 5 ? 2 : levelCount > 2 ? 1 : 0);
-
-  // If there are recorded runs, factor in player clear rate
-  if (runStats && runStats.timesPlayed >= 3) {
-    if (runStats.clearRate <= 20) rawScore += 2;
-    else if (runStats.clearRate <= 40) rawScore += 1;
-    else if (runStats.clearRate >= 70) rawScore -= 1;
-  }
-
-  const clampedScore = Math.max(1, Math.min(10, Math.round(rawScore || 1)));
-
-  let difficulty: "easy" | "medium" | "hard" | "expert";
-  if (clampedScore <= 3) {
-    difficulty = "easy";
-  } else if (clampedScore <= 5) {
-    difficulty = "medium";
-  } else if (clampedScore <= 7) {
-    difficulty = "hard";
-  } else {
-    difficulty = "expert";
-  }
-
-  return { difficulty, difficultyScore: clampedScore };
+  stats: { timesPlayed: number; clearRate: number } | undefined
+) {
+  if (!stats || stats.timesPlayed < 10) return "unknown";
+  if (stats.clearRate >= 70) return "easy";
+  if (stats.clearRate >= 40) return "medium";
+  if (stats.clearRate >= 20) return "hard";
+  return "expert";
 }
 
 // Shape raw campaign meta rows into the wire `campaign_*` objects, attaching
@@ -77,14 +41,13 @@ async function formatCampaigns(
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
 
-  const [creators, counts, completion, ratingsMap, runStatsMap, enemyStatsMap] =
+  const [creators, counts, completion, ratingsMap, runStatsMap] =
     await Promise.all([
       repo.getCreatorNames(rows.map((r) => r.creatorId)),
       repo.getLevelCounts(ids),
       repo.getCompletionByCampaign(ids, playerId),
       repo.getCampaignRatings(ids),
       repo.getCampaignRunStats(ids),
-      repo.getCampaignEnemyStats(ids),
     ]);
 
   return rows.map((row) => {
@@ -93,12 +56,7 @@ async function formatCampaigns(
     const maxCleared = comp?.maxCleared || 0;
     const ratingEntry = ratingsMap.get(row.id);
     const runEntry = runStatsMap.get(row.id);
-    const enemyEntry = enemyStatsMap.get(row.id);
-    const { difficulty, difficultyScore } = calculateDifficulty(
-      enemyEntry,
-      levelCount,
-      runEntry
-    );
+    const difficulty = calculateDifficulty(runEntry);
 
     return {
       campaign_id: row.id,
@@ -114,10 +72,8 @@ async function formatCampaigns(
       rating: ratingEntry?.rating || 0,
       rating_count: ratingEntry?.ratingCount || 0,
       difficulty,
-      difficulty_score: difficultyScore,
       times_played: runEntry?.timesPlayed || 0,
       clear_rate: runEntry?.clearRate || 0,
-      enemy_count: enemyEntry?.totalEnemies || 0,
     };
   });
 }

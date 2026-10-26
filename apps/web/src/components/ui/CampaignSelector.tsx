@@ -1,61 +1,29 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Search,
-  Layers,
-  Plus,
-  ArrowUp,
-  ArrowDown,
-  X,
-  RotateCcw,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Search, Plus, RotateCcw, Layers } from "lucide-react";
 import { CampaignCard } from "./CampaignCard";
 import { useCampaigns, useMyCampaigns } from "../../hooks/api";
-import { storage } from "../../lib/storage";
-import { Input, Button, Select, IconButton } from "./primitives";
-import type { CampaignDTO } from "@ouigame/shared/api";
+import { Input, Button, Select } from "./primitives";
+import { cn } from "../../lib/cn";
+import type { CampaignDifficulty } from "@ouigame/shared/api";
 
-interface CampaignSelectorState {
-  searchName: string;
-  difficulty: string;
-  status: string;
-  sortBy: string;
-  sortOrder: "asc" | "desc";
-  scrollTop: number;
-}
-
-/**
- * CampaignSelector - Interactive campaign browser with search,
- * difficulty filtering, completion status filtering, and sorting.
- * Styled in the OuiTank arcade art style with solid ink outlines and zero emojis.
- */
 interface CampaignSelectorProps {
   mode?: "play" | "my";
-  onSelect?: (campaignId: number) => void; // play mode
-  onPlay?: (campaignId: number) => void; // my mode
-  onEdit?: (campaignId: number) => void; // my mode
-  onDelete?: (campaignId: number) => void; // my mode
-  onCreate?: () => void; // "New Campaign" clicked (my mode)
+  onSelect?: (campaignId: number) => void;
+  onPlay?: (campaignId: number) => void;
+  onEdit?: (campaignId: number) => void;
+  onDelete?: (campaignId: number) => void;
+  onCreate?: () => void;
 }
 
-function getDifficultyScore(c: CampaignDTO): number {
-  if (c.difficulty_score && c.difficulty_score > 0) {
-    return c.difficulty_score;
-  }
-  switch (c.difficulty) {
-    case "easy":
-      return 2;
-    case "medium":
-      return 5;
-    case "hard":
-      return 7;
-    case "expert":
-      return 9;
-    default:
-      return 5;
-  }
-}
+const difficulties: CampaignDifficulty[] = [
+  "easy",
+  "medium",
+  "hard",
+  "expert",
+  "unknown",
+];
+const difficultyRank = { easy: 0, medium: 1, hard: 2, expert: 3, unknown: 4 };
 
 export function CampaignSelector({
   mode = "play",
@@ -66,339 +34,276 @@ export function CampaignSelector({
   onCreate,
 }: CampaignSelectorProps) {
   const { t } = useTranslation();
-  const listRef = useRef<HTMLDivElement | null>(null);
   const isMy = mode === "my";
-
-  const savedState = useMemo(() => {
-    if (mode !== "play") return null;
-    return storage.getCampaignSelectorState<CampaignSelectorState>();
-  }, [mode]);
-
-  const [searchName, setSearchName] = useState(savedState?.searchName || "");
-  const [difficulty, setDifficulty] = useState<string>(
-    savedState?.difficulty || "all"
-  );
-  const [status, setStatus] = useState<string>(savedState?.status || "all");
-  const [sortBy, setSortBy] = useState<string>(savedState?.sortBy || "rating");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-    savedState?.sortOrder || "desc"
-  );
-
-  // Restore scroll position after mount
-  useEffect(() => {
-    if (mode === "play" && savedState?.scrollTop && listRef.current) {
-      const timer = setTimeout(() => {
-        if (listRef.current) {
-          listRef.current.scrollTop = savedState.scrollTop;
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [mode, savedState?.scrollTop]);
-
-  // Persist state in play mode
-  useEffect(() => {
-    if (mode === "play") {
-      const state: CampaignSelectorState = {
-        searchName,
-        difficulty,
-        status,
-        sortBy,
-        sortOrder,
-        scrollTop: listRef.current?.scrollTop || 0,
-      };
-      storage.setCampaignSelectorState(state);
-    }
-  }, [mode, searchName, difficulty, status, sortBy, sortOrder]);
-
-  const query = isMy
-    ? useMyCampaigns({ name: searchName })
-    : useCampaigns({ name: searchName });
-
-  const rawCampaigns = query.data || [];
-  const isLoading = query.isLoading;
-
-  // Filter campaigns
-  const filteredCampaigns = useMemo(() => {
-    const q = searchName.trim().toLowerCase();
-    return rawCampaigns.filter((c) => {
-      // Search query filter (matches name, description, or author)
-      if (q.length > 0) {
-        const matchesName = c.campaign_name.toLowerCase().includes(q);
-        const matchesDesc = c.campaign_description?.toLowerCase().includes(q);
-        const matchesAuthor = c.campaign_creator_name
-          ?.toLowerCase()
-          .includes(q);
-        if (!matchesName && !matchesDesc && !matchesAuthor) {
-          return false;
-        }
-      }
-
-      // Difficulty filter
-      if (difficulty !== "all" && c.difficulty !== difficulty) {
+  const [search, setSearch] = useState("");
+  const [difficulty, setDifficulty] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [minRating, setMinRating] = useState("all");
+  const [sort, setSort] = useState("newest");
+  const listRef = useRef<HTMLDivElement>(null);
+  // Fetch once. Server name filtering would discard author/description matches.
+  // Both hooks run unconditionally; only the active mode's query is enabled.
+  const publicQuery = useCampaigns({}, !isMy);
+  const myQuery = useMyCampaigns({}, isMy);
+  const query = isMy ? myQuery : publicQuery;
+  const allCampaigns = query.data;
+  const campaigns = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    const filtered = (allCampaigns ?? []).filter((c) => {
+      if (
+        term &&
+        ![
+          c.campaign_name,
+          c.campaign_description,
+          c.campaign_creator_name,
+        ].some((text) => text?.toLocaleLowerCase().includes(term))
+      )
         return false;
-      }
-
-      // Status filter
-      if (status === "completed" && !c.completed) {
+      if (difficulty !== "all" && (c.difficulty ?? "unknown") !== difficulty)
         return false;
-      }
+      if (
+        minRating !== "all" &&
+        (!(c.rating_count > 0) || Number(c.rating) < Number(minRating))
+      )
+        return false;
+      if (status === "completed" && !c.completed) return false;
       if (
         status === "in_progress" &&
-        (c.completed || (c.completion_percent || 0) <= 0)
-      ) {
+        (c.completed || c.completion_percent <= 0)
+      )
         return false;
-      }
-      if (
-        status === "not_started" &&
-        (c.completed || (c.completion_percent || 0) > 0)
-      ) {
+      if (status === "not_started" && (c.completed || c.completion_percent > 0))
         return false;
-      }
-
       return true;
     });
-  }, [rawCampaigns, searchName, difficulty, status]);
-
-  // Sort campaigns
-  const campaigns = useMemo(() => {
-    return [...filteredCampaigns].sort((a, b) => {
-      if (sortBy === "name") {
-        const diff = a.campaign_name.localeCompare(b.campaign_name);
-        return sortOrder === "asc" ? diff : -diff;
-      }
-
-      let aVal = 0;
-      let bVal = 0;
-
-      switch (sortBy) {
+    return filtered.sort((a, b) => {
+      let result = 0;
+      switch (sort) {
         case "rating":
-          aVal = Number(a.rating) || 0;
-          bVal = Number(b.rating) || 0;
+          result =
+            Number(b.rating) - Number(a.rating) ||
+            b.rating_count - a.rating_count;
           break;
-        case "difficulty":
-          aVal = getDifficultyScore(a);
-          bVal = getDifficultyScore(b);
+        case "easiest":
+        case "hardest": {
+          // Unknown difficulty always belongs at the end, in either direction.
+          const ar = difficultyRank[a.difficulty ?? "unknown"];
+          const br = difficultyRank[b.difficulty ?? "unknown"];
+          result =
+            ar === 4 || br === 4
+              ? ar - br
+              : (ar - br) * (sort === "hardest" ? -1 : 1);
           break;
+        }
         case "popularity":
-          aVal = a.times_played || 0;
-          bVal = b.times_played || 0;
+          result = b.times_played - a.times_played;
           break;
-        case "levels":
-          aVal = a.level_count || 0;
-          bVal = b.level_count || 0;
-          break;
-        case "progress":
-          aVal = a.completion_percent || 0;
-          bVal = b.completion_percent || 0;
+        case "name":
+          result = a.campaign_name.localeCompare(b.campaign_name);
           break;
         default:
-          return 0;
+          result = b.campaign_id - a.campaign_id;
       }
-
-      return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      return result || b.campaign_id - a.campaign_id;
     });
-  }, [filteredCampaigns, sortBy, sortOrder]);
-
-  const toggleSortOrder = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-  };
+  }, [allCampaigns, search, difficulty, status, minRating, sort]);
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [search, difficulty, status, minRating, sort]);
 
   const isFiltered =
-    searchName.trim().length > 0 || difficulty !== "all" || status !== "all";
-
-  const resetFilters = () => {
-    setSearchName("");
+    !!search.trim() ||
+    difficulty !== "all" ||
+    status !== "all" ||
+    minRating !== "all";
+  const reset = () => {
+    setSearch("");
     setDifficulty("all");
     setStatus("all");
+    setMinRating("all");
   };
-
-  const difficultyOptions = [
-    { value: "all", label: t("campaignSelector.allDifficulties") },
-    { value: "easy", label: t("campaignSelector.easy") },
-    { value: "medium", label: t("campaignSelector.medium") },
-    { value: "hard", label: t("campaignSelector.hard") },
-    { value: "expert", label: t("campaignSelector.expert") },
-  ];
-
-  const statusOptions = [
-    { value: "all", label: t("campaignSelector.allStatus") },
-    { value: "completed", label: t("campaignSelector.completed") },
-    { value: "in_progress", label: t("campaignSelector.inProgress") },
-    { value: "not_started", label: t("campaignSelector.notStarted") },
-  ];
-
-  const sortOptions = [
-    { value: "rating", label: t("campaignSelector.sortByRating") },
-    { value: "difficulty", label: t("campaignSelector.sortByDifficulty") },
-    { value: "popularity", label: t("campaignSelector.sortByPopularity") },
-    { value: "levels", label: t("campaignSelector.sortByLevelCount") },
-    { value: "progress", label: t("campaignSelector.sortByProgress") },
-    { value: "name", label: t("campaignSelector.sortByName") },
-  ];
+  const options = (items: string[]) =>
+    items.map((value) => ({ value, label: t(`campaignSelector.${value}`) }));
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Top search & create row */}
-      <div className="flex gap-2.5 mb-3 flex-wrap items-center">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none"
-          />
-          <Input
-            className="pl-10 pr-9"
-            placeholder={t("campaignSelector.searchPlaceholder")}
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-          />
-          {searchName && (
-            <button
-              type="button"
-              onClick={() => setSearchName("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink p-1 rounded-full cursor-pointer transition-colors"
-              aria-label="Clear search"
-            >
-              <X size={15} />
-            </button>
-          )}
-        </div>
-
-        {isMy && onCreate && (
-          <Button
-            variant="green"
-            onClick={onCreate}
-            className="gap-1.5 shrink-0"
-          >
-            <Plus size={18} /> {t("campaignSelector.newCampaign")}
-          </Button>
-        )}
-      </div>
-
-      {/* Filter and sort toolbar */}
-      <div className="flex flex-wrap items-center gap-2 mb-3 pb-2.5 border-b-2 border-ink/10">
-        {/* Difficulty Filter */}
-        <div className="flex-1 min-w-[130px] sm:flex-initial">
-          <Select
-            aria-label={t("campaignSelector.filterDifficulty")}
-            value={difficulty}
-            onValueChange={setDifficulty}
-            options={difficultyOptions}
-            className="w-full text-xs py-2 px-3 h-10"
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex-1 min-w-[130px] sm:flex-initial">
-          <Select
-            aria-label={t("campaignSelector.filterStatus")}
-            value={status}
-            onValueChange={setStatus}
-            options={statusOptions}
-            className="w-full text-xs py-2 px-3 h-10"
-          />
-        </div>
-
-        {/* Sort Select */}
-        <div className="flex-1 min-w-[130px] sm:flex-initial">
-          <Select
-            aria-label={t("campaignSelector.sortBy")}
-            value={sortBy}
-            onValueChange={setSortBy}
-            options={sortOptions}
-            className="w-full text-xs py-2 px-3 h-10"
-          />
-        </div>
-
-        {/* Sort Order Toggle */}
-        <IconButton
-          size="sm"
-          onClick={toggleSortOrder}
-          className="size-10 shrink-0"
-          aria-label={
-            sortOrder === "asc"
-              ? t("campaignSelector.ascending")
-              : t("campaignSelector.descending")
-          }
-          title={
-            sortOrder === "asc"
-              ? t("campaignSelector.ascending")
-              : t("campaignSelector.descending")
-          }
-        >
-          {sortOrder === "asc" ? (
-            <ArrowUp size={16} />
-          ) : (
-            <ArrowDown size={16} />
-          )}
-        </IconButton>
-
-        {/* Clear Filters Button (shown when any filter is active) */}
-        {isFiltered && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            className="gap-1 text-xs text-ink-soft hover:text-ink h-10 ml-auto shrink-0 border-2 border-dashed border-ink/20"
-          >
-            <RotateCcw size={13} />
-            <span>{t("campaignSelector.clearFilters")}</span>
-          </Button>
-        )}
-      </div>
-
-      {/* Results counter bar */}
-      {!isLoading && rawCampaigns.length > 0 && (
-        <div className="flex items-center justify-between text-xs font-semibold text-ink-soft px-1 mb-2">
-          <span>
-            {isFiltered
-              ? t("campaignSelector.showingFiltered", {
-                  filtered: campaigns.length,
-                  total: rawCampaigns.length,
-                })
-              : t("campaignSelector.showingCount", {
-                  count: campaigns.length,
-                })}
-          </span>
-        </div>
-      )}
-
-      {/* Campaign List */}
-      <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-2 py-1">
-        {isLoading ? (
-          <div className="text-center py-12 text-ink-soft font-medium">
-            {t("campaignSelector.loadingCampaigns")}
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <div className="shrink-0 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              size={19}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft"
+            />
+            <Input
+              aria-label={t("campaignSelector.searchPlaceholder")}
+              className="pl-11"
+              placeholder={t("campaignSelector.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        ) : rawCampaigns.length === 0 ? (
-          <div className="text-center text-ink-soft py-12">
-            <Layers className="w-16 h-16 mx-auto mb-4 opacity-40 text-ink" />
-            <p className="font-bold text-base text-ink">
-              {isMy
-                ? t("campaignSelector.noCampaignsMine")
-                : t("campaignSelector.noCampaigns")}
-            </p>
+          {isMy && onCreate && (
+            <Button
+              variant="green"
+              onClick={onCreate}
+              className="shrink-0 gap-1.5"
+            >
+              <Plus size={18} />
+              {t("campaignSelector.newCampaign")}
+            </Button>
+          )}
+        </div>
+        <fieldset>
+          <legend className="mb-2 text-xs font-semibold text-ink-soft">
+            {t("campaignSelector.filterDifficulty")}
+          </legend>
+          <div className="flex flex-wrap gap-1.5">
+            {["all", ...difficulties].map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={difficulty === value}
+                onClick={() => setDifficulty(value)}
+                className={cn(
+                  "min-h-9 rounded-lg border-2 px-3 py-1 text-sm font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue/30",
+                  difficulty === value
+                    ? "border-ink bg-ink text-white"
+                    : "border-ink/20 bg-white text-ink hover:border-ink"
+                )}
+              >
+                {t(
+                  `campaignSelector.${value === "all" ? "allDifficulties" : value}`
+                )}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[
+            {
+              label: "filterStatus",
+              value: status,
+              change: setStatus,
+              items: options([
+                "allStatus",
+                "notStarted",
+                "inProgress",
+                "completed",
+              ]).map((o, i) => ({
+                ...o,
+                value: ["all", "not_started", "in_progress", "completed"][i]!,
+              })),
+            },
+            {
+              label: "filterRating",
+              value: minRating,
+              change: setMinRating,
+              items: [
+                { value: "all", label: t("campaignSelector.anyRating") },
+                {
+                  value: "4",
+                  label: t("campaignSelector.ratingAtLeast", { rating: 4 }),
+                },
+                {
+                  value: "3",
+                  label: t("campaignSelector.ratingAtLeast", { rating: 3 }),
+                },
+              ],
+            },
+            {
+              label: "sortBy",
+              value: sort,
+              change: setSort,
+              items: options([
+                "newest",
+                "rating",
+                "easiest",
+                "hardest",
+                "popularity",
+                "name",
+              ]),
+            },
+          ].map((control) => (
+            <label
+              key={control.label}
+              className={cn(
+                "flex min-w-0 flex-col gap-1 text-xs font-semibold text-ink-soft",
+                control.label === "sortBy" && "col-span-2 sm:col-span-1"
+              )}
+            >
+              <span>{t(`campaignSelector.${control.label}`)}</span>
+              <Select
+                aria-label={t(`campaignSelector.${control.label}`)}
+                value={control.value}
+                onValueChange={control.change}
+                options={control.items}
+                className="w-full min-h-10 text-sm px-3 py-2"
+              />
+            </label>
+          ))}
+        </div>
+        <details className="text-xs text-ink-soft leading-relaxed">
+          <summary className="cursor-pointer w-fit">
+            {t("campaignSelector.difficultyAbout")}
+          </summary>
+          <p className="mt-1 max-w-prose">
+            {t("campaignSelector.difficultyHelp")}
+          </p>
+        </details>
+      </div>
+      <div className="flex min-h-7 shrink-0 items-center justify-between gap-2 border-t-2 border-ink/10 pt-3 text-sm text-ink-soft">
+        <span role="status" aria-live="polite">
+          {!query.isLoading &&
+            !query.isError &&
+            t("campaignSelector.showingFiltered", {
+              filtered: campaigns.length,
+              total: allCampaigns?.length ?? 0,
+            })}
+        </span>
+        {isFiltered && (
+          <button
+            type="button"
+            onClick={reset}
+            className="flex items-center gap-1.5 text-blue-d font-semibold cursor-pointer hover:underline"
+          >
+            <RotateCcw size={14} />
+            {t("campaignSelector.clearFilters")}
+          </button>
+        )}
+      </div>
+      <div
+        ref={listRef}
+        className="min-h-0 flex-1 overflow-y-auto px-1 pb-2 pt-1 space-y-3"
+      >
+        {query.isLoading ? (
+          <p className="py-12 text-center text-ink-soft">
+            {t("campaignSelector.loadingCampaigns")}
+          </p>
+        ) : query.isError ? (
+          <div className="py-12 text-center space-y-3">
+            <p>{t("campaignSelector.loadError")}</p>
+            <Button size="sm" onClick={() => query.refetch()}>
+              {t("campaignSelector.retry")}
+            </Button>
           </div>
         ) : campaigns.length === 0 ? (
-          <div className="text-center text-ink-soft py-12 flex flex-col items-center">
-            <div className="w-14 h-14 rounded-2xl bg-field border-3 border-ink flex items-center justify-center mb-3 text-ink-soft shadow-[0_3px_0_rgba(0,0,0,0.15)]">
-              <SlidersHorizontal size={24} />
-            </div>
-            <p className="font-bold text-base text-ink mb-1">
-              {t("campaignSelector.noMatchingCampaigns")}
+          <div className="flex flex-col items-center py-10 text-center gap-3 text-ink-soft">
+            <Layers size={36} aria-hidden="true" />
+            <p>
+              {t(
+                isFiltered
+                  ? "campaignSelector.noMatchingCampaigns"
+                  : isMy
+                    ? "campaignSelector.noCampaignsMine"
+                    : "campaignSelector.noCampaigns"
+              )}
             </p>
-            <p className="text-xs text-ink-soft mb-4 max-w-xs">
-              Try adjusting your search query, difficulty tier, or status
-              filter.
-            </p>
-            <Button
-              variant="blue"
-              size="sm"
-              onClick={resetFilters}
-              className="gap-1.5"
-            >
-              <RotateCcw size={14} />
-              {t("campaignSelector.resetFilters")}
-            </Button>
+            {isFiltered && (
+              <Button variant="blue" size="sm" onClick={reset}>
+                {t("campaignSelector.resetFilters")}
+              </Button>
+            )}
           </div>
         ) : (
           campaigns.map((c) => (
@@ -407,21 +312,22 @@ export function CampaignSelector({
               campaignId={c.campaign_id}
               name={c.campaign_name}
               description={c.campaign_description}
-              levelCount={c.level_count || 0}
-              completionPercent={c.completion_percent || 0}
-              completed={c.completed || false}
+              levelCount={c.level_count}
+              completionPercent={c.completion_percent}
+              completed={c.completed}
               author={c.campaign_creator_name}
               rating={c.rating}
               ratingCount={c.rating_count}
               difficulty={c.difficulty}
-              difficultyScore={c.difficulty_score}
               timesPlayed={c.times_played}
               clearRate={c.clear_rate}
-              enemyCount={c.enemy_count}
-              onClick={() => (isMy ? undefined : onSelect?.(c.campaign_id))}
-              {...(isMy && onPlay ? { onPlay } : {})}
-              {...(isMy && onEdit ? { onEdit } : {})}
-              {...(isMy && onDelete ? { onDelete } : {})}
+              {...(!isMy
+                ? { onClick: () => onSelect?.(c.campaign_id) }
+                : {
+                    ...(onPlay ? { onPlay } : {}),
+                    ...(onEdit ? { onEdit } : {}),
+                    ...(onDelete ? { onDelete } : {}),
+                  })}
             />
           ))
         )}

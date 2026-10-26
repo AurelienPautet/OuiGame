@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const CampaignDifficultySchema = z.enum([
+  "unknown",
   "easy",
   "medium",
   "hard",
@@ -20,11 +21,9 @@ export const CampaignDTOSchema = z.object({
   completed: z.boolean(),
   rating: z.union([z.string(), z.number()]).default(0),
   rating_count: z.number().default(0),
-  difficulty: CampaignDifficultySchema.default("medium"),
-  difficulty_score: z.number().default(1),
+  difficulty: CampaignDifficultySchema.default("unknown"),
   times_played: z.number().default(0),
   clear_rate: z.number().default(0),
-  enemy_count: z.number().default(0),
 });
 export type CampaignDTO = z.infer<typeof CampaignDTOSchema>;
 

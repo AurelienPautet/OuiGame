@@ -434,3 +434,78 @@ describe("POST /api/campaigns/:id/runs", () => {
     }
   });
 });
+
+describe("campaign discovery metadata", () => {
+  test.each([
+    [0, "unknown"],
+    [9, "unknown"],
+    [10, "easy"],
+  ])("requires ten runs for difficulty (%i runs)", async (runs, difficulty) => {
+    const { player } = await createUserWithSession();
+    const [level] = await makeSoloLevels(player.id, 1);
+    const campaign = await createCampaign(player.id, [level.id]);
+    for (let i = 0; i < runs; i++)
+      await createCampaignRun(player.id, campaign.id, {
+        completed: true,
+        levelsCleared: 1,
+      });
+    const res = await request(app).get("/api/campaigns");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({
+      difficulty,
+      times_played: runs,
+      rating: 0,
+      rating_count: 0,
+    });
+  });
+  test.each([
+    [7, "easy"],
+    [6, "medium"],
+    [4, "medium"],
+    [3, "hard"],
+    [2, "hard"],
+    [1, "expert"],
+    [0, "expert"],
+  ])(
+    "uses observed clear rate (%i wins in 10 runs)",
+    async (wins, difficulty) => {
+      const { player } = await createUserWithSession();
+      const [level] = await makeSoloLevels(player.id, 1);
+      const campaign = await createCampaign(player.id, [level.id]);
+      for (let i = 0; i < 10; i++)
+        await createCampaignRun(player.id, campaign.id, {
+          completed: i < wins,
+          levelsCleared: i < wins ? 1 : 0,
+        });
+      const res = await request(app).get("/api/campaigns");
+      expect(res.status).toBe(200);
+      expect(res.body[0]).toMatchObject({ difficulty, clear_rate: wins * 10 });
+    }
+  );
+  test("averages actual level ratings and excludes unpublished levels", async () => {
+    const { player } = await createUserWithSession();
+    const levels = await makeSoloLevels(player.id, 3);
+    await createCampaign(
+      player.id,
+      levels.map((l) => l.id)
+    );
+    await db.insert(schema.ratings).values(
+      levels.map((l, i) => ({
+        playerId: player.id,
+        levelId: l.id,
+        stars: [5, 3, 1][i],
+      }))
+    );
+    await db
+      .update(schema.levels)
+      .set({ status: "down" })
+      .where(eq(schema.levels.id, levels[2].id));
+    const res = await request(app).get("/api/campaigns");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({
+      rating: 4,
+      rating_count: 2,
+      level_count: 2,
+    });
+  });
+});

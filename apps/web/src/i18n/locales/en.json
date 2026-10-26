@@ -185,7 +185,7 @@
     "best": "best {{time}}"
   },
   "campaignSelector": {
-    "searchPlaceholder": "Search campaign name…",
+    "searchPlaceholder": "Search campaigns or creators…",
     "newCampaign": "New Campaign",
     "loadingCampaigns": "Loading campaigns…",
     "noCampaignsMine": "No campaigns yet. Create your first campaign!",
@@ -215,7 +215,21 @@
     "showingCount_one": "{{count}} campaign",
     "showingCount_other": "{{count}} campaigns",
     "showingFiltered": "Showing {{filtered}} of {{total}} campaigns",
-    "noMatchingCampaigns": "No campaigns match the selected filters."
+    "noMatchingCampaigns": "No campaigns match the selected filters.",
+    "unknown": "Not enough runs",
+    "filterRating": "Rating",
+    "anyRating": "Any rating",
+    "ratingAtLeast": "{{rating}} stars & up",
+    "newest": "Newest first",
+    "rating": "Highest rated",
+    "easiest": "Easiest first",
+    "hardest": "Hardest first",
+    "popularity": "Most played",
+    "name": "Name (A–Z)",
+    "loadError": "Could not load campaigns.",
+    "retry": "Try again",
+    "difficultyHelp": "Difficulty uses completed runs: Easy ≥70% cleared, Medium ≥40%, Hard ≥20%, Expert <20%. At least 10 runs required.",
+    "difficultyAbout": "How difficulty works"
   },
   "campaignCard": {
     "levels_one": "{{count}} level",
@@ -233,7 +247,9 @@
     "expert": "Expert",
     "play": "Play",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "unknown": "Not enough runs",
+    "ratingHelp": "Average of ratings on the campaign’s levels; not campaign reviews."
   },
   "levelSelectorModal": {
     "title": "Select Level"

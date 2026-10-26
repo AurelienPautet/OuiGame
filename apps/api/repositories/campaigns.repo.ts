@@ -148,68 +148,6 @@ async function getCampaignRunStats(campaignIds: number[]) {
   );
 }
 
-// Enemy bot composition and threat metrics per campaign from playable level grids
-async function getCampaignEnemyStats(campaignIds: number[]) {
-  if (campaignIds.length === 0) return new Map();
-  const rows = await db
-    .select({
-      campaignId: campaignLevels.campaignId,
-      levelId: levels.id,
-      content: levels.content,
-    })
-    .from(campaignLevels)
-    .innerJoin(levels, eq(campaignLevels.levelId, levels.id))
-    .where(
-      and(
-        inArray(campaignLevels.campaignId, campaignIds),
-        eq(levels.status, "up")
-      )
-    );
-
-  const BOT_WEIGHTS: Record<number, number> = {
-    1: 1.0, // Brown: stationary, single slow shot
-    2: 1.2, // Grey: slow patrol, single shot
-    3: 1.8, // Teal: fast patrol, single shot
-    4: 2.2, // Green: stationary, ricocheting shot
-    5: 2.5, // Yellow: moves, drops mines
-    6: 3.0, // Purple: stealth/invisible patrol
-    7: 3.5, // Magenta: fast, dual shots
-    8: 4.2, // White: stealth, dual shots, mines
-    9: 5.0, // Black: ultra fast, dual rockets, mines
-  };
-
-  const map = new Map<
-    number,
-    { totalEnemies: number; threatScore: number; levelCount: number }
-  >();
-
-  for (const row of rows) {
-    let stats = map.get(row.campaignId);
-    if (!stats) {
-      stats = { totalEnemies: 0, threatScore: 0, levelCount: 0 };
-      map.set(row.campaignId, stats);
-    }
-    stats.levelCount += 1;
-
-    try {
-      const parsed =
-        typeof row.content === "string" ? JSON.parse(row.content) : row.content;
-      const data: number[] = Array.isArray(parsed?.data) ? parsed.data : [];
-      for (const cell of data) {
-        if (cell > 10 && cell <= 19) {
-          const botType = cell - 10;
-          stats.totalEnemies += 1;
-          stats.threatScore += BOT_WEIGHTS[botType] ?? 1.5;
-        }
-      }
-    } catch {
-      // ignore invalid json content
-    }
-  }
-
-  return map;
-}
-
 // --- Campaign rows ---
 
 // Campaigns whose name matches `name`, newest first.
@@ -383,7 +321,6 @@ export {
   getCompletionByCampaign,
   getCampaignRatings,
   getCampaignRunStats,
-  getCampaignEnemyStats,
   listCampaigns,
   listCampaignsByCreator,
   getCampaignById,

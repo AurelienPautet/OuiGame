@@ -185,7 +185,7 @@
     "best": "meilleur {{time}}"
   },
   "campaignSelector": {
-    "searchPlaceholder": "Cherche une campagne…",
+    "searchPlaceholder": "Cherche une campagne ou un créateur…",
     "newCampaign": "Nouvelle campagne",
     "loadingCampaigns": "Chargement des campagnes…",
     "noCampaignsMine": "Aucune campagne pour le moment. Crée ta première campagne !",
@@ -215,7 +215,21 @@
     "showingCount_one": "{{count}} campagne",
     "showingCount_other": "{{count}} campagnes",
     "showingFiltered": "Affichage de {{filtered}} sur {{total}} campagnes",
-    "noMatchingCampaigns": "Aucune campagne ne correspond aux filtres sélectionnés."
+    "noMatchingCampaigns": "Aucune campagne ne correspond aux filtres sélectionnés.",
+    "unknown": "Pas assez de parties",
+    "filterRating": "Note",
+    "anyRating": "Toutes les notes",
+    "ratingAtLeast": "{{rating}} étoiles et plus",
+    "newest": "Plus récentes",
+    "rating": "Mieux notées",
+    "easiest": "Plus faciles",
+    "hardest": "Plus difficiles",
+    "popularity": "Plus jouées",
+    "name": "Nom (A–Z)",
+    "loadError": "Impossible de charger les campagnes.",
+    "retry": "Réessayer",
+    "difficultyHelp": "Difficulté selon les parties terminées : Facile ≥70 % de réussite, Moyen ≥40 %, Difficile ≥20 %, Expert <20 %. Au moins 10 parties requises.",
+    "difficultyAbout": "Comment fonctionne la difficulté"
   },
   "campaignCard": {
     "levels_one": "{{count}} niveau",
@@ -233,7 +247,9 @@
     "expert": "Expert",
     "play": "Jouer",
     "edit": "Modifier",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "unknown": "Pas assez de parties",
+    "ratingHelp": "Moyenne des notes des niveaux de la campagne ; pas des avis sur la campagne."
   },
   "levelSelectorModal": {
     "title": "Sélectionne un niveau"

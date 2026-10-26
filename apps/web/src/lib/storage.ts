@@ -11,7 +11,6 @@ const KEYS = {
   tankBodyColor: "tank_body_color", // resolved colour NAME
   tankTurretColor: "tank_turret_color", // resolved colour NAME
   soloSelectorState: "soloLevelSelectorState", // JSON blob
-  campaignSelectorState: "campaignSelectorState", // JSON blob
   settings: "settings", // keybindings + effect toggles (JSON blob)
   botSystem: "bot_system", // dev toggle: which bot AI solo rooms run
   garage: "garage", // OuiCoins + owned/equipped tank paints (JSON blob)
@@ -79,14 +78,6 @@ export const storage = {
   getSoloSelectorState: <T>(): T | null => readJson<T>(KEYS.soloSelectorState),
   setSoloSelectorState: (value: unknown) =>
     window.localStorage.setItem(KEYS.soloSelectorState, JSON.stringify(value)),
-
-  getCampaignSelectorState: <T>(): T | null =>
-    readJson<T>(KEYS.campaignSelectorState),
-  setCampaignSelectorState: (value: unknown) =>
-    window.localStorage.setItem(
-      KEYS.campaignSelectorState,
-      JSON.stringify(value)
-    ),
 
   // User settings blob (keybindings + effect toggles); see lib/settings.ts,
   // which merges this over the defaults so partial/older blobs stay valid.

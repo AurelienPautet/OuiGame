@@ -183,7 +183,7 @@
     "best": "beste {{time}}"
   },
   "campaignSelector": {
-    "searchPlaceholder": "Kampagnennamen durchsuchen…",
+    "searchPlaceholder": "Kampagnen oder Ersteller suchen…",
     "newCampaign": "Neue Kampagne",
     "loadingCampaigns": "Kampagnen werden geladen…",
     "noCampaignsMine": "Noch keine Kampagnen. Erstelle deine erste Kampagne!",
@@ -213,7 +213,21 @@
     "showingCount_one": "{{count}} Kampagne",
     "showingCount_other": "{{count}} Kampagnen",
     "showingFiltered": "{{filtered}} von {{total}} Kampagnen werden angezeigt",
-    "noMatchingCampaigns": "Keine Kampagnen entsprechen den ausgewählten Filtern."
+    "noMatchingCampaigns": "Keine Kampagnen entsprechen den ausgewählten Filtern.",
+    "unknown": "Zu wenige Spiele",
+    "filterRating": "Bewertung",
+    "anyRating": "Alle Bewertungen",
+    "ratingAtLeast": "Ab {{rating}} Sternen",
+    "newest": "Neueste zuerst",
+    "rating": "Beste Bewertung",
+    "easiest": "Leichteste zuerst",
+    "hardest": "Schwerste zuerst",
+    "popularity": "Meistgespielt",
+    "name": "Name (A–Z)",
+    "loadError": "Kampagnen konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "difficultyHelp": "Schwierigkeit nach beendeten Spielen: Leicht ≥70 % geschafft, Mittel ≥40 %, Schwer ≥20 %, Experte <20 %. Mindestens 10 Spiele erforderlich.",
+    "difficultyAbout": "So funktioniert die Schwierigkeit"
   },
   "campaignCard": {
     "levels_one": "{{count}} Level",
@@ -231,7 +245,9 @@
     "expert": "Experte",
     "play": "Spielen",
     "edit": "Bearbeiten",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "unknown": "Zu wenige Spiele",
+    "ratingHelp": "Durchschnitt der Levelbewertungen dieser Kampagne; keine Kampagnenbewertungen."
   },
   "levelSelectorModal": {
     "title": "Level wählen"

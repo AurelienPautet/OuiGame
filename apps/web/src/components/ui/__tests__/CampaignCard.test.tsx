@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../test/renderWithProviders";
 import { CampaignCard } from "../CampaignCard";
 
+beforeAll(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+});
 describe("CampaignCard", () => {
   it("shows campaign title, author, and level count", () => {
     renderWithProviders(
@@ -41,26 +44,14 @@ describe("CampaignCard", () => {
 
   it("renders difficulty badges for various difficulty levels", () => {
     const { rerender } = renderWithProviders(
-      <CampaignCard
-        campaignId={1}
-        name="Training Camp"
-        difficulty="easy"
-        difficultyScore={2}
-      />
+      <CampaignCard campaignId={1} name="Training Camp" difficulty="easy" />
     );
     expect(screen.getByText("Easy")).toBeTruthy();
-    expect(screen.getByText(/2\/10/)).toBeTruthy();
 
     rerender(
-      <CampaignCard
-        campaignId={1}
-        name="Nightmare Citadel"
-        difficulty="hard"
-        difficultyScore={7}
-      />
+      <CampaignCard campaignId={1} name="Nightmare Citadel" difficulty="hard" />
     );
     expect(screen.getByText("Hard")).toBeTruthy();
-    expect(screen.getByText(/7\/10/)).toBeTruthy();
   });
 
   it("shows bot count and run stats when available", () => {
@@ -68,12 +59,10 @@ describe("CampaignCard", () => {
       <CampaignCard
         campaignId={1}
         name="Warzone"
-        enemyCount={24}
         timesPlayed={40}
         clearRate={65}
       />
     );
-    expect(screen.getByText(/24/)).toBeTruthy();
     expect(screen.getByText(/40 plays/i)).toBeTruthy();
     expect(screen.getByText(/65% clear/i)).toBeTruthy();
   });
@@ -118,4 +107,17 @@ describe("CampaignCard", () => {
     fireEvent.click(deleteBtn);
     expect(onDelete).toHaveBeenCalledWith(42);
   });
+});
+
+it("supports keyboard selection and does not invent difficulty for missing data", () => {
+  const select = vi.fn();
+  renderWithProviders(
+    <CampaignCard campaignId={1} name="Accessible campaign" onClick={select} />
+  );
+  const card = screen.getByRole("button", { name: "Accessible campaign" });
+  fireEvent.keyDown(card, { key: "Enter" });
+  fireEvent.keyDown(card, { key: " " });
+  expect(select).toHaveBeenCalledTimes(2);
+  expect(screen.getByText("Not enough runs")).toBeTruthy();
+  expect(screen.queryByRole("progressbar")).toBeNull();
 });
