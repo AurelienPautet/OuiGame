@@ -14,6 +14,7 @@ vi.mock("../../lib/storage", () => ({
   storage: {
     getSessionId: vi.fn(),
     getClientId: vi.fn(() => "mock-client-id"),
+    getPlayerName: vi.fn(() => "mock-player-name"),
   },
 }));
 
@@ -45,6 +46,7 @@ describe("SocketContext", () => {
     expect(cb).toHaveBeenCalledWith({
       token: "tok",
       clientId: "mock-client-id",
+      playerName: "mock-player-name",
     });
   });
 
@@ -64,32 +66,41 @@ describe("SocketContext", () => {
     const { result } = render();
     const sock = ioMock.mock.results[0]!.value;
 
-    expect(result.current.serverId).toBe(null);
-    act(() => handlerFor(sock, "serverid")("srv-abc123"));
-    expect(result.current.serverId).toBe("srv-abc123");
+    expect(result.current.serverId).toBeNull();
+    act(() => handlerFor(sock, "serverid")("srv-abc-123"));
+    expect(result.current.serverId).toBe("srv-abc-123");
   });
 
   it("re-auths the live socket on auth change and cleans up on unmount", () => {
+    let authListener: () => void = () => {};
+    onAuthChangeMock.mockImplementation((fn: () => void) => {
+      authListener = fn;
+      return () => {};
+    });
+
     const { unmount } = render();
     const sock = ioMock.mock.results[0]!.value;
-    const authCb = onAuthChangeMock.mock.calls[0]![0];
 
-    getSessionId.mockReturnValue("tok2");
-    act(() => authCb());
-    expect(sock.emit).toHaveBeenCalledWith("authenticate", "tok2");
+    // Login with a fresh token emits authenticate.
+    getSessionId.mockReturnValue("fresh-tok");
+    act(() => authListener());
+    expect(sock.emit).toHaveBeenCalledWith("authenticate", "fresh-tok");
 
+    // Logout emits deauthenticate.
     getSessionId.mockReturnValue(null);
-    act(() => authCb());
+    act(() => authListener());
     expect(sock.emit).toHaveBeenCalledWith("deauthenticate");
 
     unmount();
-    expect(sock.disconnect).toHaveBeenCalled();
+    expect(sock.disconnect).toHaveBeenCalledTimes(1);
   });
 
   it("throws when used outside a provider", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    // Suppress console.error from React's uncaught error log.
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => renderHook(() => useSocket())).toThrow(
-      /must be used within SocketProvider/
+      "useSocket must be used within SocketProvider"
     );
+    spy.mockRestore();
   });
 });

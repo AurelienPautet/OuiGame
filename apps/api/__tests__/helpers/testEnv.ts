@@ -10,13 +10,13 @@ import dotenv from "dotenv";
 dotenv.config({ path: path.join(__dirname, "../../../../.env") });
 
 const DEFAULTS = {
-  host: "localhost",
-  port: "5433",
-  user: "ouigame",
-  password: "ouigame",
+  host: process.env.DB_HOST || "localhost",
+  port: process.env.DB_PORT || "5433",
+  user: process.env.DB_USER || "ouigame",
+  password: process.env.DB_PASSWORD || "ouigame",
   name: "ouigame_test",
   // Database used purely as an entry point to issue CREATE/DROP DATABASE.
-  adminDb: "ouigame",
+  adminDb: process.env.DB_NAME || "ouigame",
 };
 
 function resolved() {

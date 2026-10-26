@@ -11,6 +11,7 @@ import type {
 import * as repo from "../repositories/admin.stats.repo";
 import * as dailyActivityRepo from "../repositories/dailyActivity.repo";
 import * as playSessions from "../socket/playSessions";
+import { getConnectedCounts } from "../socket/connectedPlayers";
 
 // Drizzle aggregates (sum/count) arrive as strings or null; coerce to a number.
 function n(value: unknown): number {
@@ -158,6 +159,7 @@ async function getOverview(): Promise<AdminOverview> {
       active7d: Math.max(n(activeVisitors.active7d), n(activeP.active7d)),
       active30d: Math.max(n(activeVisitors.active30d), n(activeP.active30d)),
       guestsToday: n(activeVisitors.guestsToday),
+      connected: getConnectedCounts(),
     },
     content: {
       levels: levelsTotal,

@@ -18,6 +18,7 @@ import {
   Globe,
   Clock,
   Timer,
+  Radio,
   type LucideIcon,
 } from "lucide-react";
 import { useAdminOverview, useAdminTimeseries } from "../../hooks/api";
@@ -31,6 +32,7 @@ import {
 } from "../ui/primitives";
 import { StatCard, type StatTone } from "./StatCard";
 import { LineChart, BarChart } from "./charts";
+import { ConnectedPlayersSection } from "./ConnectedPlayersSection";
 
 type TimeRange = "24h" | "7d" | "30d" | "90d";
 
@@ -67,6 +69,13 @@ export function OverviewTab() {
 
   const kpis: Kpi[] = overview
     ? [
+        {
+          label: "Connected Now",
+          value: overview.players.connected?.total ?? 0,
+          hint: `${overview.players.connected?.registered ?? 0} reg · ${overview.players.connected?.guests ?? 0} guests`,
+          tone: "green",
+          icon: Radio,
+        },
         {
           label: "Total Players",
           value: overview.players.total,
@@ -240,6 +249,9 @@ export function OverviewTab() {
           ))}
         </div>
       )}
+
+      {/* Live connected players detail table */}
+      <ConnectedPlayersSection />
 
       {/* Activity timeseries */}
       <ChartCard

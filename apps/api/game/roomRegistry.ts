@@ -8,6 +8,7 @@ import type { LobbyState } from "@ouigame/shared/types";
 import * as levelsService from "../services/levels.service";
 import * as levelsRepo from "../repositories/levels.repo";
 import { setRoomsRef } from "../routes/rooms.routes";
+import { setConnectedRoomsRef } from "../socket/connectedPlayers";
 import type { AppServer, AppSocket } from "../socket/types";
 
 // Grace period before an emptied room is actually removed (see deleteRoomIfEmpty).
@@ -35,6 +36,7 @@ function createRoomRegistry({
   // Share the SAME object reference with the HTTP routes (load-bearing: the
   // routes read this exact object; never replace it).
   setRoomsRef(rooms);
+  setConnectedRoomsRef(rooms);
 
   // Broadcast the room list. `socket === 0` => broadcast to the whole lobby;
   // otherwise emit to that one socket.

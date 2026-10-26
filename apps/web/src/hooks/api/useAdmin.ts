@@ -12,6 +12,7 @@ import type {
   AdminLoginsParams,
   AdminAuditParams,
   AdminTimeseriesParams,
+  AdminConnectedPlayersParams,
 } from "../../api/endpoints/admin";
 import type {
   AdminUpdateUserRequest,
@@ -49,6 +50,19 @@ export const useAdminTimeseries = (
     queryFn: () => adminApi.getTimeseries(params),
     enabled: storage.hasSession(),
     staleTime: STALE_TIME,
+  });
+};
+
+export const useAdminConnectedPlayers = (
+  params?: AdminConnectedPlayersParams,
+  options?: { refetchInterval?: number | false }
+) => {
+  return useQuery({
+    queryKey: ["admin", "connected-players", params],
+    queryFn: () => adminApi.getConnectedPlayers(params),
+    enabled: storage.hasSession(),
+    staleTime: 5 * 1000,
+    refetchInterval: options?.refetchInterval ?? 5000,
   });
 };
 
