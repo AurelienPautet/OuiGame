@@ -228,8 +228,7 @@
     "name": "Nom (A–Z)",
     "loadError": "Impossible de charger les campagnes.",
     "retry": "Réessayer",
-    "difficultyHelp": "Difficulté selon les parties terminées : Facile ≥70 % de réussite, Moyen ≥40 %, Difficile ≥20 %, Expert <20 %. Au moins 10 parties requises.",
-    "difficultyAbout": "Comment fonctionne la difficulté"
+    "difficultyHelp": "Difficulté selon les parties terminées : Facile ≥70 % de réussite, Moyen ≥40 %, Difficile ≥20 %, Expert <20 %. Au moins 10 parties requises."
   },
   "campaignCard": {
     "levels_one": "{{count}} niveau",

@@ -226,8 +226,7 @@
     "name": "Name (A–Z)",
     "loadError": "Kampagnen konnten nicht geladen werden.",
     "retry": "Erneut versuchen",
-    "difficultyHelp": "Schwierigkeit nach beendeten Spielen: Leicht ≥70 % geschafft, Mittel ≥40 %, Schwer ≥20 %, Experte <20 %. Mindestens 10 Spiele erforderlich.",
-    "difficultyAbout": "So funktioniert die Schwierigkeit"
+    "difficultyHelp": "Schwierigkeit nach beendeten Spielen: Leicht ≥70 % geschafft, Mittel ≥40 %, Schwer ≥20 %, Experte <20 %. Mindestens 10 Spiele erforderlich."
   },
   "campaignCard": {
     "levels_one": "{{count}} Level",

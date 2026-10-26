@@ -226,8 +226,7 @@
     "name": "Nombre (A–Z)",
     "loadError": "No se pudieron cargar las campañas.",
     "retry": "Reintentar",
-    "difficultyHelp": "Dificultad según partidas terminadas: Fácil ≥70 % superadas, Media ≥40 %, Difícil ≥20 %, Experto <20 %. Se requieren al menos 10 partidas.",
-    "difficultyAbout": "Cómo funciona la dificultad"
+    "difficultyHelp": "Dificultad según partidas terminadas: Fácil ≥70 % superadas, Media ≥40 %, Difícil ≥20 %, Experto <20 %. Se requieren al menos 10 partidas."
   },
   "campaignCard": {
     "levels_one": "{{count}} nivel",
