@@ -269,9 +269,9 @@ async function getTimeseries(days: number): Promise<AdminTimeseriesPoint[]> {
 
     const da = dailyActivityMap.get(date);
     const legacy = activeUsersMap.get(date) ?? 0;
-    const totalActive = da ? da.total : legacy;
     const activeGuests = da ? da.guests : 0;
-    const activeRegistered = da ? da.registered : legacy;
+    const activeRegistered = Math.max(da ? da.registered : 0, legacy);
+    const totalActive = activeGuests + activeRegistered;
 
     series.push({
       date,
