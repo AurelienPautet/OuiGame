@@ -173,6 +173,7 @@ export function getConnectedPlayers(): AdminConnectedPlayersResponse {
             id: user.playerId,
             username: user.username,
             email: user.email,
+            isAdmin: Boolean(user.isAdmin),
           }
         : null,
       guestName: isRegistered

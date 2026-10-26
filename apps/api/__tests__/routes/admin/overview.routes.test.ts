@@ -248,6 +248,7 @@ describe("GET /api/admin/connected-players", () => {
       playerId: player.id,
       username: player.username,
       email: player.email,
+      isAdmin: true,
     };
 
     setConnectedRoomsRef({
@@ -283,6 +284,7 @@ describe("GET /api/admin/connected-players", () => {
       id: player.id,
       username: player.username,
       email: player.email,
+      isAdmin: true,
     });
     expect(reg.status).toBe("playing");
     expect(reg.room).toEqual({

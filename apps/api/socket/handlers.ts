@@ -106,6 +106,7 @@ function registerSocketHandlers({
           playerId: user.playerId,
           username: user.username,
           email: user.email,
+          isAdmin: Boolean(user.isAdmin),
         };
         playSessions.sessionOpened(socket.id, user.playerId);
         void dailyActivity.recordVisit(socket, { playerId: user.playerId });

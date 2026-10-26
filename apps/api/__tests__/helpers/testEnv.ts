@@ -16,7 +16,9 @@ const DEFAULTS = {
   password: process.env.DB_PASSWORD || "ouigame",
   name: "ouigame_test",
   // Database used purely as an entry point to issue CREATE/DROP DATABASE.
-  adminDb: process.env.DB_NAME || "ouigame",
+  // Kept distinct from DB_NAME so the admin connection never targets the database
+  // being created or dropped.
+  adminDb: "ouigame",
 };
 
 function resolved() {
