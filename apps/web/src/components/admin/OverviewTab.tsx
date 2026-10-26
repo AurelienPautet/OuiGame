@@ -32,9 +32,10 @@ import {
 import { StatCard, type StatTone } from "./StatCard";
 import { LineChart, BarChart } from "./charts";
 
-type Days = "7" | "30" | "90";
+type Days = "1" | "7" | "30" | "90";
 
 const DAY_OPTIONS: { value: Days; label: string }[] = [
+  { value: "1", label: "24h" },
   { value: "7", label: "7d" },
   { value: "30", label: "30d" },
   { value: "90", label: "90d" },
@@ -243,7 +244,7 @@ export function OverviewTab() {
       {/* Activity timeseries */}
       <ChartCard
         title="Activity"
-        subtitle={`Last ${days} days`}
+        subtitle={days === "1" ? "Last 24 hours" : `Last ${days} days`}
         loading={seriesLoading}
         empty={chartData.length === 0}
       >
@@ -266,7 +267,11 @@ export function OverviewTab() {
       {/* Daily active users breakdown (registered vs guests) */}
       <ChartCard
         title="Daily Active Users"
-        subtitle={`Last ${days} days · Guests vs registered`}
+        subtitle={
+          days === "1"
+            ? "Last 24 hours · Guests vs registered"
+            : `Last ${days} days · Guests vs registered`
+        }
         loading={seriesLoading}
         empty={chartData.length === 0}
       >

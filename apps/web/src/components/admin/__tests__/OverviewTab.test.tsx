@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { AdminOverview, AdminTimeseriesPoint } from "@ouigame/shared/api";
 import { OverviewTab } from "../OverviewTab";
 
@@ -125,6 +125,15 @@ describe("OverviewTab", () => {
   it("requests the default 30-day window", () => {
     render(<OverviewTab />);
     expect(useAdminTimeseries).toHaveBeenCalledWith(30);
+  });
+
+  it("allows selecting the 24h window option", () => {
+    render(<OverviewTab />);
+    const btn24h = screen.getByRole("button", { name: "24h" });
+    expect(btn24h).toBeTruthy();
+    fireEvent.click(btn24h);
+    expect(useAdminTimeseries).toHaveBeenCalledWith(1);
+    expect(screen.getByText("Last 24 hours")).toBeTruthy();
   });
 
   it("shows a loading skeleton while the overview is fetching", () => {
