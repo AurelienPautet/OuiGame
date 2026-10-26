@@ -124,7 +124,7 @@ describe("OverviewTab", () => {
 
   it("requests the default 30-day window", () => {
     render(<OverviewTab />);
-    expect(useAdminTimeseries).toHaveBeenCalledWith(30);
+    expect(useAdminTimeseries).toHaveBeenCalledWith("30d");
   });
 
   it("allows selecting the 24h window option", () => {
@@ -132,8 +132,9 @@ describe("OverviewTab", () => {
     const btn24h = screen.getByRole("button", { name: "24h" });
     expect(btn24h).toBeTruthy();
     fireEvent.click(btn24h);
-    expect(useAdminTimeseries).toHaveBeenCalledWith(1);
+    expect(useAdminTimeseries).toHaveBeenCalledWith("24h");
     expect(screen.getByText("Last 24 hours")).toBeTruthy();
+    expect(screen.getAllByText("Per hour").length).toBeGreaterThan(0);
   });
 
   it("shows a loading skeleton while the overview is fetching", () => {

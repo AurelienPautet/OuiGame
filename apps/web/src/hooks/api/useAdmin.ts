@@ -11,10 +11,12 @@ import type {
   AdminCampaignsParams,
   AdminLoginsParams,
   AdminAuditParams,
+  AdminTimeseriesParams,
 } from "../../api/endpoints/admin";
 import type {
   AdminUpdateUserRequest,
   AdminUpdateLevelRequest,
+  AdminTimeseriesRange,
 } from "@ouigame/shared/api";
 
 // Every admin query is gated on a live session (the routes are admin-only on the
@@ -30,10 +32,21 @@ export const useAdminOverview = () => {
   });
 };
 
-export const useAdminTimeseries = (days: number) => {
+export const useAdminTimeseries = (
+  windowOrDays: number | string | AdminTimeseriesParams = "30d"
+) => {
+  const params: AdminTimeseriesParams =
+    typeof windowOrDays === "number"
+      ? { days: windowOrDays }
+      : typeof windowOrDays === "string"
+        ? ["24h", "7d", "30d", "90d"].includes(windowOrDays)
+          ? { range: windowOrDays as AdminTimeseriesRange }
+          : { days: Number(windowOrDays) }
+        : windowOrDays;
+
   return useQuery({
-    queryKey: ["admin", "timeseries", days],
-    queryFn: () => adminApi.getTimeseries(days),
+    queryKey: ["admin", "timeseries", params],
+    queryFn: () => adminApi.getTimeseries(params),
     enabled: storage.hasSession(),
     staleTime: STALE_TIME,
   });

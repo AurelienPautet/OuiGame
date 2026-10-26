@@ -278,9 +278,13 @@ export type AdminAuditResponse = z.infer<typeof AdminAuditResponseSchema>;
 
 // --- Request schemas (parse req.query / req.body / req.params) -----------------
 
-// GET /api/admin/timeseries?days= — window length in days.
+export const AdminTimeseriesRangeSchema = z.enum(["24h", "7d", "30d", "90d"]);
+export type AdminTimeseriesRange = z.infer<typeof AdminTimeseriesRangeSchema>;
+
+// GET /api/admin/timeseries?days=&range= — window length in days or named range ("24h" gives hourly series).
 export const AdminTimeseriesQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).default(30).optional(),
+  days: z.coerce.number().int().min(1).max(365).optional(),
+  range: AdminTimeseriesRangeSchema.optional(),
 });
 export type AdminTimeseriesQuery = z.infer<typeof AdminTimeseriesQuerySchema>;
 

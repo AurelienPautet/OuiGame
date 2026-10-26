@@ -128,10 +128,26 @@ async function activityByDay(start: string, end: string) {
     .groupBy(dailyActiveUsers.day);
 }
 
+// Per-hour totals with the registered/guest split for the last 24h.
+async function activityByHour(start: Date) {
+  const bucket = sql`to_char(date_trunc('hour', ${dailyActiveUsers.firstSeenAt}), 'YYYY-MM-DD HH24:00')`;
+  return db
+    .select({
+      hour: bucket,
+      total: sql`COUNT(*)`,
+      guests: sql`COUNT(*) FILTER (WHERE ${dailyActiveUsers.playerId} IS NULL)`,
+      registered: sql`COUNT(*) FILTER (WHERE ${dailyActiveUsers.playerId} IS NOT NULL)`,
+    })
+    .from(dailyActiveUsers)
+    .where(gte(dailyActiveUsers.firstSeenAt, start))
+    .groupBy(bucket);
+}
+
 export {
   upsertVisitor,
   upgradeGuestToPlayer,
   deleteVisitor,
   activeVisitorCounts,
   activityByDay,
+  activityByHour,
 };

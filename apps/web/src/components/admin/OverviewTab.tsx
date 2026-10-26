@@ -32,13 +32,13 @@ import {
 import { StatCard, type StatTone } from "./StatCard";
 import { LineChart, BarChart } from "./charts";
 
-type Days = "1" | "7" | "30" | "90";
+type TimeRange = "24h" | "7d" | "30d" | "90d";
 
-const DAY_OPTIONS: { value: Days; label: string }[] = [
-  { value: "1", label: "24h" },
-  { value: "7", label: "7d" },
-  { value: "30", label: "30d" },
-  { value: "90", label: "90d" },
+const RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
+  { value: "24h", label: "24h" },
+  { value: "7d", label: "7d" },
+  { value: "30d", label: "30d" },
+  { value: "90d", label: "90d" },
 ];
 
 // One headline KPI tile spec. Resolved against the overview DTO below.
@@ -56,10 +56,10 @@ const pct = (ratio: number) => `${Math.round((ratio || 0) * 100)}%`;
 const iconNode = (Icon: LucideIcon) => <Icon size={20} strokeWidth={2.5} />;
 
 export function OverviewTab() {
-  const [days, setDays] = useState<Days>("30");
+  const [range, setRange] = useState<TimeRange>("30d");
   const { data: overview, isLoading: overviewLoading } = useAdminOverview();
   const { data: timeseries = [], isLoading: seriesLoading } =
-    useAdminTimeseries(Number(days));
+    useAdminTimeseries(range);
 
   // The charts take loosely-typed rows (Record<string, string|number>); the
   // timeseries points already match that shape, so they pass straight through.
@@ -210,11 +210,11 @@ export function OverviewTab() {
       {/* Header + window picker */}
       <div className="flex items-center justify-between gap-3.5 flex-wrap">
         <SectionLabel>Dashboard Overview</SectionLabel>
-        <SegmentedControl<Days>
+        <SegmentedControl<TimeRange>
           tone="yellow"
-          value={days}
-          onValueChange={setDays}
-          options={DAY_OPTIONS}
+          value={range}
+          onValueChange={setRange}
+          options={RANGE_OPTIONS}
           aria-label="Time window"
         />
       </div>
@@ -244,7 +244,11 @@ export function OverviewTab() {
       {/* Activity timeseries */}
       <ChartCard
         title="Activity"
-        subtitle={days === "1" ? "Last 24 hours" : `Last ${days} days`}
+        subtitle={
+          range === "24h"
+            ? "Last 24 hours"
+            : `Last ${range.replace("d", "")} days`
+        }
         loading={seriesLoading}
         empty={chartData.length === 0}
       >
@@ -264,13 +268,13 @@ export function OverviewTab() {
         />
       </ChartCard>
 
-      {/* Daily active users breakdown (registered vs guests) */}
+      {/* Active users breakdown (registered vs guests) */}
       <ChartCard
-        title="Daily Active Users"
+        title={range === "24h" ? "Active Users" : "Daily Active Users"}
         subtitle={
-          days === "1"
+          range === "24h"
             ? "Last 24 hours · Guests vs registered"
-            : `Last ${days} days · Guests vs registered`
+            : `Last ${range.replace("d", "")} days · Guests vs registered`
         }
         loading={seriesLoading}
         empty={chartData.length === 0}
@@ -300,10 +304,10 @@ export function OverviewTab() {
       </ChartCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Daily kills */}
+        {/* Kills */}
         <ChartCard
           title="Kills"
-          subtitle="Per day"
+          subtitle={range === "24h" ? "Per hour" : "Per day"}
           loading={seriesLoading}
           empty={chartData.length === 0}
         >
@@ -318,7 +322,7 @@ export function OverviewTab() {
         {/* Logins, with failed overlaid */}
         <ChartCard
           title="Logins"
-          subtitle="Per day"
+          subtitle={range === "24h" ? "Per hour" : "Per day"}
           loading={seriesLoading}
           empty={chartData.length === 0}
         >

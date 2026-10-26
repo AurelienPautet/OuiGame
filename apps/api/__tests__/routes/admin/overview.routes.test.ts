@@ -109,6 +109,33 @@ describe("GET /api/admin/timeseries", () => {
     expect(res.body[res.body.length - 1].date).toBe(today);
   });
 
+  test("returns 24 hourly buckets when range=24h is given", async () => {
+    const { authHeader } = await createAdminWithSession();
+
+    const res = await request(app)
+      .get("/api/admin/timeseries")
+      .query({ range: "24h" })
+      .set("Authorization", authHeader);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(24);
+
+    const point = res.body[0];
+    expect(typeof point.date).toBe("string");
+    expect(point.date).toMatch(/^\d{2}:00$/);
+    expect(typeof point.newUsers).toBe("number");
+    expect(typeof point.activeUsers).toBe("number");
+    expect(typeof point.logins).toBe("number");
+    expect(typeof point.failedLogins).toBe("number");
+    expect(typeof point.onlineRounds).toBe("number");
+    expect(typeof point.soloRounds).toBe("number");
+    expect(typeof point.campaignRuns).toBe("number");
+    expect(typeof point.games).toBe("number");
+    expect(typeof point.kills).toBe("number");
+    expect(typeof point.levelsCreated).toBe("number");
+  });
+
   test("preserves legacy registered activity when a day has partial guest visitor data", async () => {
     const { player, authHeader } = await createAdminWithSession();
     // Seed a successful login today so activeUsersByDay has a legacy active player
