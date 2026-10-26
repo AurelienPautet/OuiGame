@@ -509,3 +509,34 @@ describe("campaign discovery metadata", () => {
     });
   });
 });
+
+describe("campaign preview", () => {
+  test("uses the first public level in campaign order", async () => {
+    const { player } = await createUserWithSession();
+    const levels = await makeSoloLevels(player.id, 3);
+    await createCampaign(player.id, [levels[2].id, levels[1].id, levels[0].id]);
+    await db.insert(schema.levelsImg).values(
+      levels.map((level, i) => ({
+        levelId: level.id,
+        img: Buffer.from(`image-${i}`),
+      }))
+    );
+    await db
+      .update(schema.levels)
+      .set({ status: "down" })
+      .where(eq(schema.levels.id, levels[2].id));
+    const res = await request(app).get("/api/campaigns");
+    expect(res.status).toBe(200);
+    expect(res.body[0].preview_img).toBe(
+      Buffer.from("image-1").toString("hex")
+    );
+  });
+  test("returns no preview when the opening level has no image", async () => {
+    const { player } = await createUserWithSession();
+    const [level] = await makeSoloLevels(player.id, 1);
+    await createCampaign(player.id, [level.id]);
+    const res = await request(app).get("/api/campaigns");
+    expect(res.status).toBe(200);
+    expect(res.body[0].preview_img).toBeNull();
+  });
+});

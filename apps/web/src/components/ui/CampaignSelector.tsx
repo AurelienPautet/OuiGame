@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Search, Plus, RotateCcw, Layers } from "lucide-react";
 import { CampaignCard } from "./CampaignCard";
 import { useCampaigns, useMyCampaigns } from "../../hooks/api";
-import { Input, Button, Select } from "./primitives";
+import { Input, Button, Select, Chip } from "./primitives";
+import { hexToDataUrl } from "../../utils/levelUtils";
 import { cn } from "../../lib/cn";
 import type { CampaignDifficulty } from "@ouigame/shared/api";
 
@@ -160,22 +161,16 @@ export function CampaignSelector({
           </legend>
           <div className="flex flex-wrap gap-1.5">
             {["all", ...difficulties].map((value) => (
-              <button
+              <Chip
                 key={value}
-                type="button"
-                aria-pressed={difficulty === value}
+                active={difficulty === value}
                 onClick={() => setDifficulty(value)}
-                className={cn(
-                  "min-h-9 rounded-lg border-2 px-3 py-1 text-sm font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue/30",
-                  difficulty === value
-                    ? "border-ink bg-ink text-white"
-                    : "border-ink/20 bg-white text-ink hover:border-ink"
-                )}
+                className="min-h-9 px-3 py-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue/30"
               >
                 {t(
                   `campaignSelector.${value === "all" ? "allDifficulties" : value}`
                 )}
-              </button>
+              </Chip>
             ))}
           </div>
         </fieldset>
@@ -311,6 +306,9 @@ export function CampaignSelector({
               key={c.campaign_id}
               campaignId={c.campaign_id}
               name={c.campaign_name}
+              {...(c.preview_img
+                ? { thumbnailSrc: hexToDataUrl(c.preview_img) }
+                : {})}
               description={c.campaign_description}
               levelCount={c.level_count}
               completionPercent={c.completion_percent}

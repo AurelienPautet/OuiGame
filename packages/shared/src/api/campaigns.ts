@@ -14,6 +14,7 @@ export type CampaignDifficulty = z.infer<typeof CampaignDifficultySchema>;
 export const CampaignDTOSchema = z.object({
   campaign_id: z.number(),
   campaign_name: z.string(),
+  preview_img: z.string().nullable().optional(),
   campaign_description: z.string(),
   campaign_creator_name: z.string(),
   level_count: z.number(),

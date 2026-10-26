@@ -1,7 +1,13 @@
 import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { extractBotCounts, getBotColor } from "../../utils/levelUtils";
-import { Card, StarRating, TankAvatar } from "./primitives";
+import {
+  Card,
+  StarRating,
+  TankAvatar,
+  ListCardPreview,
+  ListCardStat,
+} from "./primitives";
 import { cn } from "../../lib/cn";
 
 // Format milliseconds to readable time (MM:SS or HH:MM:SS)
@@ -76,13 +82,9 @@ export function LevelCard({
       )}
 
       <div className={cn("shrink-0", locked && "blur-sm")}>
-        <img
+        <ListCardPreview
           src={thumbnailSrc || "ressources/image/minia/test.png"}
           alt={`Level ${levelId} preview`}
-          loading="lazy"
-          width={128}
-          height={96}
-          className="w-32 h-24 object-cover rounded-lg border-[3px] border-ink transition-transform duration-300 ease-out group-hover:scale-[1.04]"
         />
       </div>
 
@@ -119,23 +121,16 @@ export function LevelCard({
 
         {isSolo && soloTimesPlayed > 0 && (
           <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-ink-soft flex-wrap">
-            <span className="bg-field border-2 border-ink/15 rounded-md px-1.5 py-0.5">
+            <ListCardStat>
               {t("levelCard.plays", { count: soloTimesPlayed })}
-            </span>
-            <span
-              className={cn(
-                "border-2 border-ink/15 rounded-md px-1.5 py-0.5",
-                soloSuccessRate >= 50
-                  ? "bg-green/15 text-green-d"
-                  : "bg-red/15 text-red-d"
-              )}
-            >
+            </ListCardStat>
+            <ListCardStat tone={soloSuccessRate >= 50 ? "success" : "danger"}>
               {t("levelCard.winShare", { rate: soloSuccessRate })}
-            </span>
+            </ListCardStat>
             {bestTimeFormatted && (
-              <span className="bg-field border-2 border-ink/15 rounded-md px-1.5 py-0.5">
+              <ListCardStat>
                 {t("levelCard.best", { time: bestTimeFormatted })}
-              </span>
+              </ListCardStat>
             )}
           </div>
         )}

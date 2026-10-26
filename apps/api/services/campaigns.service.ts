@@ -41,13 +41,14 @@ async function formatCampaigns(
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
 
-  const [creators, counts, completion, ratingsMap, runStatsMap] =
+  const [creators, counts, completion, ratingsMap, runStatsMap, previews] =
     await Promise.all([
       repo.getCreatorNames(rows.map((r) => r.creatorId)),
       repo.getLevelCounts(ids),
       repo.getCompletionByCampaign(ids, playerId),
       repo.getCampaignRatings(ids),
       repo.getCampaignRunStats(ids),
+      repo.getCampaignPreviews(ids),
     ]);
 
   return rows.map((row) => {
@@ -61,6 +62,7 @@ async function formatCampaigns(
     return {
       campaign_id: row.id,
       campaign_name: row.name,
+      preview_img: previews.get(row.id) ?? null,
       campaign_description: row.description,
       campaign_creator_name: creators.get(row.creatorId) || "Unknown",
       level_count: levelCount,

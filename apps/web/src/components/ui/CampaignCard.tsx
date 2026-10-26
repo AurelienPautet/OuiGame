@@ -1,22 +1,29 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
-import { Star, Check, ChevronRight, Play, Pencil, Trash2 } from "lucide-react";
-import { Card, Button, TankAvatar } from "./primitives";
+import { Layers, Check, Play, Pencil, Trash2 } from "lucide-react";
+import {
+  Card,
+  Button,
+  StarRating,
+  ListCardPreview,
+  ListCardStat,
+} from "./primitives";
 import { cn } from "../../lib/cn";
 import type { CampaignDifficulty } from "@ouigame/shared/api";
 
-const difficultyColors = {
-  easy: "bg-green",
-  medium: "bg-blue",
-  hard: "bg-orange",
-  expert: "bg-red",
-  unknown: "bg-field",
-};
+const difficultyTones = {
+  easy: "success",
+  medium: "info",
+  hard: "warning",
+  expert: "danger",
+  unknown: "neutral",
+} as const;
 
 export interface CampaignCardProps {
   campaignId: number;
   name: string;
   description?: string;
+  thumbnailSrc?: string;
   levelCount?: number;
   completionPercent?: number;
   completed?: boolean;
@@ -36,6 +43,7 @@ export function CampaignCard({
   campaignId,
   name,
   description,
+  thumbnailSrc,
   levelCount = 0,
   completionPercent = 0,
   completed = false,
@@ -56,7 +64,7 @@ export function CampaignCard({
   return (
     <Card
       className={cn(
-        "group p-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue/30",
+        "group p-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue/30",
         !onClick && "cursor-default"
       )}
       {...(onClick
@@ -74,96 +82,80 @@ export function CampaignCard({
           }
         : {})}
     >
-      <div className="flex gap-3 sm:gap-4">
-        <div
-          aria-hidden="true"
-          className="hidden sm:flex w-20 h-20 shrink-0 items-center justify-center rounded-xl border-2 border-ink bg-field/40 graph-paper"
-        >
-          <TankAvatar bodyColor="blue" size={66} angle={-Math.PI / 4} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="text-lg font-bold leading-snug text-ink break-words line-clamp-2">
+      <div className="grid grid-cols-[80px_minmax(0,1fr)] sm:grid-cols-[128px_minmax(0,1fr)] gap-x-4 gap-y-2">
+        <ListCardPreview
+          {...(thumbnailSrc ? { src: thumbnailSrc } : {})}
+          alt={name}
+          fallback={<Layers className="size-10 text-blue-d" />}
+          className="w-20 h-16 sm:w-32 sm:h-24 sm:row-span-5"
+        />
+        <div className="contents">
+          <div className="col-start-2 flex flex-wrap justify-between items-start gap-x-3 gap-y-1">
+            <div className="min-w-0 flex-1 basis-40">
+              <h3 className="text-lg font-bold text-ink leading-snug break-words line-clamp-2">
                 {name}
               </h3>
-              <p className="text-xs text-ink-soft mt-0.5">
+              <p className="text-xs font-semibold text-blue-d mt-0.5">
                 {t("common.by", { name: author || t("common.unknown") })}
-                <span className="mx-1.5" aria-hidden="true">
-                  ·
-                </span>
-                {t("campaignCard.levels", { count: levelCount })}
               </p>
             </div>
-            {onClick && (
-              <ChevronRight
-                aria-hidden="true"
-                size={20}
-                className="shrink-0 mt-1 text-ink-soft group-hover:text-blue-d"
-              />
+            <div className="shrink-0" title={t("campaignCard.ratingHelp")}>
+              <div aria-hidden="true">
+                <StarRating
+                  value={ratingCount > 0 ? Number(rating) : 0}
+                  size={15}
+                  className="gap-0.5"
+                />
+              </div>
+              <p className="text-xs text-ink-soft mt-0.5 sm:text-right">
+                {ratingCount > 0 ? (
+                  <>
+                    <span className="font-semibold">
+                      {Number(rating).toFixed(1)}
+                    </span>{" "}
+                    <span>({ratingCount})</span>
+                  </>
+                ) : (
+                  t("campaignCard.unrated")
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="col-span-2 sm:col-span-1 sm:col-start-2 flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 bg-field border-2 border-ink rounded-lg px-1.5 py-0.5 text-xs font-bold text-ink">
+              <Layers size={14} aria-hidden="true" />
+              {t("campaignCard.levels", { count: levelCount })}
+            </span>
+            <ListCardStat
+              tone={difficultyTones[difficulty]}
+              title={t("campaignSelector.difficultyHelp")}
+            >
+              {t(`campaignCard.${difficulty}`)}
+            </ListCardStat>
+            {completed && (
+              <ListCardStat tone="success">
+                <Check size={14} aria-hidden="true" />
+                {t("campaignCard.done")}
+              </ListCardStat>
             )}
           </div>
           {description && (
-            <p className="mt-2 text-sm leading-relaxed text-ink-soft line-clamp-2">
+            <p className="col-span-2 sm:col-span-1 sm:col-start-2 text-sm leading-relaxed text-ink-soft line-clamp-2">
               {description}
             </p>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-ink">
-            <span
-              className="inline-flex items-center gap-1.5"
-              title={t("campaignSelector.difficultyHelp")}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-2.5 rounded-full border border-ink",
-                  difficultyColors[difficulty]
-                )}
-              />
-              {t(`campaignCard.${difficulty}`)}
-            </span>
-            <span
-              className="inline-flex items-center gap-1"
-              title={t("campaignCard.ratingHelp")}
-            >
-              <Star
-                size={14}
-                aria-hidden="true"
-                className={
-                  ratingCount > 0 ? "fill-yellow text-ink" : "text-ink-soft"
-                }
-              />
-              {ratingCount > 0 ? (
-                <>
-                  {Number(rating).toFixed(1)}
-                  <span className="text-ink-soft font-normal">
-                    ({ratingCount})
-                  </span>
-                </>
-              ) : (
-                <span className="font-normal text-ink-soft">
-                  {t("campaignCard.unrated")}
-                </span>
-              )}
-            </span>
-            {timesPlayed > 0 && (
-              <span className="font-normal text-ink-soft">
+          {timesPlayed > 0 && (
+            <div className="col-span-2 sm:col-span-1 sm:col-start-2 flex flex-wrap items-center gap-2">
+              <ListCardStat>
                 {t("campaignCard.plays", { count: timesPlayed })}
-                <span className="mx-1.5" aria-hidden="true">
-                  ·
-                </span>
+              </ListCardStat>
+              <ListCardStat tone={clearRate >= 50 ? "success" : "danger"}>
                 {t("campaignCard.winShare", { rate: clearRate })}
-              </span>
-            )}
-            {completed && (
-              <span className="inline-flex items-center gap-1 text-green-d">
-                <Check size={14} aria-hidden="true" />
-                {t("campaignCard.done")}
-              </span>
-            )}
-          </div>
+              </ListCardStat>
+            </div>
+          )}
           {!showActions && pct > 0 && (
-            <div className="mt-3 flex items-center gap-3">
+            <div className="col-span-2 sm:col-span-1 sm:col-start-2 mt-1 flex items-center gap-3">
               <div
                 role="progressbar"
                 aria-label={t("campaignCard.progress")}

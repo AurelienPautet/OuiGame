@@ -41,6 +41,36 @@ async function getImagesByLevelId(levelIds: number[]) {
   );
 }
 
+// First public level in campaign order, fetched in one batch for list previews.
+async function getCampaignPreviews(campaignIds: number[]) {
+  if (campaignIds.length === 0) return new Map<number, string | null>();
+  const rows = await db
+    .selectDistinctOn([campaignLevels.campaignId], {
+      campaignId: campaignLevels.campaignId,
+      img: levelsImg.img,
+    })
+    .from(campaignLevels)
+    .innerJoin(levels, eq(campaignLevels.levelId, levels.id))
+    .leftJoin(levelsImg, eq(levelsImg.levelId, levels.id))
+    .where(
+      and(
+        inArray(campaignLevels.campaignId, campaignIds),
+        eq(levels.status, "up")
+      )
+    )
+    .orderBy(
+      asc(campaignLevels.campaignId),
+      asc(campaignLevels.orderIndex),
+      asc(levelsImg.id)
+    );
+  return new Map(
+    rows.map((r) => [
+      r.campaignId,
+      r.img ? (r.img as Buffer).toString("hex") : null,
+    ])
+  );
+}
+
 // Number of still-playable (status 'up') levels per campaign. Used as the
 // completion denominator so a campaign stays reachable at 100% even if some
 // of its levels are later taken down.
@@ -320,6 +350,7 @@ export {
   getLevelCounts,
   getCompletionByCampaign,
   getCampaignRatings,
+  getCampaignPreviews,
   getCampaignRunStats,
   listCampaigns,
   listCampaignsByCreator,

@@ -1,6 +1,6 @@
 # Campaign browser
 
-The selector uses the shared Oui Tank input, select, button, card, and in-game tank drawing. Difficulty chips stay visible; progress, minimum rating, and sort controls have explicit labels. Cards show the name, creator, length, description, observed difficulty, level-rating average, and finished-run statistics. Only started campaigns show a progress bar. Owner play/edit/delete actions remain available.
+The selector uses the shared Oui Tank input, select, button, card, filter chips, and five-star rating. Level and campaign cards reuse the same ListCardPreview frame and ListCardStat badges. Campaign previews use the first public level's thumbnail in campaign order, with a stack fallback when it has no image. Difficulty chips stay visible; progress, minimum rating, and sort controls have explicit labels. Cards show the name, creator, length, description, observed difficulty, level-rating average, and finished-run statistics. Only started campaigns show a progress bar. Owner play/edit/delete actions remain available.
 
 ## Discovery rules
 
@@ -19,8 +19,10 @@ Ratings average existing individual ratings across the campaign's currently publ
 ## Verification
 
 - 109 unit-test files, 693 tests passed.
-- 32 campaign API integration tests passed against the isolated test database, including sample-size boundaries, all difficulty thresholds, and rating aggregation excluding unpublished levels.
+- 34 campaign API integration tests passed against the isolated test database, including sample-size boundaries, all difficulty thresholds, rating aggregation excluding unpublished levels, and ordered campaign previews excluding unpublished levels.
 - Production web build and workspace type checking passed. Web and changed backend/shared files passed lint (existing web warnings remain).
 - Automated Chromium checks against the running app and its real local API: creator search, combined expert and 4+ rating filters, empty state and reset, reopening with fresh filters, no horizontal overflow at 390px, no emoji text, and no page errors.
 
 The PNGs in this directory were captured from that real local app/API session. They are anonymous views of existing local campaigns; no responses were mocked or screenshots fabricated.
+
+The local campaigns in these captures have no stored opening-level thumbnail, so the fallback is visible. Preview selection and missing-image handling are covered by the API integration tests.
