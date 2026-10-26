@@ -1,58 +1,57 @@
+import { memo } from "react";
+import { useTranslation } from "react-i18next";
+import { motion } from "motion/react";
 import {
   Layers,
-  CheckCircle2,
+  Trophy,
   Play,
   Pencil,
   Trash2,
-  Trophy,
   Shield,
-  Target,
+  Crosshair,
   Flame,
   Skull,
   Swords,
+  Gamepad2,
+  TrendingUp,
   Star,
+  CheckCircle2,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useTranslation } from "react-i18next";
-import { Button, Card, StarRating } from "./primitives";
-import { springs } from "../../lib/motion";
+import { Card, Button, StarRating } from "./primitives";
 import { cn } from "../../lib/cn";
+import { springs } from "../../lib/motion";
 import type { CampaignDifficulty } from "@ouigame/shared/api";
 
 const DIFFICULTY_CONFIG = {
   easy: {
-    labelKey: "campaignCard.easy",
-    badgeClass:
-      "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-    dotClass: "bg-emerald-500",
     icon: Shield,
+    badgeClass:
+      "bg-green text-white border-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.18)]",
+    labelKey: "campaignCard.easy",
   },
   medium: {
-    labelKey: "campaignCard.medium",
+    icon: Crosshair,
     badgeClass:
-      "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
-    dotClass: "bg-sky-500",
-    icon: Target,
+      "bg-blue text-white border-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.18)]",
+    labelKey: "campaignCard.medium",
   },
   hard: {
-    labelKey: "campaignCard.hard",
-    badgeClass:
-      "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-    dotClass: "bg-amber-500",
     icon: Flame,
+    badgeClass:
+      "bg-[#e28743] text-white border-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.18)]",
+    labelKey: "campaignCard.hard",
   },
   expert: {
-    labelKey: "campaignCard.expert",
-    badgeClass:
-      "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
-    dotClass: "bg-rose-500",
     icon: Skull,
+    badgeClass:
+      "bg-red text-white border-2 border-ink shadow-[0_2px_0_rgba(0,0,0,0.18)]",
+    labelKey: "campaignCard.expert",
   },
-} as const;
+};
 
 /**
- * CampaignCard - Displays a rich campaign preview with difficulty badge,
- * star rating, enemy/run statistics, and completion progress.
+ * CampaignCard - Authentic OuiTank arcade card showing campaign summary,
+ * difficulty badge, star rating, bot threat count, run statistics, and progress.
  */
 export interface CampaignCardProps {
   campaignId: number;
@@ -108,7 +107,7 @@ export function CampaignCard({
   return (
     <Card
       className={cn(
-        "group flex flex-col sm:flex-row gap-4 p-3.5 relative transition-all duration-200",
+        "group flex flex-col sm:flex-row gap-4 p-3.5 relative transition-all duration-200 border-[3px] border-ink",
         completed ? "hover:border-green" : "hover:border-blue"
       )}
       onClick={onClick}
@@ -116,11 +115,14 @@ export function CampaignCard({
       {/* Left visual icon badge */}
       <div className="shrink-0 w-full sm:w-28 h-24 sm:h-28 rounded-xl border-[3px] border-ink bg-field flex flex-col items-center justify-center relative overflow-hidden transition-transform duration-300 ease-out group-hover:scale-[1.03] group-hover:-rotate-1">
         {completed ? (
-          <Trophy className="w-12 h-12 text-yellow-d drop-shadow-sm" />
+          <Trophy
+            className="w-12 h-12 text-yellow-d drop-shadow-sm"
+            strokeWidth={2.5}
+          />
         ) : (
-          <Layers className="w-12 h-12 text-blue-d" />
+          <Layers className="w-12 h-12 text-blue-d" strokeWidth={2.5} />
         )}
-        <div className="absolute bottom-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-canvas border border-ink/20 text-ink-soft">
+        <div className="absolute bottom-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white border-2 border-ink text-ink shadow-[0_1px_0_rgba(0,0,0,0.15)]">
           {t("campaignCard.levels", { count: levelCount })}
         </div>
       </div>
@@ -143,7 +145,7 @@ export function CampaignCard({
             <div className="shrink-0">
               {ratingValue > 0 ? (
                 <div
-                  className="flex items-center gap-1.5 bg-field border-2 border-ink/15 rounded-lg px-2 py-1 shadow-2xs"
+                  className="flex items-center gap-1.5 bg-field border-2 border-ink rounded-lg px-2 py-1 shadow-[0_2px_0_rgba(0,0,0,0.15)]"
                   aria-label={`Rating: ${ratingValue.toFixed(1)} out of 5 stars`}
                 >
                   <StarRating
@@ -161,8 +163,12 @@ export function CampaignCard({
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-1 bg-field/60 border-2 border-ink/10 rounded-lg px-2 py-1 text-xs font-semibold text-ink-soft">
-                  <Star size={13} className="text-ink-soft/40" />
+                <div className="flex items-center gap-1 bg-field border-2 border-ink/30 rounded-lg px-2 py-1 text-xs font-semibold text-ink-soft">
+                  <Star
+                    size={13}
+                    strokeWidth={2.5}
+                    className="text-ink-soft/40"
+                  />
                   <span>{t("campaignCard.unrated")}</span>
                 </div>
               )}
@@ -174,128 +180,141 @@ export function CampaignCard({
             {/* Difficulty Badge */}
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 text-xs font-bold border-2 rounded-md px-2 py-0.5 shadow-2xs",
+                "inline-flex items-center gap-1 text-xs font-bold uppercase rounded-md px-2 py-0.5 tracking-wide",
                 diffConfig.badgeClass
               )}
             >
-              <DiffIcon size={13} className="shrink-0" />
+              <DiffIcon size={13} strokeWidth={2.5} className="shrink-0" />
               <span>{t(diffConfig.labelKey)}</span>
               {difficultyScore > 0 && (
-                <span className="text-[10px] font-semibold opacity-75">
-                  · {difficultyScore}/10
+                <span className="text-[10px] font-black opacity-90">
+                  {difficultyScore}/10
                 </span>
               )}
             </span>
 
             {/* Total Enemy bots badge (if any) */}
             {enemyCount > 0 && (
-              <span className="inline-flex items-center gap-1 bg-field border-2 border-ink/15 rounded-md px-2 py-0.5 text-xs font-semibold text-ink-soft">
-                <Swords size={12} className="shrink-0 text-red-d" />
+              <span className="inline-flex items-center gap-1 bg-field border-2 border-ink rounded-md px-2 py-0.5 text-xs font-bold text-ink shadow-[0_1px_0_rgba(0,0,0,0.12)]">
+                <Swords
+                  size={13}
+                  strokeWidth={2.5}
+                  className="shrink-0 text-red-d"
+                />
                 <span>{t("campaignCard.bots", { count: enemyCount })}</span>
               </span>
             )}
 
             {/* Run statistics: Times played and Clear rate */}
             {timesPlayed > 0 && (
-              <>
-                <span className="bg-field border-2 border-ink/15 rounded-md px-2 py-0.5 text-xs font-semibold text-ink-soft">
-                  {t("campaignCard.plays", { count: timesPlayed })}
-                </span>
-                <span
-                  className={cn(
-                    "border-2 border-ink/15 rounded-md px-2 py-0.5 text-xs font-semibold",
-                    clearRate >= 50
-                      ? "bg-green/15 text-green-d"
-                      : "bg-red/15 text-red-d"
-                  )}
-                >
-                  {t("campaignCard.winShare", { rate: clearRate })}
-                </span>
-              </>
+              <span className="inline-flex items-center gap-1 bg-field border-2 border-ink rounded-md px-2 py-0.5 text-xs font-bold text-ink shadow-[0_1px_0_rgba(0,0,0,0.12)]">
+                <Gamepad2
+                  size={13}
+                  strokeWidth={2.5}
+                  className="shrink-0 text-ink-soft"
+                />
+                <span>{t("campaignCard.plays", { count: timesPlayed })}</span>
+              </span>
+            )}
+
+            {clearRate !== undefined && timesPlayed > 0 && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 border-2 border-ink rounded-md px-2 py-0.5 text-xs font-bold shadow-[0_1px_0_rgba(0,0,0,0.12)]",
+                  clearRate >= 50 ? "bg-green text-white" : "bg-field text-ink"
+                )}
+              >
+                <TrendingUp size={13} strokeWidth={2.5} className="shrink-0" />
+                <span>{t("campaignCard.winShare", { rate: clearRate })}</span>
+              </span>
             )}
 
             {/* Completed badge */}
             {completed && (
-              <span className="inline-flex items-center gap-1 bg-green text-white text-xs font-bold border-2 border-ink rounded-full px-2 py-0.5 ml-auto">
-                <CheckCircle2 size={12} strokeWidth={3} />
-                {t("campaignCard.done")}
+              <span className="inline-flex items-center gap-1 bg-yellow text-ink border-2 border-ink rounded-md px-2 py-0.5 text-xs font-black shadow-[0_2px_0_rgba(0,0,0,0.18)]">
+                <CheckCircle2
+                  size={13}
+                  strokeWidth={3}
+                  className="shrink-0 text-ink"
+                />
+                <span>{t("campaignCard.done")}</span>
               </span>
             )}
           </div>
 
           {/* Description */}
           {description && (
-            <p className="text-sm text-ink-soft line-clamp-2 mt-2 leading-relaxed">
+            <p className="text-xs text-ink-soft line-clamp-2 mt-2 leading-relaxed">
               {description}
             </p>
           )}
         </div>
 
-        {/* Progress bar */}
+        {/* Bottom progress bar or action buttons */}
         <div className="mt-3">
-          <div className="flex justify-between text-xs font-semibold text-ink-soft mb-1">
-            <span>{t("campaignCard.progress")}</span>
-            <span className="font-bold text-ink">{pct}%</span>
-          </div>
-          <div className="h-3 rounded-full border-2 border-ink bg-field overflow-hidden">
-            <motion.div
-              className={cn(
-                "h-full origin-left",
-                completed ? "bg-green" : "bg-blue"
+          {showActions ? (
+            <div
+              className="flex items-center justify-end gap-2 pt-2 border-t-2 border-ink/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {onPlay && (
+                <Button
+                  size="sm"
+                  variant="blue"
+                  onClick={() => onPlay(campaignId)}
+                  className="gap-1.5"
+                >
+                  <Play size={14} className="fill-current" />
+                  {t("common.play")}
+                </Button>
               )}
-              style={{ width: `${pct}%` }}
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ ...springs.soft, delay: 0.1 }}
-            />
-          </div>
+              {onEdit && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onEdit(campaignId)}
+                  className="gap-1.5"
+                >
+                  <Pencil size={14} />
+                  {t("common.edit")}
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  size="sm"
+                  variant="red"
+                  onClick={() => onDelete(campaignId)}
+                  className="gap-1.5"
+                >
+                  <Trash2 size={14} />
+                  {t("common.delete")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between text-xs font-semibold text-ink-soft mb-1">
+                <span>{t("campaignCard.progress")}</span>
+                <span className="font-bold text-ink">{pct}%</span>
+              </div>
+              <div className="h-3 rounded-full border-[2.5px] border-ink bg-field overflow-hidden">
+                <motion.div
+                  className={cn(
+                    "h-full origin-left",
+                    completed ? "bg-green" : "bg-blue"
+                  )}
+                  style={{ width: `${pct}%` }}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={springs.gentle}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Owner actions (Play, Edit, Delete) */}
-      {showActions && (
-        <div className="flex sm:flex-col justify-end gap-1.5 sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-ink/10">
-          {onPlay && (
-            <Button
-              variant="green"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlay(campaignId);
-              }}
-              className="gap-1"
-            >
-              <Play size={14} /> {t("campaignCard.play")}
-            </Button>
-          )}
-          {onEdit && (
-            <Button
-              variant="blue"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(campaignId);
-              }}
-              className="gap-1"
-            >
-              <Pencil size={14} /> {t("campaignCard.edit")}
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="red"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(campaignId);
-              }}
-              className="gap-1"
-            >
-              <Trash2 size={14} /> {t("campaignCard.delete")}
-            </Button>
-          )}
-        </div>
-      )}
     </Card>
   );
 }
+
+export const MemoizedCampaignCard = memo(CampaignCard);

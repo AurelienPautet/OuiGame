@@ -28,6 +28,7 @@ interface CampaignSelectorState {
 /**
  * CampaignSelector - Interactive campaign browser with search,
  * difficulty filtering, completion status filtering, and sorting.
+ * Styled in the OuiTank arcade art style with solid ink outlines and zero emojis.
  */
 interface CampaignSelectorProps {
   mode?: "play" | "my";
@@ -214,17 +215,17 @@ export function CampaignSelector({
 
   const difficultyOptions = [
     { value: "all", label: t("campaignSelector.allDifficulties") },
-    { value: "easy", label: `🟢 ${t("campaignSelector.easy")}` },
-    { value: "medium", label: `🔵 ${t("campaignSelector.medium")}` },
-    { value: "hard", label: `🟠 ${t("campaignSelector.hard")}` },
-    { value: "expert", label: `🔴 ${t("campaignSelector.expert")}` },
+    { value: "easy", label: t("campaignSelector.easy") },
+    { value: "medium", label: t("campaignSelector.medium") },
+    { value: "hard", label: t("campaignSelector.hard") },
+    { value: "expert", label: t("campaignSelector.expert") },
   ];
 
   const statusOptions = [
     { value: "all", label: t("campaignSelector.allStatus") },
-    { value: "completed", label: `🏆 ${t("campaignSelector.completed")}` },
-    { value: "in_progress", label: `⚡ ${t("campaignSelector.inProgress")}` },
-    { value: "not_started", label: `⏳ ${t("campaignSelector.notStarted")}` },
+    { value: "completed", label: t("campaignSelector.completed") },
+    { value: "in_progress", label: t("campaignSelector.inProgress") },
+    { value: "not_started", label: t("campaignSelector.notStarted") },
   ];
 
   const sortOptions = [
@@ -379,7 +380,7 @@ export function CampaignSelector({
           </div>
         ) : campaigns.length === 0 ? (
           <div className="text-center text-ink-soft py-12 flex flex-col items-center">
-            <div className="w-14 h-14 rounded-2xl bg-field border-3 border-ink flex items-center justify-center mb-3 text-ink-soft">
+            <div className="w-14 h-14 rounded-2xl bg-field border-3 border-ink flex items-center justify-center mb-3 text-ink-soft shadow-[0_3px_0_rgba(0,0,0,0.15)]">
               <SlidersHorizontal size={24} />
             </div>
             <p className="font-bold text-base text-ink mb-1">

@@ -95,7 +95,7 @@ describe("CampaignSelector", () => {
     fireEvent.click(diffSelect);
 
     // Pick "Easy"
-    const easyOption = await screen.findByText(/🟢 Easy/i);
+    const easyOption = await screen.findByRole("option", { name: /^easy$/i });
     fireEvent.click(easyOption);
 
     // Only Alpha Assault is easy
@@ -110,7 +110,9 @@ describe("CampaignSelector", () => {
     const statusSelect = screen.getByLabelText(/status/i);
     fireEvent.click(statusSelect);
 
-    const completedOption = await screen.findByText(/🏆 Completed/i);
+    const completedOption = await screen.findByRole("option", {
+      name: /^completed$/i,
+    });
     fireEvent.click(completedOption);
 
     // Only Alpha Assault is completed
