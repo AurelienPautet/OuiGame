@@ -5,8 +5,15 @@
 import { db, schema } from "@ouigame/db";
 import { eq, like, and, sql, count, asc, desc, inArray } from "drizzle-orm";
 
-const { campaigns, campaignLevels, campaignRuns, levels, levelsImg, players } =
-  schema;
+const {
+  campaigns,
+  campaignLevels,
+  campaignRuns,
+  levels,
+  levelsImg,
+  players,
+  ratings,
+} = schema;
 
 // --- Batched lookups (avoid N+1 over a list) ---
 
@@ -29,6 +36,36 @@ async function getImagesByLevelId(levelIds: number[]) {
   return new Map(
     rows.map((r) => [
       r.levelId,
+      r.img ? (r.img as Buffer).toString("hex") : null,
+    ])
+  );
+}
+
+// First public level in campaign order, fetched in one batch for list previews.
+async function getCampaignPreviews(campaignIds: number[]) {
+  if (campaignIds.length === 0) return new Map<number, string | null>();
+  const rows = await db
+    .selectDistinctOn([campaignLevels.campaignId], {
+      campaignId: campaignLevels.campaignId,
+      img: levelsImg.img,
+    })
+    .from(campaignLevels)
+    .innerJoin(levels, eq(campaignLevels.levelId, levels.id))
+    .leftJoin(levelsImg, eq(levelsImg.levelId, levels.id))
+    .where(
+      and(
+        inArray(campaignLevels.campaignId, campaignIds),
+        eq(levels.status, "up")
+      )
+    )
+    .orderBy(
+      asc(campaignLevels.campaignId),
+      asc(campaignLevels.orderIndex),
+      asc(levelsImg.id)
+    );
+  return new Map(
+    rows.map((r) => [
+      r.campaignId,
       r.img ? (r.img as Buffer).toString("hex") : null,
     ])
   );
@@ -79,6 +116,65 @@ async function getCompletionByCampaign(
       r.campaignId,
       { maxCleared: Number(r.maxCleared) || 0, anyCompleted: !!r.anyCompleted },
     ])
+  );
+}
+
+// Average star rating and rating count for each campaign, aggregated from all ratings on its playable levels
+async function getCampaignRatings(campaignIds: number[]) {
+  if (campaignIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      campaignId: campaignLevels.campaignId,
+      avgStars: sql`ROUND(AVG(${ratings.stars}), 1)`,
+      ratingsCount: count(ratings.id),
+    })
+    .from(campaignLevels)
+    .innerJoin(levels, eq(campaignLevels.levelId, levels.id))
+    .innerJoin(ratings, eq(levels.id, ratings.levelId))
+    .where(
+      and(
+        inArray(campaignLevels.campaignId, campaignIds),
+        eq(levels.status, "up")
+      )
+    )
+    .groupBy(campaignLevels.campaignId);
+
+  return new Map(
+    rows.map((r) => [
+      r.campaignId,
+      {
+        rating: Number(r.avgStars) || 0,
+        ratingCount: Number(r.ratingsCount) || 0,
+      },
+    ])
+  );
+}
+
+// Overall run statistics: times played and clear rate across all players
+async function getCampaignRunStats(campaignIds: number[]) {
+  if (campaignIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      campaignId: campaignRuns.campaignId,
+      totalRuns: count(campaignRuns.id),
+      completedRuns: sql`SUM(CASE WHEN ${campaignRuns.completed} THEN 1 ELSE 0 END)`,
+    })
+    .from(campaignRuns)
+    .where(inArray(campaignRuns.campaignId, campaignIds))
+    .groupBy(campaignRuns.campaignId);
+
+  return new Map(
+    rows.map((r) => {
+      const total = Number(r.totalRuns) || 0;
+      const completed = Number(r.completedRuns) || 0;
+      return [
+        r.campaignId,
+        {
+          timesPlayed: total,
+          clearRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+        },
+      ];
+    })
   );
 }
 
@@ -253,6 +349,9 @@ export {
   getImagesByLevelId,
   getLevelCounts,
   getCompletionByCampaign,
+  getCampaignRatings,
+  getCampaignPreviews,
+  getCampaignRunStats,
   listCampaigns,
   listCampaignsByCreator,
   getCampaignById,

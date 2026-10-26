@@ -22,7 +22,7 @@ export const CampaignSelectorModal = () => {
     >
       <DialogContent
         widthClassName="w-[min(94vw,920px)]"
-        className="h-[82vh] flex flex-col overflow-hidden"
+        className="h-[90dvh] sm:h-[82vh] flex flex-col overflow-hidden"
       >
         <DialogTitle className="text-2xl font-bold mb-4">
           {t("campaignSelectorModal.title")}

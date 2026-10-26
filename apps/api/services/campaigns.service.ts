@@ -19,8 +19,21 @@ interface CampaignMetaRow {
   creatorId: number;
 }
 
+// Difficulty describes observed full-run completion, not a fabricated bot score.
+// Require ten finished runs before assigning a tier; small samples stay unknown.
+function calculateDifficulty(
+  stats: { timesPlayed: number; clearRate: number } | undefined
+) {
+  if (!stats || stats.timesPlayed < 10) return "unknown";
+  if (stats.clearRate >= 70) return "easy";
+  if (stats.clearRate >= 40) return "medium";
+  if (stats.clearRate >= 20) return "hard";
+  return "expert";
+}
+
 // Shape raw campaign meta rows into the wire `campaign_*` objects, attaching
-// level counts and this player's completion. Anonymous => zero completion.
+// level counts, rating, difficulty, run statistics, and this player's completion.
+// Anonymous => zero completion.
 async function formatCampaigns(
   rows: CampaignMetaRow[],
   playerId: number | null
@@ -28,19 +41,28 @@ async function formatCampaigns(
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
 
-  const [creators, counts, completion] = await Promise.all([
-    repo.getCreatorNames(rows.map((r) => r.creatorId)),
-    repo.getLevelCounts(ids),
-    repo.getCompletionByCampaign(ids, playerId),
-  ]);
+  const [creators, counts, completion, ratingsMap, runStatsMap, previews] =
+    await Promise.all([
+      repo.getCreatorNames(rows.map((r) => r.creatorId)),
+      repo.getLevelCounts(ids),
+      repo.getCompletionByCampaign(ids, playerId),
+      repo.getCampaignRatings(ids),
+      repo.getCampaignRunStats(ids),
+      repo.getCampaignPreviews(ids),
+    ]);
 
   return rows.map((row) => {
     const levelCount = counts.get(row.id) || 0;
     const comp = completion.get(row.id);
     const maxCleared = comp?.maxCleared || 0;
+    const ratingEntry = ratingsMap.get(row.id);
+    const runEntry = runStatsMap.get(row.id);
+    const difficulty = calculateDifficulty(runEntry);
+
     return {
       campaign_id: row.id,
       campaign_name: row.name,
+      preview_img: previews.get(row.id) ?? null,
       campaign_description: row.description,
       campaign_creator_name: creators.get(row.creatorId) || "Unknown",
       level_count: levelCount,
@@ -49,6 +71,11 @@ async function formatCampaigns(
           ? Math.min(100, Math.round((maxCleared / levelCount) * 100))
           : 0,
       completed: comp?.anyCompleted || false,
+      rating: ratingEntry?.rating || 0,
+      rating_count: ratingEntry?.ratingCount || 0,
+      difficulty,
+      times_played: runEntry?.timesPlayed || 0,
+      clear_rate: runEntry?.clearRate || 0,
     };
   });
 }
