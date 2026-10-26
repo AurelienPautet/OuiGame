@@ -320,23 +320,15 @@ export function OverviewTab() {
           <BarChart
             data={chartData}
             xKey="date"
-            barKey="logins"
-            color={palette.teal}
+            series={[{ key: "logins", label: "Logins", color: palette.teal }]}
+            lineSeries={[
+              {
+                key: "failedLogins",
+                label: "Failed Logins",
+                color: palette.red,
+              },
+            ]}
           />
-          <div className="mt-2 -mb-1">
-            <LineChart
-              data={chartData}
-              xKey="date"
-              height={120}
-              series={[
-                {
-                  key: "failedLogins",
-                  label: "Failed Logins",
-                  color: palette.red,
-                },
-              ]}
-            />
-          </div>
         </ChartCard>
       </div>
     </div>
@@ -353,7 +345,7 @@ interface ChartCardProps {
   children: React.ReactNode;
 }
 
-/** A titled dark panel wrapping a bespoke SVG chart, with its own loading
+/** A titled dark panel wrapping an interactive chart, with its own loading
  *  and empty states so a slow/blank timeseries reads on-brand. */
 function ChartCard({
   title,
@@ -370,7 +362,7 @@ function ChartCard({
           {subtitle}
         </span>
       </div>
-      {/* Charts draw ink-soft text on light fills, so sit them on a light card. */}
+      {/* Charts sit on an arcade light card. */}
       <div className="bg-white border-[3px] border-ink rounded-xl p-3">
         {loading ? (
           <div className="flex items-center justify-center h-[220px] text-sm font-semibold text-ink-soft">

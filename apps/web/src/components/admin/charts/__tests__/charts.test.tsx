@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { LineChart, BarChart } from "../index";
 
 const SERIES_DATA = [
@@ -32,7 +32,7 @@ describe("LineChart", () => {
     expect(screen.getByText("Games")).toBeTruthy();
   });
 
-  it("renders one polyline per series", () => {
+  it("renders chart paths and allows toggling series via legend", () => {
     const { container } = render(
       <LineChart
         data={SERIES_DATA}
@@ -43,7 +43,14 @@ describe("LineChart", () => {
         ]}
       />
     );
-    expect(container.querySelectorAll("polyline").length).toBe(2);
+    expect(container.querySelectorAll("path").length).toBeGreaterThan(0);
+
+    const toggleBtn = screen.getByText("New Players").closest("button");
+    expect(toggleBtn).toBeTruthy();
+    if (toggleBtn) {
+      fireEvent.click(toggleBtn);
+      expect(toggleBtn.className).toContain("opacity-35");
+    }
   });
 
   it("renders an empty state with no data", () => {
@@ -60,21 +67,25 @@ describe("LineChart", () => {
 });
 
 describe("BarChart", () => {
-  it("renders an <svg> with one bar per data row", () => {
+  it("renders an <svg> and bar elements", () => {
     const { container } = render(
       <BarChart data={BAR_DATA} xKey="name" barKey="plays" color="#ffb142" />
     );
     expect(container.querySelector("svg")).toBeTruthy();
-    expect(container.querySelectorAll("rect").length).toBe(BAR_DATA.length);
+    expect(container.querySelectorAll("path").length).toBeGreaterThan(0);
   });
 
-  it("renders a sparse x-axis label from the data", () => {
-    render(
+  it("renders x-axis data categories", () => {
+    const { container } = render(
       <BarChart data={BAR_DATA} xKey="name" barKey="plays" color="#ffb142" />
     );
-    // first + last ticks are always shown
-    expect(screen.getByText("Solo")).toBeTruthy();
-    expect(screen.getByText("Campaign")).toBeTruthy();
+    expect(container.querySelector("svg")).toBeTruthy();
+    // ECharts SVG renderer produces text elements for axis labels
+    const textContents = Array.from(container.querySelectorAll("text")).map(
+      (t) => t.textContent
+    );
+    expect(textContents.some((t) => t?.includes("Solo"))).toBe(true);
+    expect(textContents.some((t) => t?.includes("Campaign"))).toBe(true);
   });
 
   it("renders an empty state with no data", () => {
