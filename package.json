@@ -95,7 +95,7 @@
     "@swc/core": "^1.7.0",
     "@swc/jest": "^0.2.39",
     "@types/node": "^24.12.4",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-v8": "4.1.7",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
