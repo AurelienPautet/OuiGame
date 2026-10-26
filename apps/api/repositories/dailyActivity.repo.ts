@@ -39,6 +39,45 @@ async function upsertVisitor(values: {
     });
 }
 
+// Atomically upgrade a guest visitor row to a registered player row in a single
+// database transaction, preventing races where an interleaved guest insert
+// recreates the guest entry after an authentication upgrade.
+async function upgradeGuestToPlayer(values: {
+  day: string;
+  guestKey: string;
+  playerKey: string;
+  playerId: number;
+}): Promise<void> {
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(dailyActiveUsers)
+      .where(
+        and(
+          eq(dailyActiveUsers.day, values.day),
+          eq(dailyActiveUsers.visitorKey, values.guestKey)
+        )
+      );
+
+    await tx
+      .insert(dailyActiveUsers)
+      .values({
+        day: values.day,
+        visitorKey: values.playerKey,
+        playerId: values.playerId,
+        firstSeenAt: now,
+        lastSeenAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [dailyActiveUsers.day, dailyActiveUsers.visitorKey],
+        set: {
+          lastSeenAt: now,
+          playerId: sql`COALESCE(${dailyActiveUsers.playerId}, ${values.playerId})`,
+        },
+      });
+  });
+}
+
 // Drop one visitor row for a day. Used when a guest authenticates: the guest
 // identity is replaced by the player identity so the same human is not counted
 // twice in the same day.
@@ -89,4 +128,10 @@ async function activityByDay(start: string, end: string) {
     .groupBy(dailyActiveUsers.day);
 }
 
-export { upsertVisitor, deleteVisitor, activeVisitorCounts, activityByDay };
+export {
+  upsertVisitor,
+  upgradeGuestToPlayer,
+  deleteVisitor,
+  activeVisitorCounts,
+  activityByDay,
+};

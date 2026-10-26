@@ -8,11 +8,13 @@ import type { AppSocket } from "../../socket/types";
 
 jest.mock("../../repositories/dailyActivity.repo", () => ({
   upsertVisitor: jest.fn().mockResolvedValue(undefined),
+  upgradeGuestToPlayer: jest.fn().mockResolvedValue(undefined),
   deleteVisitor: jest.fn().mockResolvedValue(undefined),
 }));
 
 const upsertVisitor = dailyActivityRepo.upsertVisitor as jest.Mock;
-const deleteVisitor = dailyActivityRepo.deleteVisitor as jest.Mock;
+const upgradeGuestToPlayer =
+  dailyActivityRepo.upgradeGuestToPlayer as jest.Mock;
 
 function mockSocket(clientId?: string, socketId = "sock_1"): AppSocket {
   return {
@@ -55,15 +57,15 @@ describe("dailyActivity.recordVisit", () => {
     });
   });
 
-  test("records an authenticated player with p:<playerId> and deletes guest key", async () => {
+  test("records an authenticated player with p:<playerId> via upgradeGuestToPlayer", async () => {
     const socket = mockSocket("client_abc");
     await recordVisit(socket, { playerId: 42 });
 
     const today = getUtcDay();
-    expect(deleteVisitor).toHaveBeenCalledWith(today, "c:client_abc");
-    expect(upsertVisitor).toHaveBeenCalledWith({
+    expect(upgradeGuestToPlayer).toHaveBeenCalledWith({
       day: today,
-      visitorKey: "p:42",
+      guestKey: "c:client_abc",
+      playerKey: "p:42",
       playerId: 42,
     });
   });
@@ -77,32 +79,42 @@ describe("dailyActivity.recordVisit", () => {
     expect(upsertVisitor).toHaveBeenCalledTimes(1);
   });
 
-  test("upgrades guest to registered player on login without duplicate counts", async () => {
-    const socket = mockSocket("client_abc");
-    // Connects as guest first
-    await recordVisit(socket, null);
+  test("serializes overlapping guest and authenticated recordVisit calls without duplicate rows", async () => {
+    const socket = mockSocket("client_race");
+
+    // Simulate slow initial guest upsert
+    let resolveGuest!: () => void;
+    const slowGuestPromise = new Promise<void>((resolve) => {
+      resolveGuest = resolve;
+    });
+    upsertVisitor.mockImplementationOnce(() => slowGuestPromise);
+
+    // Launch guest visit and immediate auth upgrade concurrently
+    const guestCall = recordVisit(socket, null);
+    const authCall = recordVisit(socket, { playerId: 55 });
+
+    resolveGuest();
+    await Promise.all([guestCall, authCall]);
+
+    // Guest upsert was called first
     expect(upsertVisitor).toHaveBeenCalledTimes(1);
-    expect(upsertVisitor).toHaveBeenLastCalledWith(
+    expect(upsertVisitor).toHaveBeenCalledWith(
+      expect.objectContaining({ visitorKey: "c:client_race" })
+    );
+
+    // Followed by upgrade
+    expect(upgradeGuestToPlayer).toHaveBeenCalledTimes(1);
+    expect(upgradeGuestToPlayer).toHaveBeenCalledWith(
       expect.objectContaining({
-        visitorKey: "c:client_abc",
-        playerId: null,
+        guestKey: "c:client_race",
+        playerKey: "p:55",
+        playerId: 55,
       })
     );
 
-    // Logs in later
-    await recordVisit(socket, { playerId: 99 });
-    const today = getUtcDay();
-    expect(deleteVisitor).toHaveBeenCalledWith(today, "c:client_abc");
-    expect(upsertVisitor).toHaveBeenCalledTimes(2);
-    expect(upsertVisitor).toHaveBeenLastCalledWith({
-      day: today,
-      visitorKey: "p:99",
-      playerId: 99,
-    });
-
-    // Repeated call for the player is deduplicated
-    await recordVisit(socket, { playerId: 99 });
-    expect(upsertVisitor).toHaveBeenCalledTimes(2);
+    // A subsequent guest call is dropped because the client is registered today
+    await recordVisit(socket, null);
+    expect(upsertVisitor).toHaveBeenCalledTimes(1);
   });
 
   test("swallows repo errors gracefully without throwing", async () => {
