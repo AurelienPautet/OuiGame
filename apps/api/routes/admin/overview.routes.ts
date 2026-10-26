@@ -17,15 +17,13 @@ router.get("/overview", async (_req: Request, res: Response) => {
   res.json(overview);
 });
 
-// GET /api/admin/timeseries?days= — a contiguous daily series (default 30 days).
+// GET /api/admin/timeseries?days=&range= — contiguous series (default 30 days, or hourly for 24h).
 router.get(
   "/timeseries",
   validate({ query: AdminTimeseriesQuerySchema }),
   async (req: Request, res: Response) => {
     const query = req.validatedQuery as AdminTimeseriesQuery;
-    const days = query.days ?? 30;
-
-    const series = await adminStatsService.getTimeseries(days);
+    const series = await adminStatsService.getTimeseries(query);
     res.json(series);
   }
 );

@@ -207,126 +207,168 @@ async function loginCounts() {
 
 // --- Timeseries: one grouped query per metric ---
 
-// Truncate a timestamp column to a UTC day and cast to a date, yielding the
-// YYYY-MM-DD bucket key shared by every metric query below.
-function dayBucket(tsCol: AnyColumn): SQL {
-  return sql`date_trunc('day', ${tsCol})::date`;
+export type TimeseriesGranularity = "day" | "hour";
+
+function timeBucket(tsCol: AnyColumn, granularity: TimeseriesGranularity): SQL {
+  return granularity === "hour"
+    ? sql`to_char(date_trunc('hour', ${tsCol}), 'YYYY-MM-DD HH24:00')`
+    : sql`date_trunc('day', ${tsCol})::date`;
 }
 
-// New players per day.
-async function newUsersByDay(start: Date) {
+// New players per time bucket.
+async function newUsersSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(players.creationTimestamp, granularity);
   return db
     .select({
-      day: dayBucket(players.creationTimestamp),
+      day: bucket,
       value: count(players.id),
     })
     .from(players)
     .where(gte(players.creationTimestamp, start))
-    .groupBy(dayBucket(players.creationTimestamp));
+    .groupBy(bucket);
 }
 
-// Distinct players with a successful login per day.
-async function activeUsersByDay(start: Date) {
+// Distinct players with a successful login per time bucket.
+async function activeUsersSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(logings.attemptTimestamp, granularity);
   return db
     .select({
-      day: dayBucket(logings.attemptTimestamp),
+      day: bucket,
       value: countDistinct(logings.playerId),
     })
     .from(logings)
     .where(and(successLoginCond(), gte(logings.attemptTimestamp, start)))
-    .groupBy(dayBucket(logings.attemptTimestamp));
+    .groupBy(bucket);
 }
 
-// All login attempts per day.
-async function loginsByDay(start: Date) {
+// All login attempts per time bucket.
+async function loginsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(logings.attemptTimestamp, granularity);
   return db
     .select({
-      day: dayBucket(logings.attemptTimestamp),
+      day: bucket,
       value: count(logings.id),
     })
     .from(logings)
     .where(gte(logings.attemptTimestamp, start))
-    .groupBy(dayBucket(logings.attemptTimestamp));
+    .groupBy(bucket);
 }
 
-// Failed login attempts per day.
-async function failedLoginsByDay(start: Date) {
+// Failed login attempts per time bucket.
+async function failedLoginsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(logings.attemptTimestamp, granularity);
   return db
     .select({
-      day: dayBucket(logings.attemptTimestamp),
+      day: bucket,
       value: count(logings.id),
     })
     .from(logings)
     .where(
       and(ilike(logings.status, "%fail%"), gte(logings.attemptTimestamp, start))
     )
-    .groupBy(dayBucket(logings.attemptTimestamp));
+    .groupBy(bucket);
 }
 
-// Online rounds per day.
-async function onlineRoundsByDay(start: Date) {
+// Online rounds per time bucket.
+async function onlineRoundsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(rounds.timestamp, granularity);
   return db
-    .select({ day: dayBucket(rounds.timestamp), value: count(rounds.id) })
+    .select({ day: bucket, value: count(rounds.id) })
     .from(rounds)
     .where(gte(rounds.timestamp, start))
-    .groupBy(dayBucket(rounds.timestamp));
+    .groupBy(bucket);
 }
 
-// Solo rounds per day.
-async function soloRoundsByDay(start: Date) {
+// Solo rounds per time bucket.
+async function soloRoundsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(soloRounds.timestamp, granularity);
   return db
     .select({
-      day: dayBucket(soloRounds.timestamp),
+      day: bucket,
       value: count(soloRounds.id),
     })
     .from(soloRounds)
     .where(gte(soloRounds.timestamp, start))
-    .groupBy(dayBucket(soloRounds.timestamp));
+    .groupBy(bucket);
 }
 
-// Campaign runs per day.
-async function campaignRunsByDay(start: Date) {
+// Campaign runs per time bucket.
+async function campaignRunsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(campaignRuns.timestamp, granularity);
   return db
     .select({
-      day: dayBucket(campaignRuns.timestamp),
+      day: bucket,
       value: count(campaignRuns.id),
     })
     .from(campaignRuns)
     .where(gte(campaignRuns.timestamp, start))
-    .groupBy(dayBucket(campaignRuns.timestamp));
+    .groupBy(bucket);
 }
 
-// Online kills per day.
-async function onlineKillsByDay(start: Date) {
+// Online kills per time bucket.
+async function onlineKillsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(rounds.timestamp, granularity);
   return db
-    .select({ day: dayBucket(rounds.timestamp), value: sum(rounds.kills) })
+    .select({ day: bucket, value: sum(rounds.kills) })
     .from(rounds)
     .where(gte(rounds.timestamp, start))
-    .groupBy(dayBucket(rounds.timestamp));
+    .groupBy(bucket);
 }
 
-// Solo kills per day.
-async function soloKillsByDay(start: Date) {
+// Solo kills per time bucket.
+async function soloKillsSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(soloRounds.timestamp, granularity);
   return db
     .select({
-      day: dayBucket(soloRounds.timestamp),
+      day: bucket,
       value: sum(soloRounds.kills),
     })
     .from(soloRounds)
     .where(gte(soloRounds.timestamp, start))
-    .groupBy(dayBucket(soloRounds.timestamp));
+    .groupBy(bucket);
 }
 
-// Levels created per day.
-async function levelsCreatedByDay(start: Date) {
+// Levels created per time bucket.
+async function levelsCreatedSeries(
+  start: Date,
+  granularity: TimeseriesGranularity = "day"
+) {
+  const bucket = timeBucket(levels.creationTimestamp, granularity);
   return db
     .select({
-      day: dayBucket(levels.creationTimestamp),
+      day: bucket,
       value: count(levels.id),
     })
     .from(levels)
     .where(gte(levels.creationTimestamp, start))
-    .groupBy(dayBucket(levels.creationTimestamp));
+    .groupBy(bucket);
 }
 
 export {
@@ -342,14 +384,24 @@ export {
   campaignRunStats,
   achievementCount,
   loginCounts,
-  newUsersByDay,
-  activeUsersByDay,
-  loginsByDay,
-  failedLoginsByDay,
-  onlineRoundsByDay,
-  soloRoundsByDay,
-  campaignRunsByDay,
-  onlineKillsByDay,
-  soloKillsByDay,
-  levelsCreatedByDay,
+  newUsersSeries,
+  activeUsersSeries,
+  loginsSeries,
+  failedLoginsSeries,
+  onlineRoundsSeries,
+  soloRoundsSeries,
+  campaignRunsSeries,
+  onlineKillsSeries,
+  soloKillsSeries,
+  levelsCreatedSeries,
+  newUsersSeries as newUsersByDay,
+  activeUsersSeries as activeUsersByDay,
+  loginsSeries as loginsByDay,
+  failedLoginsSeries as failedLoginsByDay,
+  onlineRoundsSeries as onlineRoundsByDay,
+  soloRoundsSeries as soloRoundsByDay,
+  campaignRunsSeries as campaignRunsByDay,
+  onlineKillsSeries as onlineKillsByDay,
+  soloKillsSeries as soloKillsByDay,
+  levelsCreatedSeries as levelsCreatedByDay,
 };

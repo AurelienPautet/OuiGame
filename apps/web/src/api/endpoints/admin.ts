@@ -38,11 +38,20 @@ function toQuery(params: Record<string, string | number | undefined>): string {
   return qs ? `?${qs}` : "";
 }
 
+export interface AdminTimeseriesParams {
+  [key: string]: string | number | undefined;
+  days?: number;
+  range?: "24h" | "7d" | "30d" | "90d";
+}
+
 export const adminApi = {
   getOverview: () => apiClient.get<AdminOverview>("/admin/overview"),
 
-  getTimeseries: (days?: number) =>
-    apiClient.get<AdminTimeseries>(`/admin/timeseries${toQuery({ days })}`),
+  getTimeseries: (params?: number | AdminTimeseriesParams) => {
+    const query =
+      typeof params === "number" ? { days: params } : (params ?? {});
+    return apiClient.get<AdminTimeseries>(`/admin/timeseries${toQuery(query)}`);
+  },
 
   getUsers: (params: AdminUsersParams) =>
     apiClient.get<AdminUsersResponse>(

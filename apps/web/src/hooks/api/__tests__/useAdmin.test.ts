@@ -4,6 +4,7 @@ import { renderHook, waitFor, cleanup } from "@testing-library/react";
 vi.mock("../../../api", () => ({
   adminApi: {
     getOverview: vi.fn(),
+    getTimeseries: vi.fn(),
     updateUser: vi.fn(),
     getLevelThumbnailSources: vi.fn(),
     updateLevelThumbnail: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("../../../lib/storage", () => ({
 
 import {
   useAdminOverview,
+  useAdminTimeseries,
   useUpdateAdminUser,
   useRerenderAdminLevelThumbnails,
 } from "../useAdmin";
@@ -35,6 +37,7 @@ import {
 import { createQueryWrapper } from "../../../test/queryWrapper";
 
 const getOverview = adminApi.getOverview as ReturnType<typeof vi.fn>;
+const getTimeseries = adminApi.getTimeseries as ReturnType<typeof vi.fn>;
 const updateUser = adminApi.updateUser as ReturnType<typeof vi.fn>;
 const getLevelThumbnailSources =
   adminApi.getLevelThumbnailSources as ReturnType<typeof vi.fn>;
@@ -238,5 +241,29 @@ describe("useRerenderAdminLevelThumbnails", () => {
     result.current.mutate(undefined);
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
+describe("useAdminTimeseries", () => {
+  it("fetches timeseries with named range", async () => {
+    const points = [{ date: "14:00", games: 5 }];
+    getTimeseries.mockResolvedValue(points);
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useAdminTimeseries("24h"), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(points);
+    expect(getTimeseries).toHaveBeenCalledWith({ range: "24h" });
+  });
+
+  it("fetches timeseries with numeric days", async () => {
+    const points = [{ date: "2026-10-26", games: 10 }];
+    getTimeseries.mockResolvedValue(points);
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useAdminTimeseries(7), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(points);
+    expect(getTimeseries).toHaveBeenCalledWith({ days: 7 });
   });
 });
