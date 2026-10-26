@@ -3,7 +3,12 @@
 
 const users: Record<
   string,
-  { playerId: number; username: string; email: string }
+  {
+    playerId: number;
+    username: string;
+    email: string;
+    isAdmin?: boolean;
+  }
 > = {};
 
 export { users };

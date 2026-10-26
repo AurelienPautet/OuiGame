@@ -2,6 +2,8 @@ import { apiClient } from "../client";
 import type {
   AdminOverview,
   AdminTimeseries,
+  AdminConnectedPlayersResponse,
+  AdminConnectedPlayersQuery,
   AdminUsersResponse,
   AdminUserDetail,
   AdminUpdateUserRequest,
@@ -26,6 +28,7 @@ export type AdminLevelsParams = AdminLevelsQuery;
 export type AdminCampaignsParams = AdminPagedQuery;
 export type AdminLoginsParams = AdminLoginsQuery;
 export type AdminAuditParams = AdminPagedQuery;
+export type AdminConnectedPlayersParams = AdminConnectedPlayersQuery;
 
 // Build a `?a=b&c=d` query string, dropping undefined params so optional
 // filters don't leak as empty values onto the wire.
@@ -52,6 +55,14 @@ export const adminApi = {
       typeof params === "number" ? { days: params } : (params ?? {});
     return apiClient.get<AdminTimeseries>(`/admin/timeseries${toQuery(query)}`);
   },
+
+  getConnectedPlayers: (params?: AdminConnectedPlayersParams) =>
+    apiClient.get<AdminConnectedPlayersResponse>(
+      `/admin/connected-players${toQuery({
+        type: params?.type,
+        search: params?.search,
+      })}`
+    ),
 
   getUsers: (params: AdminUsersParams) =>
     apiClient.get<AdminUsersResponse>(

@@ -12,6 +12,8 @@ import type {
 export interface SocketData {
   rl?: { start: number; count: number };
   clientId?: string;
+  connectedAt?: number;
+  guestName?: string;
 }
 
 export type AppServer = Server<

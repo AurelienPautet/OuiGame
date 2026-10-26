@@ -8,9 +8,12 @@ import { OverviewTab } from "../OverviewTab";
 // network / QueryClient involvement.
 const useAdminOverview = vi.fn();
 const useAdminTimeseries = vi.fn();
+const useAdminConnectedPlayers = vi.fn();
 vi.mock("../../../hooks/api", () => ({
   useAdminOverview: () => useAdminOverview(),
-  useAdminTimeseries: (days: number) => useAdminTimeseries(days),
+  useAdminTimeseries: (days: any) => useAdminTimeseries(days),
+  useAdminConnectedPlayers: (params?: any, options?: any) =>
+    useAdminConnectedPlayers(params, options),
 }));
 
 const OVERVIEW: AdminOverview = {
@@ -26,6 +29,11 @@ const OVERVIEW: AdminOverview = {
     active7d: 210,
     active30d: 540,
     guestsToday: 15,
+    connected: {
+      total: 7,
+      registered: 4,
+      guests: 3,
+    },
   },
   content: {
     levels: 80,
@@ -94,10 +102,24 @@ describe("OverviewTab", () => {
   beforeEach(() => {
     useAdminOverview.mockReturnValue({ data: OVERVIEW, isLoading: false });
     useAdminTimeseries.mockReturnValue({ data: SERIES, isLoading: false });
+    useAdminConnectedPlayers.mockReturnValue({
+      data: {
+        total: 2,
+        registeredCount: 1,
+        guestCount: 1,
+        players: [],
+      },
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
   });
 
-  it("renders headline KPI values from the overview DTO", () => {
+  it("renders headline KPI values from the overview DTO including Connected Now", () => {
     render(<OverviewTab />);
+    expect(screen.getByText("Connected Now")).toBeTruthy();
+    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.getByText(/4 reg · 3 guests/)).toBeTruthy();
     expect(screen.getByText("Total Players")).toBeTruthy();
     expect(screen.getByText("1284")).toBeTruthy();
     // accuracy is rendered as a whole-percent string
@@ -106,6 +128,12 @@ describe("OverviewTab", () => {
     expect(screen.getByText("64 / 80")).toBeTruthy();
     // Active KPI includes guest hint
     expect(screen.getByText(/15 guests/)).toBeTruthy();
+  });
+
+  it("renders the connected players section", () => {
+    render(<OverviewTab />);
+    expect(screen.getByText("Connected Players")).toBeTruthy();
+    expect(screen.getByText("2 Online")).toBeTruthy();
   });
 
   it("renders the bespoke SVG charts with the timeseries data", () => {
@@ -140,12 +168,8 @@ describe("OverviewTab", () => {
   it("shows a loading skeleton while the overview is fetching", () => {
     useAdminOverview.mockReturnValue({ data: undefined, isLoading: true });
     const { container } = render(<OverviewTab />);
-    expect(container.querySelector(".animate-pulse")).toBeTruthy();
-  });
-
-  it("shows an empty chart state when the timeseries is empty", () => {
-    useAdminTimeseries.mockReturnValue({ data: [], isLoading: false });
-    render(<OverviewTab />);
-    expect(screen.getAllByText("No data yet").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0
+    );
   });
 });

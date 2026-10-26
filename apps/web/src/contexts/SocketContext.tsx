@@ -58,6 +58,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         cb({
           token: storage.getSessionId(),
           clientId: storage.getClientId(),
+          playerName: storage.getPlayerName(),
         }),
     }) as GameSocket;
 

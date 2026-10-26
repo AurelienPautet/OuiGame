@@ -7,6 +7,13 @@ import * as levelsService from "../services/levels.service";
 import * as ratingsRepo from "../repositories/ratings.repo";
 import * as playSessions from "./playSessions";
 import * as dailyActivity from "./dailyActivity";
+import {
+  trackSocketConnect,
+  trackSocketDisconnect,
+  updateSocketGuestName,
+  setConnectedRoomsRef,
+  setConnectedIoRef,
+} from "./connectedPlayers";
 import { beginCountdown } from "../game/countdown";
 import {
   applyPlayerInput,
@@ -82,6 +89,9 @@ function registerSocketHandlers({
   broadcast_lobby_state: (room: Room) => void;
   deleteRoomIfEmpty: (room: Room) => void;
 }) {
+  setConnectedRoomsRef(rooms);
+  setConnectedIoRef(io);
+
   // Resolve a session token to an in-memory user record keyed by socket id.
   async function authenticateSocket(socket: AppSocket, token: string) {
     try {
@@ -96,6 +106,7 @@ function registerSocketHandlers({
           playerId: user.playerId,
           username: user.username,
           email: user.email,
+          isAdmin: Boolean(user.isAdmin),
         };
         playSessions.sessionOpened(socket.id, user.playerId);
         void dailyActivity.recordVisit(socket, { playerId: user.playerId });
@@ -149,6 +160,7 @@ function registerSocketHandlers({
 
   function disconnect_socket(socket: AppSocket) {
     console.log(socket.id, "Got disconnect!");
+    trackSocketDisconnect(socket.id);
     // End the player's play session (after the reconnect grace) before the
     // in-memory auth record for this socket goes away.
     const user = users[socket.id];
@@ -167,6 +179,8 @@ function registerSocketHandlers({
       typeof authClientId === "string" && authClientId.trim().length > 0
         ? authClientId.trim().slice(0, 64)
         : socket.id;
+
+    trackSocketConnect(socket);
 
     room_list(socket);
     socket.join("lobby" + serverid);
@@ -290,6 +304,8 @@ function registerSocketHandlers({
     });
 
     socket.on("play", (playerName, turretc, bodyc, room_id, paintc) => {
+      updateSocketGuestName(socket.id, playerName);
+
       // Hull paint is cosmetic; sanitize the id here so a malformed client can't
       // bloat every tick snapshot (the renderer resolves unknowns to plain).
       const paint = sanitizePaint(paintc);

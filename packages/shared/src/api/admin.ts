@@ -23,6 +23,13 @@ export const AdminOverviewSchema = z.object({
     active7d: z.number(),
     active30d: z.number(),
     guestsToday: z.number().default(0),
+    connected: z
+      .object({
+        total: z.number(),
+        registered: z.number(),
+        guests: z.number(),
+      })
+      .default({ total: 0, registered: 0, guests: 0 }),
   }),
   content: z.object({
     levels: z.number(),
@@ -170,6 +177,47 @@ export const AdminUserDetailSchema = AdminUserListItemSchema.extend({
 });
 export type AdminUserDetail = z.infer<typeof AdminUserDetailSchema>;
 
+// GET /api/admin/connected-players — real-time snapshot of sockets currently connected.
+export const AdminConnectedPlayerSchema = z.object({
+  socketId: z.string(),
+  clientId: z.string().nullable().optional(),
+  type: z.enum(["registered", "guest"]),
+  connectedAt: z.string(),
+  durationMs: z.number(),
+  ip: z.string().nullable().optional(),
+  status: z.enum(["lobby", "playing", "in_room"]),
+  room: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+      mode: z.string().optional(),
+      status: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+  user: z
+    .object({
+      id: z.number(),
+      username: z.string(),
+      email: z.string(),
+      isAdmin: z.boolean().optional(),
+    })
+    .nullable()
+    .optional(),
+  guestName: z.string().nullable().optional(),
+});
+export type AdminConnectedPlayer = z.infer<typeof AdminConnectedPlayerSchema>;
+
+export const AdminConnectedPlayersResponseSchema = z.object({
+  total: z.number(),
+  registeredCount: z.number(),
+  guestCount: z.number(),
+  players: z.array(AdminConnectedPlayerSchema),
+});
+export type AdminConnectedPlayersResponse = z.infer<
+  typeof AdminConnectedPlayersResponseSchema
+>;
+
 // GET /api/admin/levels — paginated level catalog with play/rating aggregates.
 export const AdminLevelListItemSchema = z.object({
   id: z.number(),
@@ -287,6 +335,15 @@ export const AdminTimeseriesQuerySchema = z.object({
   range: AdminTimeseriesRangeSchema.optional(),
 });
 export type AdminTimeseriesQuery = z.infer<typeof AdminTimeseriesQuerySchema>;
+
+// GET /api/admin/connected-players?type=&search=
+export const AdminConnectedPlayersQuerySchema = z.object({
+  type: z.enum(["all", "registered", "guest"]).optional(),
+  search: z.string().optional(),
+});
+export type AdminConnectedPlayersQuery = z.infer<
+  typeof AdminConnectedPlayersQuerySchema
+>;
 
 // GET /api/admin/users?search=&sort=&order=&type=&page=&pageSize=
 export const AdminUsersQuerySchema = z.object({
