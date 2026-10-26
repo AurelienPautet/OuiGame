@@ -156,7 +156,8 @@ export function BarChart({
         data: data.map((row) => Number(row[s.key]) || 0),
         smooth: 0.15,
         symbol: "circle",
-        symbolSize: 6,
+        symbolSize: data.length === 1 ? 8 : 6,
+        showSymbol: data.length === 1,
         lineStyle: {
           color: s.color,
           width: 3,
