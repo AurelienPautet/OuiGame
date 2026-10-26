@@ -228,8 +228,7 @@
     "name": "Name (A–Z)",
     "loadError": "Could not load campaigns.",
     "retry": "Try again",
-    "difficultyHelp": "Difficulty uses completed runs: Easy ≥70% cleared, Medium ≥40%, Hard ≥20%, Expert <20%. At least 10 runs required.",
-    "difficultyAbout": "How difficulty works"
+    "difficultyHelp": "Difficulty uses completed runs: Easy ≥70% cleared, Medium ≥40%, Hard ≥20%, Expert <20%. At least 10 runs required."
   },
   "campaignCard": {
     "levels_one": "{{count}} level",

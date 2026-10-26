@@ -238,14 +238,6 @@ export function CampaignSelector({
             </label>
           ))}
         </div>
-        <details className="text-xs text-ink-soft leading-relaxed">
-          <summary className="cursor-pointer w-fit">
-            {t("campaignSelector.difficultyAbout")}
-          </summary>
-          <p className="mt-1 max-w-prose">
-            {t("campaignSelector.difficultyHelp")}
-          </p>
-        </details>
       </div>
       <div className="flex min-h-7 shrink-0 items-center justify-between gap-2 border-t-2 border-ink/10 pt-3 text-sm text-ink-soft">
         <span role="status" aria-live="polite">

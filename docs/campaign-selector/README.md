@@ -12,7 +12,7 @@ The selector uses the shared Oui Tank input, select, button, card, filter chips,
 
 ## Metadata
 
-Difficulty uses the proportion of recorded finished campaign runs that cleared the campaign, with at least ten runs required. Easy: at least 70%; medium: at least 40%; hard: at least 20%; expert: below 20%. Smaller samples are explicitly unknown. The expandable explanation exposes these rules. This is an observed completion measure, not an intrinsic map difficulty or a bot-weight estimate, and repeat runs count individually.
+Difficulty uses the proportion of recorded finished campaign runs that cleared the campaign, with at least ten runs required. Easy: at least 70%; medium: at least 40%; hard: at least 20%; expert: below 20%. Smaller samples are explicitly unknown. The difficulty badge tooltip on each card exposes these rules. This is an observed completion measure, not an intrinsic map difficulty or a bot-weight estimate, and repeat runs count individually.
 
 Ratings average existing individual ratings across the campaign's currently public levels. The count is the number of those level ratings, not unique campaign reviewers. The rating indicator explains this in its tooltip. No campaign-review data is invented. Difficulty changes as run data changes; level ratings can change when levels are unpublished.
 

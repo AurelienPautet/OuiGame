@@ -226,8 +226,7 @@
     "name": "Nome (A–Z)",
     "loadError": "Impossibile caricare le campagne.",
     "retry": "Riprova",
-    "difficultyHelp": "Difficoltà dalle partite terminate: Facile ≥70 % superate, Media ≥40 %, Difficile ≥20 %, Esperto <20 %. Servono almeno 10 partite.",
-    "difficultyAbout": "Come funziona la difficoltà"
+    "difficultyHelp": "Difficoltà dalle partite terminate: Facile ≥70 % superate, Media ≥40 %, Difficile ≥20 %, Esperto <20 %. Servono almeno 10 partite."
   },
   "campaignCard": {
     "levels_one": "{{count}} livello",
