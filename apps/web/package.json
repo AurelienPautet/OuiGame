@@ -35,7 +35,7 @@
     "motion": "^12.40.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-i18next": "^17.0.8",
+    "react-i18next": "^17.1.5",
     "react-router-dom": "^7.18.4",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.6.0",
