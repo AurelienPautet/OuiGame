@@ -108,8 +108,7 @@ describe("ConnectedPlayersSection", () => {
 
     expect(screen.getByText("Connected Players")).toBeTruthy();
     expect(screen.getByText("3 Online")).toBeTruthy();
-    expect(screen.getByText("2 Reg")).toBeTruthy();
-    expect(screen.getByText("1 Guest")).toBeTruthy();
+    expect(screen.getByText(/2 registered · 1 guest/)).toBeTruthy();
   });
 
   it("renders details for both registered and guest players", () => {
@@ -119,20 +118,20 @@ describe("ConnectedPlayersSection", () => {
     expect(screen.getByText("AceCommander")).toBeTruthy();
     expect(screen.getByText("ace@example.com")).toBeTruthy();
     expect(screen.getByText("Admin")).toBeTruthy();
-    expect(screen.getByText("Playing in #42")).toBeTruthy();
+    expect(screen.getByText(/Playing in #42/)).toBeTruthy();
     expect(screen.getByText(/Neon Fortress/)).toBeTruthy();
     expect(screen.getByText("192.168.1.100")).toBeTruthy();
 
     // Registered player 2
     expect(screen.getByText("TankBuster")).toBeTruthy();
     expect(screen.getByText("tank@example.com")).toBeTruthy();
-    expect(screen.getByText("In Room #99")).toBeTruthy();
+    expect(screen.getByText(/In Room #99/)).toBeTruthy();
     expect(screen.getByText(/Desert Arena/)).toBeTruthy();
     expect(screen.getByText("10.0.0.5")).toBeTruthy();
 
     // Guest player
     expect(screen.getByText("SpeedyGuest")).toBeTruthy();
-    expect(screen.getByText(/Client: client-guest-x/)).toBeTruthy();
+    expect(screen.getByText("client-guest-xyz-12345678")).toBeTruthy();
     expect(screen.getByText("Main Lobby")).toBeTruthy();
     expect(screen.getByText("172.16.0.22")).toBeTruthy();
   });
@@ -204,12 +203,10 @@ describe("ConnectedPlayersSection", () => {
     render(<ConnectedPlayersSection />);
 
     const toggleBtn = screen.getByTitle("Auto-refresh active (5s)");
-    expect(toggleBtn.textContent).toBe("● Live (5s)");
+    expect(toggleBtn.textContent).toBe("Live (5s)");
 
     fireEvent.click(toggleBtn);
-    expect(screen.getByTitle("Auto-refresh paused").textContent).toBe(
-      "○ Paused"
-    );
+    expect(screen.getByTitle("Auto-refresh paused").textContent).toBe("Paused");
 
     const refreshBtn = screen.getByLabelText("Refresh connected players");
     fireEvent.click(refreshBtn);
