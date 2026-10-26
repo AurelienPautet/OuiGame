@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export const CampaignDifficultySchema = z.enum([
+  "easy",
+  "medium",
+  "hard",
+  "expert",
+]);
+export type CampaignDifficulty = z.infer<typeof CampaignDifficultySchema>;
+
 // The formatCampaigns DTO — all snake_case, all Number()/Math.round coerced
 // server-side (real numbers).
 export const CampaignDTOSchema = z.object({
@@ -10,6 +18,13 @@ export const CampaignDTOSchema = z.object({
   level_count: z.number(),
   completion_percent: z.number(),
   completed: z.boolean(),
+  rating: z.union([z.string(), z.number()]).default(0),
+  rating_count: z.number().default(0),
+  difficulty: CampaignDifficultySchema.default("medium"),
+  difficulty_score: z.number().default(1),
+  times_played: z.number().default(0),
+  clear_rate: z.number().default(0),
+  enemy_count: z.number().default(0),
 });
 export type CampaignDTO = z.infer<typeof CampaignDTOSchema>;
 
