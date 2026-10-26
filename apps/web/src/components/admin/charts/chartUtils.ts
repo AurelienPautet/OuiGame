@@ -1,7 +1,7 @@
 import { palette } from "../../../theme/palette";
 
 export const CHART_FONTS =
-  '"Fredoka Variable", "Fredoka", system-ui, -apple-system, sans-serif';
+  'Fredoka, "Fredoka Variable", system-ui, -apple-system, sans-serif';
 
 export const BASE_AXIS_LINE = {
   lineStyle: {
@@ -14,7 +14,7 @@ export const BASE_SPLIT_LINE = {
   lineStyle: {
     color: palette.fieldLine,
     width: 1,
-    type: "solid" as const,
+    type: "dashed" as const,
   },
 };
 
@@ -26,19 +26,32 @@ export const BASE_AXIS_LABEL = {
   margin: 8,
 };
 
+export interface TooltipItemParam {
+  axisValueLabel?: string;
+  name?: string;
+  seriesName?: string;
+  value?: number | string | null;
+  color?: string | { colorStops?: Array<{ color: string }> };
+}
+
 /** Format tooltip content using OuiGame's dark arcade panel styling. */
-export function formatArcadeTooltip(params: any): string {
-  const items = Array.isArray(params) ? params : [params];
+export function formatArcadeTooltip(params: unknown): string {
+  const rawItems = Array.isArray(params) ? params : [params];
+  const items = rawItems as TooltipItemParam[];
   if (items.length === 0) return "";
 
-  const title = items[0].axisValueLabel || items[0].name || "";
+  const title = items[0]?.axisValueLabel || items[0]?.name || "";
 
   const rows = items
-    .filter((it: any) => it.value !== undefined && it.value !== null)
-    .map((it: any) => {
-      const color = it.color?.colorStops
-        ? it.color.colorStops[0].color
-        : it.color || palette.blue;
+    .filter(
+      (it): it is TooltipItemParam =>
+        it.value !== undefined && it.value !== null
+    )
+    .map((it) => {
+      const color =
+        typeof it.color === "object" && it.color?.colorStops
+          ? it.color.colorStops[0]?.color || palette.blue
+          : (it.color as string) || palette.blue;
       const val =
         typeof it.value === "number" ? it.value.toLocaleString() : it.value;
       const name = it.seriesName || "";

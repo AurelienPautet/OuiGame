@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { palette } from "../../../theme/palette";
@@ -53,34 +53,34 @@ export function BarChart({
   const [isZoomed, setIsZoomed] = useState(false);
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
-  // Normalize single barKey or multiple series
-  const barSeries: BarChartSeries[] =
-    seriesProp && seriesProp.length > 0
-      ? seriesProp
-      : barKey
-        ? [{ key: barKey, color, label: barKey }]
-        : [];
+  // Normalize single barKey or multiple series with useMemo
+  const barSeries: BarChartSeries[] = useMemo(() => {
+    if (seriesProp && seriesProp.length > 0) {
+      return seriesProp;
+    }
+    if (barKey) {
+      return [{ key: barKey, color, label: barKey }];
+    }
+    return [];
+  }, [seriesProp, barKey, color]);
 
-  const allSeriesLabels = [
-    ...barSeries.map((s) => ({ label: s.label || s.key, color: s.color })),
-    ...lineSeries.map((s) => ({ label: s.label, color: s.color })),
-  ];
+  const allSeriesLabels = useMemo(
+    () => [
+      ...barSeries.map((s) => ({ label: s.label || s.key, color: s.color })),
+      ...lineSeries.map((s) => ({ label: s.label, color: s.color })),
+    ],
+    [barSeries, lineSeries]
+  );
 
-  if (data.length === 0 || barSeries.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center text-sm font-semibold text-ink-soft"
-        style={{ height }}
-      >
-        No data yet
-      </div>
-    );
-  }
+  const isEmpty = data.length === 0 || barSeries.length === 0;
 
-  const xCategories = data.map((d) => String(d[xKey] ?? ""));
+  const xCategories = useMemo(
+    () => (isEmpty ? [] : data.map((d) => String(d[xKey] ?? ""))),
+    [data, xKey, isEmpty]
+  );
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isEmpty) return;
 
     const initialWidth = containerRef.current.clientWidth || 600;
     const initialHeight = containerRef.current.clientHeight || height;
@@ -93,7 +93,9 @@ export function BarChart({
     chartRef.current = chart;
 
     chart.on("datazoom", () => {
-      const opt = chart.getOption() as any;
+      const opt = chart.getOption() as {
+        dataZoom?: Array<{ start?: number; end?: number }>;
+      };
       const zoom = opt?.dataZoom?.[0];
       if (zoom) {
         const active =
@@ -122,23 +124,23 @@ export function BarChart({
       chart.dispose();
       chartRef.current = null;
     };
-  }, [height]);
+  }, [height, isEmpty]);
 
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart) return;
+    if (!chart || isEmpty) return;
 
-    const echartsSeries: any[] = [
+    const echartsSeries = [
       ...barSeries.map((s) => ({
         name: s.label || s.key,
-        type: "bar",
+        type: "bar" as const,
         data: data.map((row) => Number(row[s.key]) || 0),
         barMaxWidth: 30,
         itemStyle: {
           color: s.color,
           borderColor: palette.ink,
           borderWidth: 2,
-          borderRadius: [4, 4, 0, 0],
+          borderRadius: [4, 4, 0, 0] as [number, number, number, number],
         },
         emphasis: {
           itemStyle: {
@@ -150,7 +152,7 @@ export function BarChart({
       })),
       ...lineSeries.map((s) => ({
         name: s.label,
-        type: "line",
+        type: "line" as const,
         data: data.map((row) => Number(row[s.key]) || 0),
         smooth: 0.15,
         symbol: "circle",
@@ -158,8 +160,8 @@ export function BarChart({
         lineStyle: {
           color: s.color,
           width: 3,
-          cap: "round",
-          join: "round",
+          cap: "round" as const,
+          join: "round" as const,
         },
         itemStyle: {
           color: s.color,
@@ -172,10 +174,10 @@ export function BarChart({
       })),
     ];
 
-    const dataZoom: any[] = zoomable
+    const dataZoom = zoomable
       ? [
           {
-            type: "inside",
+            type: "inside" as const,
             xAxisIndex: 0,
             zoomOnMouseWheel: true,
             moveOnMouseMove: true,
@@ -184,7 +186,7 @@ export function BarChart({
           ...(showSlider
             ? [
                 {
-                  type: "slider",
+                  type: "slider" as const,
                   xAxisIndex: 0,
                   height: 16,
                   bottom: 2,
@@ -215,6 +217,10 @@ export function BarChart({
       {
         animation: true,
         animationDuration: 300,
+        legend: {
+          show: false,
+          data: allSeriesLabels.map((s) => s.label),
+        },
         grid: {
           left: 42,
           right: 16,
@@ -262,7 +268,16 @@ export function BarChart({
       },
       { notMerge: false }
     );
-  }, [data, barSeries, lineSeries, zoomable, showSlider, xCategories]);
+  }, [
+    data,
+    barSeries,
+    lineSeries,
+    zoomable,
+    showSlider,
+    xCategories,
+    allSeriesLabels,
+    isEmpty,
+  ]);
 
   const toggleSeries = (label: string) => {
     if (!chartRef.current) return;
@@ -289,6 +304,17 @@ export function BarChart({
     });
     setIsZoomed(false);
   };
+
+  if (isEmpty) {
+    return (
+      <div
+        className="flex items-center justify-center text-sm font-semibold text-ink-soft"
+        style={{ height }}
+      >
+        No data yet
+      </div>
+    );
+  }
 
   const showLegend = allSeriesLabels.length > 1;
 

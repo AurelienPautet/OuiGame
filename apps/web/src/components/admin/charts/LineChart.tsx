@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { palette } from "../../../theme/palette";
@@ -12,22 +12,23 @@ import {
 } from "./chartUtils";
 
 export interface LineChartSeries {
-  /** Key into each data row (numeric value). */
+  /** Key in the data object for this series' numeric values. */
   key: string;
-  /** Legend label. */
+  /** Label shown in tooltip and legend. */
   label: string;
-  /** Stroke / area colour (hex). */
+  /** Stroke colour (hex) for this line. */
   color: string;
 }
 
 export interface LineChartProps {
   data: Array<Record<string, string | number>>;
-  /** Key into each row for the x-axis category (e.g. a date string). */
+  /** Key into each row for the x-axis category label (e.g. "date"). */
   xKey: string;
+  /** One or more numeric series to draw. */
   series: LineChartSeries[];
-  height?: number;
-  /** Fill a faint area under each line. */
+  /** Fill the area beneath each line with a soft gradient. Default false. */
   area?: boolean;
+  height?: number;
   /** Enable scroll & mouse-wheel zooming. Default true. */
   zoomable?: boolean;
   /** Show the bottom timeline slider control. Default false. */
@@ -38,8 +39,8 @@ export function LineChart({
   data,
   xKey,
   series,
-  height = 220,
   area = false,
+  height = 220,
   zoomable = true,
   showSlider = false,
 }: LineChartProps) {
@@ -48,22 +49,15 @@ export function LineChart({
   const [isZoomed, setIsZoomed] = useState(false);
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
-  // Empty state fallback matching the original design
-  if (data.length === 0 || series.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center text-sm font-semibold text-ink-soft"
-        style={{ height }}
-      >
-        No data yet
-      </div>
-    );
-  }
+  const isEmpty = data.length === 0 || series.length === 0;
 
-  const xCategories = data.map((d) => String(d[xKey] ?? ""));
+  const xCategories = useMemo(
+    () => (isEmpty ? [] : data.map((d) => String(d[xKey] ?? ""))),
+    [data, xKey, isEmpty]
+  );
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isEmpty) return;
 
     const initialWidth = containerRef.current.clientWidth || 600;
     const initialHeight = containerRef.current.clientHeight || height;
@@ -75,9 +69,10 @@ export function LineChart({
     });
     chartRef.current = chart;
 
-    // Track zoom state to toggle the Reset Zoom button
     chart.on("datazoom", () => {
-      const opt = chart.getOption() as any;
+      const opt = chart.getOption() as {
+        dataZoom?: Array<{ start?: number; end?: number }>;
+      };
       const zoom = opt?.dataZoom?.[0];
       if (zoom) {
         const active =
@@ -106,28 +101,25 @@ export function LineChart({
       chart.dispose();
       chartRef.current = null;
     };
-  }, [height]);
+  }, [height, isEmpty]);
 
-  // Update chart options whenever data, series, or configuration changes
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart) return;
+    if (!chart || isEmpty) return;
 
-    const isSinglePoint = data.length === 1;
-
-    const echartsSeries: any[] = series.map((s) => ({
+    const echartsSeries = series.map((s) => ({
       name: s.label,
-      type: "line",
+      type: "line" as const,
       data: data.map((row) => Number(row[s.key]) || 0),
       smooth: 0.15,
-      symbol: isSinglePoint ? "circle" : "emptyCircle",
-      symbolSize: isSinglePoint ? 8 : 6,
-      showSymbol: isSinglePoint,
+      symbol: "circle",
+      symbolSize: 6,
+      showSymbol: false,
       lineStyle: {
         color: s.color,
         width: 3,
-        cap: "round",
-        join: "round",
+        cap: "round" as const,
+        join: "round" as const,
       },
       itemStyle: {
         color: s.color,
@@ -135,30 +127,32 @@ export function LineChart({
         borderWidth: 2,
       },
       emphasis: {
-        focus: "series",
-        scale: 1.5,
-        itemStyle: {
-          color: s.color,
-          borderColor: palette.ink,
-          borderWidth: 2,
-        },
+        scale: 1.6,
       },
-      ...(area && data.length > 1
+      ...(area
         ? {
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: s.color + "44" },
-                { offset: 1, color: s.color + "08" },
+                {
+                  offset: 0,
+                  color:
+                    s.color.length === 7 ? `${s.color}40` : "rgba(0,0,0,0.2)",
+                },
+                {
+                  offset: 1,
+                  color:
+                    s.color.length === 7 ? `${s.color}05` : "rgba(0,0,0,0)",
+                },
               ]),
             },
           }
         : {}),
     }));
 
-    const dataZoom: any[] = zoomable
+    const dataZoom = zoomable
       ? [
           {
-            type: "inside",
+            type: "inside" as const,
             xAxisIndex: 0,
             zoomOnMouseWheel: true,
             moveOnMouseMove: true,
@@ -167,7 +161,7 @@ export function LineChart({
           ...(showSlider
             ? [
                 {
-                  type: "slider",
+                  type: "slider" as const,
                   xAxisIndex: 0,
                   height: 16,
                   bottom: 2,
@@ -198,6 +192,10 @@ export function LineChart({
       {
         animation: true,
         animationDuration: 300,
+        legend: {
+          show: false,
+          data: series.map((s) => s.label),
+        },
         grid: {
           left: 42,
           right: 16,
@@ -216,11 +214,10 @@ export function LineChart({
           axisPointer: {
             type: "line",
             lineStyle: {
-              color: "rgba(43, 47, 54, 0.4)",
+              color: palette.ink,
               width: 1.5,
               type: "dashed",
             },
-            label: { show: false },
           },
         },
         xAxis: {
@@ -231,7 +228,7 @@ export function LineChart({
           axisTick: { show: false },
           axisLabel: {
             ...BASE_AXIS_LABEL,
-            interval: isSinglePoint ? 0 : "auto",
+            interval: "auto",
           },
           splitLine: { show: false },
         },
@@ -248,7 +245,7 @@ export function LineChart({
       },
       { notMerge: false }
     );
-  }, [data, series, area, zoomable, showSlider, xCategories]);
+  }, [data, series, area, zoomable, showSlider, xCategories, isEmpty]);
 
   const toggleSeries = (label: string) => {
     if (!chartRef.current) return;
@@ -276,6 +273,19 @@ export function LineChart({
     setIsZoomed(false);
   };
 
+  if (isEmpty) {
+    return (
+      <div
+        className="flex items-center justify-center text-sm font-semibold text-ink-soft"
+        style={{ height }}
+      >
+        No data yet
+      </div>
+    );
+  }
+
+  const showLegend = series.length > 1;
+
   return (
     <div className="relative">
       {/* Zoom reset badge */}
@@ -299,34 +309,36 @@ export function LineChart({
       />
 
       {/* Interactive Arcade Legend */}
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-        {series.map((s) => {
-          const isHidden = hiddenSeries.has(s.label);
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => toggleSeries(s.label)}
-              className={cn(
-                "inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none transition-all",
-                isHidden
-                  ? "opacity-35 line-through text-ink-soft/60"
-                  : "text-ink-soft hover:text-ink"
-              )}
-              title={isHidden ? `Show ${s.label}` : `Hide ${s.label}`}
-            >
-              <span
+      {showLegend && (
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          {series.map((s) => {
+            const isHidden = hiddenSeries.has(s.label);
+            return (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => toggleSeries(s.label)}
                 className={cn(
-                  "size-3 rounded-full border-2 border-ink transition-transform",
-                  isHidden && "scale-75 opacity-50"
+                  "inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none transition-all",
+                  isHidden
+                    ? "opacity-35 line-through text-ink-soft/60"
+                    : "text-ink-soft hover:text-ink"
                 )}
-                style={{ background: s.color }}
-              />
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
+                title={isHidden ? `Show ${s.label}` : `Hide ${s.label}`}
+              >
+                <span
+                  className={cn(
+                    "size-3 rounded-full border-2 border-ink transition-transform",
+                    isHidden && "scale-75 opacity-50"
+                  )}
+                  style={{ background: s.color }}
+                />
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
