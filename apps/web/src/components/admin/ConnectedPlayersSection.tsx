@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import {
-  Users,
   ShieldCheck,
   User,
   Radio,
@@ -9,22 +8,11 @@ import {
   Search,
   RefreshCw,
   Eye,
-  Globe,
-  Wifi,
-  Filter,
 } from "lucide-react";
 import type { AdminConnectedPlayer } from "@ouigame/shared/api";
 import { useAdminConnectedPlayers } from "../../hooks/api";
 import { formatDurationMs } from "../../lib/formatTime";
-import {
-  DarkPanel,
-  Panel,
-  Button,
-  IconButton,
-  Input,
-  SegmentedControl,
-  Tooltip,
-} from "../ui/primitives";
+import { Panel, Button, IconButton, Input, Tooltip } from "../ui/primitives";
 import { UserDetailModal } from "./UserDetailModal";
 import { cn } from "../../lib/cn";
 
@@ -91,147 +79,127 @@ export function ConnectedPlayersSection({
   ];
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Header with live status, counts, and auto-refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-paper border-[3px] border-ink rounded-arcade p-4">
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-green/20 border-2 border-green text-green-700">
-            <Radio size={18} className="animate-pulse" />
-            <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-green border-2 border-paper" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-display font-black text-lg text-ink">
+    <section
+      aria-label="Connected players"
+      className={cn("min-w-0", className)}
+    >
+      <Panel className="overflow-hidden text-ink">
+        <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="font-display text-xl font-bold">
                 Connected Players
               </h3>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green/15 text-green-800 border border-green/30">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-semibold text-emerald-900">
+                <Radio size={16} aria-hidden="true" />
                 {totalCount} Online
               </span>
             </div>
-            <p className="text-xs font-semibold text-ink-soft">
-              Real-time socket connections tracked on this instance
+            <p className="mt-1 text-sm text-ink-soft">
+              {registeredCount} registered · {guestCount}{" "}
+              {guestCount === 1 ? "guest" : "guests"} · Current server
             </p>
           </div>
-        </div>
-
-        {/* Counts Badges & Refresh controls */}
-        <div className="flex items-center gap-2 self-end sm:self-center">
-          <div className="hidden md:flex items-center gap-2 text-xs font-bold mr-2">
-            <span className="px-2.5 py-1 rounded-arcade bg-blue/10 border-2 border-blue/30 text-blue">
-              {registeredCount} Reg
-            </span>
-            <span className="px-2.5 py-1 rounded-arcade bg-yellow/20 border-2 border-yellow/40 text-ink">
-              {guestCount} {guestCount === 1 ? "Guest" : "Guests"}
-            </span>
-          </div>
-
-          <Tooltip
-            content={
-              autoRefresh
-                ? "Pause auto-refresh (5s)"
-                : "Resume auto-refresh (5s)"
-            }
-          >
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant={autoRefresh ? "green" : "ghost"}
+              variant="ghost"
               size="sm"
+              aria-pressed={autoRefresh}
               title={
                 autoRefresh ? "Auto-refresh active (5s)" : "Auto-refresh paused"
               }
               onClick={() => setAutoRefresh((v) => !v)}
-              className="text-xs gap-1.5"
             >
-              <Wifi
-                size={14}
-                className={autoRefresh ? "text-green" : "text-ink-soft"}
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  autoRefresh ? "bg-emerald-700" : "bg-ink-soft"
+                )}
+                aria-hidden="true"
               />
-              {autoRefresh ? "● Live (5s)" : "○ Paused"}
+              {autoRefresh ? "Live (5s)" : "Paused"}
             </Button>
-          </Tooltip>
-
-          <Tooltip content="Refresh now">
-            <IconButton
-              aria-label="Refresh connected players"
-              size="sm"
-              onClick={() => refetch()}
-              className="p-1.5"
-            >
-              <RefreshCw
-                size={14}
-                className={isFetching ? "animate-spin" : ""}
-              />
-            </IconButton>
-          </Tooltip>
+            <Tooltip content="Refresh now">
+              <IconButton
+                aria-label="Refresh connected players"
+                size="sm"
+                onClick={() => refetch()}
+              >
+                <RefreshCw
+                  size={16}
+                  className={isFetching ? "animate-spin" : ""}
+                />
+              </IconButton>
+            </Tooltip>
+          </div>
         </div>
-      </div>
 
-      {/* Filter and search toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <SegmentedControl<FilterType>
-          tone="yellow"
-          value={filterType}
-          onValueChange={setFilterType}
-          options={filterOptions}
-          aria-label="Filter connected players"
-        />
-
-        <div className="relative w-full sm:w-72">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none"
-          />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter by name, ID, IP, room…"
-            aria-label="Search connected players"
-            className="pl-9"
-          />
-        </div>
-      </div>
-
-      {/* Connected Players Table / List */}
-      <DarkPanel className="overflow-hidden p-0 border-[3px] border-ink">
-        {isLoading ? (
-          <div className="p-8 text-center text-sm font-semibold text-ink-soft">
-            <RefreshCw
-              size={20}
-              className="animate-spin mx-auto mb-2 text-ink-soft"
+        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-ink/15 bg-slate-50 px-5 py-4">
+          <div
+            role="group"
+            aria-label="Filter connected players"
+            className="flex flex-wrap gap-1 rounded-xl border border-ink/20 bg-white p-1"
+          >
+            {filterOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={filterType === option.value}
+                onClick={() => setFilterType(option.value)}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+                  filterType === option.value
+                    ? "bg-ink text-white"
+                    : "text-ink-soft hover:bg-slate-100"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full sm:w-80">
+            <Search
+              size={18}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft"
             />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search players, IP or room…"
+              aria-label="Search connected players"
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div
+            className="p-8 text-center text-base text-ink-soft"
+            role="status"
+          >
             Loading connected players…
           </div>
         ) : filteredPlayers.length === 0 ? (
-          <div className="p-8 text-center text-sm font-medium text-ink-soft">
+          <div className="p-8 text-center text-base text-ink-soft">
             {totalCount === 0
               ? "No players currently connected to the server."
               : "No connected players match your search filter."}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="bg-ink/5 border-b-2 border-ink/20 text-xs font-display uppercase tracking-wider text-ink-soft">
-                  <th className="py-2.5 px-4">Player</th>
-                  <th className="py-2.5 px-3">Type</th>
-                  <th className="py-2.5 px-3">Status / Room</th>
-                  <th className="py-2.5 px-3">Connected Time</th>
-                  <th className="py-2.5 px-3">Connection Details</th>
-                  <th className="py-2.5 px-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink/10">
-                {filteredPlayers.map((player) => (
-                  <ConnectedPlayerRow
-                    key={player.socketId}
-                    player={player}
-                    onSelectUser={(id) => setSelectedUserId(id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul
+            aria-label="Connected player list"
+            className="divide-y divide-ink/15"
+          >
+            {filteredPlayers.map((player) => (
+              <ConnectedPlayerRow
+                key={player.socketId}
+                player={player}
+                onSelectUser={setSelectedUserId}
+              />
+            ))}
+          </ul>
         )}
-      </DarkPanel>
+      </Panel>
 
       {/* User profile detail modal */}
       {selectedUserId !== null && (
@@ -240,7 +208,7 @@ export function ConnectedPlayersSection({
           onClose={() => setSelectedUserId(null)}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -254,168 +222,111 @@ function ConnectedPlayerRow({ player, onSelectUser }: ConnectedPlayerRowProps) {
   const connectedDate = new Date(player.connectedAt);
 
   return (
-    <tr className="hover:bg-ink/5 transition-colors">
-      {/* Player Identity */}
-      <td className="py-3 px-4">
-        <div className="flex items-center gap-3">
+    <li className="p-5">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_7rem] lg:items-center">
+        <div className="flex min-w-0 items-start gap-3">
           <div
             className={cn(
-              "w-8 h-8 rounded-full border-2 border-ink flex items-center justify-center font-bold text-xs uppercase shrink-0",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
               isRegistered
-                ? "bg-blue/15 text-blue"
-                : "bg-amber-100 text-amber-700"
+                ? "bg-sky-100 text-sky-900"
+                : "bg-amber-100 text-amber-900"
             )}
           >
-            {isRegistered ? <User size={16} /> : <Gamepad2 size={16} />}
+            {isRegistered ? <User size={20} /> : <Gamepad2 size={20} />}
           </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-display font-bold text-ink text-sm truncate">
-                {isRegistered ? (
-                  <button
-                    type="button"
-                    onClick={() => player.user && onSelectUser(player.user.id)}
-                    className="hover:underline text-left cursor-pointer text-ink hover:text-blue-600 focus:outline-none"
-                    title="View user profile"
-                  >
-                    {player.user?.username}
-                  </button>
-                ) : (
-                  <span>{player.guestName || "Guest (Unnamed)"}</span>
-                )}
-              </span>
-
-              {isRegistered && player.user?.isAdmin && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                  <ShieldCheck size={10} />
-                  Admin
-                </span>
-              )}
-            </div>
-
-            <span className="text-xs text-ink-soft truncate font-mono">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
               {isRegistered ? (
-                player.user?.email
+                <button
+                  type="button"
+                  onClick={() => player.user && onSelectUser(player.user.id)}
+                  className="break-all text-left text-base font-semibold underline decoration-ink/30 underline-offset-4 hover:decoration-ink cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  title="View user profile"
+                >
+                  {player.user?.username}
+                </button>
               ) : (
-                <span title={`Client ID: ${player.clientId || "N/A"}`}>
-                  Client:{" "}
-                  {player.clientId ? `${player.clientId.slice(0, 14)}…` : "N/A"}
+                <span className="break-all text-base font-semibold">
+                  {player.guestName || "Guest (Unnamed)"}
                 </span>
               )}
-            </span>
-          </div>
-        </div>
-      </td>
-
-      {/* Account Type Badge */}
-      <td className="py-3 px-3">
-        {isRegistered ? (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue/15 text-blue border border-blue/30">
-            <User size={12} />
-            Registered
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-yellow/20 text-yellow-900 border border-yellow/40">
-            <Gamepad2 size={12} />
-            Guest
-          </span>
-        )}
-      </td>
-
-      {/* Current Room / Activity Status */}
-      <td className="py-3 px-3">
-        {player.room ? (
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
               <span
                 className={cn(
-                  "w-2 h-2 rounded-full",
-                  player.status === "playing"
-                    ? "bg-green animate-pulse"
-                    : "bg-blue"
+                  "rounded-md px-2 py-0.5 text-sm font-medium",
+                  isRegistered
+                    ? "bg-sky-100 text-sky-900"
+                    : "bg-amber-100 text-amber-900"
                 )}
-              />
-              <span
-                className="font-semibold text-xs text-ink truncate max-w-[140px]"
-                title={player.room.name}
               >
-                {player.status === "playing" ? "Playing in" : "In Room"} #
-                {player.room.id}
+                {isRegistered ? "Registered" : "Guest"}
               </span>
+              {player.user?.isAdmin && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-purple-100 px-2 py-0.5 text-sm font-medium text-purple-900">
+                  <ShieldCheck size={14} /> Admin
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-ink-soft uppercase font-medium">
-              <span className="truncate max-w-[120px]">{player.room.name}</span>
-              <span>·</span>
-              <span>{player.room.mode ?? "ffa"}</span>
-            </div>
+            <p className="break-all text-sm text-ink-soft">
+              {isRegistered ? player.user?.email : "Guest session"}
+            </p>
           </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
-            <span className="w-2 h-2 rounded-full bg-ink/30" />
-            <span>Main Lobby</span>
-          </div>
-        )}
-      </td>
+        </div>
 
-      {/* Connected Duration */}
-      <td className="py-3 px-3">
-        <div className="flex flex-col text-xs">
-          <span className="font-bold text-ink flex items-center gap-1">
-            <Clock size={12} className="text-ink-soft" />
-            {formatDurationMs(player.durationMs)}
-          </span>
-          <span
-            className="text-[11px] text-ink-soft font-mono"
+        <div className="min-w-0 space-y-1 text-sm">
+          {player.room ? (
+            <>
+              <p className="break-words text-base font-semibold">
+                {player.room.name}
+              </p>
+              <p className="text-ink-soft">
+                {player.status === "playing" ? "Playing in" : "In Room"} #
+                {player.room.id} · {player.room.mode ?? "ffa"}
+              </p>
+            </>
+          ) : (
+            <p className="text-base font-semibold">Main Lobby</p>
+          )}
+          <p
+            className="flex items-center gap-1.5 text-ink-soft"
             title={connectedDate.toISOString()}
           >
-            {connectedDate.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
-          </span>
+            <Clock size={15} aria-hidden="true" />
+            Connected for {formatDurationMs(player.durationMs)}
+          </p>
         </div>
-      </td>
 
-      {/* Socket & IP details */}
-      <td className="py-3 px-3">
-        <div className="flex flex-col font-mono text-[11px] text-ink-soft">
-          <span
-            className="flex items-center gap-1"
-            title={`Socket ID: ${player.socketId}`}
-          >
-            <span className="text-[10px] text-ink-soft/70 uppercase">
-              Sock:
-            </span>
-            {player.socketId.slice(0, 10)}…
-          </span>
-          <span
-            className="flex items-center gap-1"
-            title={`IP Address: ${player.ip || "N/A"}`}
-          >
-            <Globe size={10} className="text-ink-soft/70" />
-            {player.ip || "N/A"}
-          </span>
-        </div>
-      </td>
-
-      {/* Action: Open User Modal if registered */}
-      <td className="py-3 px-3 text-right">
-        {isRegistered && player.user ? (
+        {isRegistered && player.user && (
           <Button
             variant="ghost"
             size="sm"
+            className="justify-self-start lg:justify-self-end"
             onClick={() => onSelectUser(player.user!.id)}
-            className="text-xs gap-1 py-1 px-2.5"
             title="Inspect user details"
           >
-            <Eye size={13} />
-            <span>Inspect</span>
+            <Eye size={16} /> Inspect
           </Button>
-        ) : (
-          <span className="text-xs text-ink-soft/50 italic px-2">—</span>
         )}
-      </td>
-    </tr>
+      </div>
+      <details className="mt-4 rounded-lg border border-ink/15 bg-slate-50 text-sm">
+        <summary className="cursor-pointer px-3 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+          Connection details
+        </summary>
+        <dl className="grid gap-3 border-t border-ink/15 p-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["IP address", player.ip || "Not available"],
+            ["Socket ID", player.socketId],
+            ["Client ID", player.clientId || "Not available"],
+            ["Connected since", connectedDate.toLocaleString()],
+            ...(player.user ? [["User ID", String(player.user.id)]] : []),
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="mb-1 text-ink-soft">{label}</dt>
+              <dd className="break-all font-mono text-ink">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
+    </li>
   );
 }
