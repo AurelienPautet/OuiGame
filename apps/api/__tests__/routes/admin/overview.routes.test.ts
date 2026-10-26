@@ -8,7 +8,10 @@ import {
   createRound,
   createSoloRound,
   createPlaySession,
+  db,
+  tables,
 } from "../../helpers/db";
+import { upsertVisitor } from "../../../repositories/dailyActivity.repo";
 
 const app = buildApp();
 
@@ -104,6 +107,37 @@ describe("GET /api/admin/timeseries", () => {
     // Oldest first, last point is today (UTC).
     const today = new Date().toISOString().slice(0, 10);
     expect(res.body[res.body.length - 1].date).toBe(today);
+  });
+
+  test("preserves legacy registered activity when a day has partial guest visitor data", async () => {
+    const { player, authHeader } = await createAdminWithSession();
+    // Seed a successful login today so activeUsersByDay has a legacy active player
+    await db.insert(tables.logings).values({
+      playerId: player.id,
+      ipAddress: "127.0.0.1",
+      status: "success",
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    // Add only a guest visitor row for today in daily_active_users
+    await upsertVisitor({
+      day: today,
+      visitorKey: "c:test_guest_partial",
+      playerId: null,
+    });
+
+    const res = await request(app)
+      .get("/api/admin/timeseries")
+      .query({ days: 1 })
+      .set("Authorization", authHeader);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    const point = res.body[0];
+    expect(point.date).toBe(today);
+    expect(point.activeGuests).toBe(1);
+    expect(point.activeRegistered).toBeGreaterThanOrEqual(1);
+    expect(point.activeUsers).toBe(point.activeGuests + point.activeRegistered);
   });
 
   test("defaults to 30 days when no query is given", async () => {

@@ -5,6 +5,7 @@
 // lives here so the repo stays pure Drizzle.
 import type { AdminOverview, AdminTimeseriesPoint } from "@ouigame/shared/api";
 import * as repo from "../repositories/admin.stats.repo";
+import * as dailyActivityRepo from "../repositories/dailyActivity.repo";
 import * as playSessions from "../socket/playSessions";
 
 // Drizzle aggregates (sum/count) arrive as strings or null; coerce to a number.
@@ -51,6 +52,7 @@ async function getOverview(): Promise<AdminOverview> {
     pCounts,
     newP,
     activeP,
+    activeVisitors,
     content,
     games,
     onlineCombat,
@@ -64,6 +66,11 @@ async function getOverview(): Promise<AdminOverview> {
     repo.playerCounts(),
     repo.newPlayerCounts(since),
     repo.activePlayerCounts(since),
+    dailyActivityRepo.activeVisitorCounts({
+      today: dayKey(today),
+      d7: dayKey(since.d7),
+      d30: dayKey(since.d30),
+    }),
     repo.contentCounts(),
     repo.gameCounts(),
     repo.onlineCombatTotals(),
@@ -122,9 +129,13 @@ async function getOverview(): Promise<AdminOverview> {
       newToday: n(newP.newToday),
       new7d: n(newP.new7d),
       new30d: n(newP.new30d),
-      activeToday: n(activeP.activeToday),
-      active7d: n(activeP.active7d),
-      active30d: n(activeP.active30d),
+      activeToday: Math.max(
+        n(activeVisitors.activeToday),
+        n(activeP.activeToday)
+      ),
+      active7d: Math.max(n(activeVisitors.active7d), n(activeP.active7d)),
+      active30d: Math.max(n(activeVisitors.active30d), n(activeP.active30d)),
+      guestsToday: n(activeVisitors.guestsToday),
     },
     content: {
       levels: levelsTotal,
@@ -203,6 +214,7 @@ async function getTimeseries(days: number): Promise<AdminTimeseriesPoint[]> {
   const [
     newUsers,
     activeUsers,
+    dailyActivity,
     logins,
     failedLogins,
     onlineRounds,
@@ -214,6 +226,7 @@ async function getTimeseries(days: number): Promise<AdminTimeseriesPoint[]> {
   ] = await Promise.all([
     repo.newUsersByDay(start),
     repo.activeUsersByDay(start),
+    dailyActivityRepo.activityByDay(dayKey(start), dayKey(today)),
     repo.loginsByDay(start),
     repo.failedLoginsByDay(start),
     repo.onlineRoundsByDay(start),
@@ -235,16 +248,37 @@ async function getTimeseries(days: number): Promise<AdminTimeseriesPoint[]> {
   const soloKillsMap = toMap(soloKills);
   const levelsCreatedMap = toMap(levelsCreated);
 
+  const dailyActivityMap = new Map<
+    string,
+    { total: number; guests: number; registered: number }
+  >();
+  for (const row of dailyActivity) {
+    dailyActivityMap.set(bucketKey(row.day), {
+      total: n(row.total),
+      guests: n(row.guests),
+      registered: n(row.registered),
+    });
+  }
+
   const series: AdminTimeseriesPoint[] = [];
   for (let i = 0; i < days; i += 1) {
     const date = dayKey(new Date(start.getTime() + i * DAY_MS));
     const online = onlineRoundsMap.get(date) ?? 0;
     const solo = soloRoundsMap.get(date) ?? 0;
     const campaign = campaignRunsMap.get(date) ?? 0;
+
+    const da = dailyActivityMap.get(date);
+    const legacy = activeUsersMap.get(date) ?? 0;
+    const activeGuests = da ? da.guests : 0;
+    const activeRegistered = Math.max(da ? da.registered : 0, legacy);
+    const totalActive = activeGuests + activeRegistered;
+
     series.push({
       date,
       newUsers: newUsersMap.get(date) ?? 0,
-      activeUsers: activeUsersMap.get(date) ?? 0,
+      activeUsers: totalActive,
+      activeGuests,
+      activeRegistered,
       logins: loginsMap.get(date) ?? 0,
       failedLogins: failedLoginsMap.get(date) ?? 0,
       onlineRounds: online,

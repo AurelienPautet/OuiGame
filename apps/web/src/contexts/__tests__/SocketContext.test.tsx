@@ -10,7 +10,12 @@ vi.mock("socket.io-client", () => {
   return { io: vi.fn(() => socket) };
 });
 vi.mock("../../api/authEvents", () => ({ onAuthChange: vi.fn(() => vi.fn()) }));
-vi.mock("../../lib/storage", () => ({ storage: { getSessionId: vi.fn() } }));
+vi.mock("../../lib/storage", () => ({
+  storage: {
+    getSessionId: vi.fn(),
+    getClientId: vi.fn(() => "mock-client-id"),
+  },
+}));
 
 import { io } from "socket.io-client";
 import { onAuthChange } from "../../api/authEvents";
@@ -37,7 +42,10 @@ describe("SocketContext", () => {
     const opts = ioMock.mock.calls[0]![1];
     const cb = vi.fn();
     opts.auth(cb);
-    expect(cb).toHaveBeenCalledWith({ token: "tok" });
+    expect(cb).toHaveBeenCalledWith({
+      token: "tok",
+      clientId: "mock-client-id",
+    });
   });
 
   it("tracks connect/disconnect/online_count", () => {

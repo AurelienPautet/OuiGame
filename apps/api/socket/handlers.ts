@@ -6,6 +6,7 @@ import { verifySession } from "../auth/session";
 import * as levelsService from "../services/levels.service";
 import * as ratingsRepo from "../repositories/ratings.repo";
 import * as playSessions from "./playSessions";
+import * as dailyActivity from "./dailyActivity";
 import { beginCountdown } from "../game/countdown";
 import {
   applyPlayerInput,
@@ -97,6 +98,7 @@ function registerSocketHandlers({
           email: user.email,
         };
         playSessions.sessionOpened(socket.id, user.playerId);
+        void dailyActivity.recordVisit(socket, { playerId: user.playerId });
         return true;
       }
     } catch (err) {
@@ -159,6 +161,13 @@ function registerSocketHandlers({
   }
 
   io.on("connect", (socket: AppSocket) => {
+    // Retain client identity for daily active visitor tracking.
+    const authClientId = socket.handshake.auth?.clientId;
+    socket.data.clientId =
+      typeof authClientId === "string" && authClientId.trim().length > 0
+        ? authClientId.trim().slice(0, 64)
+        : socket.id;
+
     room_list(socket);
     socket.join("lobby" + serverid);
 
@@ -166,7 +175,13 @@ function registerSocketHandlers({
     // connect and on every reconnect). This populates `users[socket.id]` so
     // gameplay stats and level ratings are attributed to the logged-in player.
     if (socket.handshake.auth?.token) {
-      authenticateSocket(socket, socket.handshake.auth.token);
+      authenticateSocket(socket, socket.handshake.auth.token).then((ok) => {
+        if (!ok) {
+          void dailyActivity.recordVisit(socket, null);
+        }
+      });
+    } else {
+      void dailyActivity.recordVisit(socket, null);
     }
 
     // Re-authenticate when the user logs in/out without reconnecting.

@@ -82,7 +82,11 @@ export function OverviewTab() {
         {
           label: "Active (7d)",
           value: overview.players.active7d,
-          hint: `${overview.players.activeToday} today`,
+          hint: `${overview.players.activeToday} today${
+            overview.players.guestsToday
+              ? ` (${overview.players.guestsToday} guests)`
+              : ""
+          }`,
           tone: "teal",
           icon: Activity,
         },
@@ -254,6 +258,37 @@ export function OverviewTab() {
               key: "activeUsers",
               label: "Active Users",
               color: palette.purple,
+            },
+          ]}
+        />
+      </ChartCard>
+
+      {/* Daily active users breakdown (registered vs guests) */}
+      <ChartCard
+        title="Daily Active Users"
+        subtitle={`Last ${days} days · Guests vs registered`}
+        loading={seriesLoading}
+        empty={chartData.length === 0}
+      >
+        <LineChart
+          data={chartData}
+          xKey="date"
+          area
+          series={[
+            {
+              key: "activeUsers",
+              label: "Total Active",
+              color: palette.purple,
+            },
+            {
+              key: "activeRegistered",
+              label: "Registered",
+              color: palette.teal,
+            },
+            {
+              key: "activeGuests",
+              label: "Guests",
+              color: palette.yellow,
             },
           ]}
         />

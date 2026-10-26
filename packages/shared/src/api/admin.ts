@@ -22,6 +22,7 @@ export const AdminOverviewSchema = z.object({
     activeToday: z.number(),
     active7d: z.number(),
     active30d: z.number(),
+    guestsToday: z.number().default(0),
   }),
   content: z.object({
     levels: z.number(),
@@ -84,6 +85,8 @@ export const AdminTimeseriesPointSchema = z.object({
   date: z.string(),
   newUsers: z.number(),
   activeUsers: z.number(),
+  activeGuests: z.number().default(0),
+  activeRegistered: z.number().default(0),
   logins: z.number(),
   failedLogins: z.number(),
   onlineRounds: z.number(),

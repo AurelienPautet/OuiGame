@@ -25,6 +25,7 @@ const OVERVIEW: AdminOverview = {
     activeToday: 60,
     active7d: 210,
     active30d: 540,
+    guestsToday: 15,
   },
   content: {
     levels: 80,
@@ -71,6 +72,8 @@ const point = (date: string, n: number): AdminTimeseriesPoint => ({
   date,
   newUsers: n,
   activeUsers: n * 3,
+  activeGuests: n,
+  activeRegistered: n * 2,
   logins: n * 4,
   failedLogins: Math.floor(n / 2),
   onlineRounds: n * 2,
@@ -101,6 +104,8 @@ describe("OverviewTab", () => {
     expect(screen.getByText("45%")).toBeTruthy();
     // levels show published / total
     expect(screen.getByText("64 / 80")).toBeTruthy();
+    // Active KPI includes guest hint
+    expect(screen.getByText(/15 guests/)).toBeTruthy();
   });
 
   it("renders the bespoke SVG charts with the timeseries data", () => {
@@ -110,6 +115,11 @@ describe("OverviewTab", () => {
     expect(screen.getByText("Games")).toBeTruthy();
     expect(screen.getByText("New Users")).toBeTruthy();
     expect(screen.getByText("Active Users")).toBeTruthy();
+    // Daily Active Users chart and breakdown labels
+    expect(screen.getByText("Daily Active Users")).toBeTruthy();
+    expect(screen.getByText("Total Active")).toBeTruthy();
+    expect(screen.getByText("Registered")).toBeTruthy();
+    expect(screen.getByText("Guests")).toBeTruthy();
   });
 
   it("requests the default 30-day window", () => {

@@ -4,6 +4,7 @@
 // SocketContext, the auth hooks, and LevelSelector).
 const KEYS = {
   sessionId: "session_id",
+  clientId: "client_id",
   playerName: "playerName",
   body: "body", // tank body colour INDEX, persisted as a string
   turret: "turret", // tank turret colour INDEX, persisted as a string
@@ -40,6 +41,19 @@ export const storage = {
     window.localStorage.setItem(KEYS.sessionId, token),
   clearSessionId: () => window.localStorage.removeItem(KEYS.sessionId),
   hasSession: (): boolean => !!window.localStorage.getItem(KEYS.sessionId),
+
+  // Stable anonymous client id for daily active visitor tracking.
+  getClientId: (): string => {
+    let id = window.localStorage.getItem(KEYS.clientId);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      window.localStorage.setItem(KEYS.clientId, id);
+    }
+    return id;
+  },
 
   getPlayerName: (): string | null =>
     window.localStorage.getItem(KEYS.playerName),
