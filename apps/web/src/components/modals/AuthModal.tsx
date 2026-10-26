@@ -176,7 +176,7 @@ function AuthModalComponent() {
       attempts += 1;
       if (attempts < 6) {
         timer = window.setTimeout(() => {
-          if (!cancelled && !node.querySelector('[role="button"], iframe')) {
+          if (!cancelled && !node.querySelector('[role="button"]')) {
             render();
           }
         }, 1800);
