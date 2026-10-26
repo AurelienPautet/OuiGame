@@ -4,6 +4,10 @@
 // IMPORTANT: tests run against a dedicated `*_test` database, never the dev
 // `ouigame` database. The connection defaults below match the local Docker
 // Postgres and can be overridden per-var (TEST_DB_*) — notably in CI.
+import path from "path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.join(__dirname, "../../../../.env") });
 
 const DEFAULTS = {
   host: "localhost",

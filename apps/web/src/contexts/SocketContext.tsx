@@ -54,7 +54,11 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     // returned socket to the typed shape. This keeps full per-event typing on
     // `sock.on`/`sock.emit` below (only the io() call itself is asserted).
     const sock = io(SERVER_URL, {
-      auth: (cb) => cb({ token: storage.getSessionId() }),
+      auth: (cb) =>
+        cb({
+          token: storage.getSessionId(),
+          clientId: storage.getClientId(),
+        }),
     }) as GameSocket;
 
     sock.on("connect", () => {

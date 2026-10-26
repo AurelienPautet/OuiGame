@@ -4,6 +4,7 @@ const {
   integer,
   varchar,
   timestamp,
+  date,
   unique,
   boolean,
   index,
@@ -124,4 +125,41 @@ const playSessions = pgTable(
   })
 );
 
-module.exports = { ratings, logings, rounds, soloRounds, playSessions };
+// One row per unique visitor per UTC day: the daily-active-user metric. A
+// visitor is a logged-in player (`p:<playerId>`) or a guest browser
+// (`c:<clientId>`, generated and persisted client-side). Rows are upserted by
+// the socket connection handler; `playerId` is filled in when a guest
+// authenticates during the same day. Keeping the raw visitor key (rather than
+// only a counter) makes the metric idempotent across reconnects and lets the
+// admin dashboard break the total down into registered vs guest users.
+const dailyActiveUsers = pgTable(
+  "OuiTank-daily_active_users",
+  {
+    id: serial("id").primaryKey(),
+    // UTC calendar day, stored as a date so the admin bucket key is stable.
+    day: date("day").notNull(),
+    // Visitor identity for the day: "p:<playerId>" or "c:<clientId>".
+    visitorKey: varchar("visitor_key", { length: 80 }).notNull(),
+    // Null for guests. ON DELETE SET NULL keeps the historical metric when an
+    // account is removed (the visit still happened).
+    playerId: integer("player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    firstSeenAt: timestamp("first_seen_at").defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueVisitorDay: unique().on(table.day, table.visitorKey),
+    dayIdx: index("daily_active_users_day_idx").on(table.day),
+    playerIdx: index("daily_active_users_player_id_idx").on(table.playerId),
+  })
+);
+
+module.exports = {
+  ratings,
+  logings,
+  rounds,
+  soloRounds,
+  playSessions,
+  dailyActiveUsers,
+};

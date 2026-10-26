@@ -7,6 +7,7 @@ const {
   rounds,
   soloRounds,
   playSessions,
+  dailyActiveUsers,
 } = require("./stats");
 const { playerAchievements } = require("./achievements");
 const { adminAuditLog } = require("./admin");
@@ -25,6 +26,7 @@ module.exports = {
   rounds,
   soloRounds,
   playSessions,
+  dailyActiveUsers,
   playerAchievements,
   adminAuditLog,
 };
