@@ -94,7 +94,7 @@
     "@ouigame/config-ts": "workspace:*",
     "@swc/core": "^1.16.20",
     "@swc/jest": "^0.2.39",
-    "@types/node": "^24.12.4",
+    "@types/node": "^26.6.6",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "4.1.12",
     "drizzle-kit": "^0.31.10",
