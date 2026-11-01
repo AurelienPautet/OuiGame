@@ -5,19 +5,16 @@
 
 version: 2
 updates:
+  # This repo is a pnpm workspace (see pnpm-workspace.yaml) with a single
+  # lockfile at the root. Dependabot must run from the root for the npm
+  # ecosystem: only then does it resolve the workspace packages and regenerate
+  # pnpm-lock.yaml. Per-workspace entries ("/apps/web/", "/apps/api/") are
+  # treated as standalone npm projects, so they bump that package.json without
+  # touching the root lockfile, and every CI job fails on
+  # `pnpm install --frozen-lockfile` with ERR_PNPM_OUTDATED_LOCKFILE.
   - package-ecosystem: "npm"
-    # Look for `package.json` and `lock` files in the `root` directory
+    # Covers the root manifest and every package in pnpm-workspace.yaml.
     directory: "/"
     # Check the npm registry for updates every day (weekdays)
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "npm"
-    # Frontend workspace package
-    directory: "/apps/web/"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "npm"
-    # Backend workspace package
-    directory: "/apps/api/"
     schedule:
       interval: "daily"
