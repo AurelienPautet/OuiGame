@@ -119,21 +119,25 @@ describe("CampaignSelector", () => {
     expect(screen.queryByText("Charlie Chaos")).toBeNull();
   });
 
-  it("filters campaigns by status (e.g. completed)", async () => {
+  it("keeps only search and difficulty, with no status/rating/sort bar", () => {
     renderWithProviders(<CampaignSelector mode="play" />);
 
-    const statusSelect = screen.getByLabelText(/status/i);
-    fireEvent.click(statusSelect);
+    expect(
+      screen.getByPlaceholderText(/search campaigns or creators/i)
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /all difficulties/i })
+    ).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByText(/^showing /i)).toBeNull();
+  });
 
-    const completedOption = await screen.findByRole("option", {
-      name: /^completed$/i,
-    });
-    fireEvent.click(completedOption);
+  it("lists campaigns newest first", () => {
+    renderWithProviders(<CampaignSelector mode="play" />);
 
-    // Only Alpha Assault is completed
-    expect(screen.getByText("Alpha Assault")).toBeTruthy();
-    expect(screen.queryByText("Bravo Blitz")).toBeNull();
-    expect(screen.queryByText("Charlie Chaos")).toBeNull();
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((x) => x.textContent)
+    ).toEqual(["Charlie Chaos", "Bravo Blitz", "Alpha Assault"]);
   });
 
   it("shows empty state and allows resetting filters", async () => {
@@ -182,10 +186,6 @@ describe("campaign discovery regressions", () => {
     queryError = false;
     vi.clearAllMocks();
   });
-  async function choose(label: RegExp, option: RegExp) {
-    fireEvent.click(screen.getByRole("combobox", { name: label }));
-    fireEvent.click(await screen.findByRole("option", { name: option }));
-  }
   it("searches authors and descriptions without narrowing the API query", () => {
     renderWithProviders(<CampaignSelector />);
     const input = screen.getByRole("textbox");
@@ -197,23 +197,19 @@ describe("campaign discovery regressions", () => {
     expect(queryCalls.public).toHaveBeenLastCalledWith({}, true);
     expect(queryCalls.my).toHaveBeenLastCalledWith({}, false);
   });
-  it("combines rating, difficulty and progress filters, then resets them", async () => {
+  it("combines search and difficulty, then resets them", () => {
     renderWithProviders(<CampaignSelector />);
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Chaos" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Easy" }));
-    await choose(/^rating$/i, /4 stars/i);
-    await choose(/^status$/i, /^completed$/i);
-    expect(screen.getByText("Alpha Assault")).toBeTruthy();
-    expect(screen.queryByText("Bravo Blitz")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /hard/i }));
     expect(screen.getByText(/no campaigns match/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /reset filters/i }));
-    expect(
-      screen.getAllByRole("button", {
-        name: /Alpha Assault|Bravo Blitz|Charlie Chaos/,
-      })
-    ).toHaveLength(3);
+    expect(screen.getByText("Alpha Assault")).toBeTruthy();
+    expect(screen.getByText("Bravo Blitz")).toBeTruthy();
+    expect(screen.getByText("Charlie Chaos")).toBeTruthy();
   });
-  it("sorts by actual rating and keeps unknown difficulty last in both directions", async () => {
+  it("keeps unknown difficulty out of the named difficulty chips", () => {
     queryData = [
       ...mockCampaigns,
       {
@@ -226,30 +222,9 @@ describe("campaign discovery regressions", () => {
       },
     ];
     renderWithProviders(<CampaignSelector />);
-    await choose(/^sort by$/i, /highest rated/i);
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((x) => x.textContent)
-    ).toEqual([
-      "Alpha Assault",
-      "Charlie Chaos",
-      "Bravo Blitz",
-      "Unknown campaign",
-    ]);
-    await choose(/^sort by$/i, /hardest first/i);
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((x) => x.textContent)
-    ).toEqual([
-      "Bravo Blitz",
-      "Charlie Chaos",
-      "Alpha Assault",
-      "Unknown campaign",
-    ]);
-    await choose(/^sort by$/i, /easiest first/i);
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).at(-1)?.textContent
-    ).toBe("Unknown campaign");
     fireEvent.click(screen.getByRole("button", { name: /not enough runs/i }));
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(1);
+    expect(screen.getByText("Unknown campaign")).toBeTruthy();
   });
   it("uses only the owner query in my mode", () => {
     renderWithProviders(<CampaignSelector mode="my" />);

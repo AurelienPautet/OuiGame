@@ -1,12 +1,12 @@
 # Campaign browser
 
-The selector uses the shared Oui Tank input, select, button, card, filter chips, and five-star rating. Level and campaign cards reuse the same ListCardPreview frame and ListCardStat badges. Campaign previews use the first public level's thumbnail in campaign order, with a stack fallback when it has no image. Difficulty chips stay visible; progress, minimum rating, and sort controls have explicit labels. Cards show the name, creator, length, description, observed difficulty, level-rating average, and finished-run statistics. Only started campaigns show a progress bar. Owner play/edit/delete actions remain available.
+The selector uses the shared Oui Tank input, button, card, filter chips, and five-star rating. Level and campaign cards reuse the same ListCardPreview frame and ListCardStat badges. Campaign previews use the first public level's thumbnail in campaign order, with a stack fallback when it has no image. Browsing is search plus difficulty chips only: there is no status, rating, or sort control, and no result count line. Cards show the name, creator, length, description, observed difficulty, level-rating average, and finished-run statistics. Only started campaigns show a progress bar. Owner play/edit/delete actions remain available.
 
 ## Discovery rules
 
 - Fetch the complete list for the active mode; search names, creators, and descriptions locally. A server name-only search would discard valid creator/description matches.
-- Combine search, difficulty, progress, and minimum rating. Unrated campaigns do not pass a minimum-rating filter.
-- Default to newest first. Highest rated breaks ties by rating count, then campaign ID. Unknown difficulty stays last for both easiest-first and hardest-first.
+- Combine search and difficulty. Progress and rating never hide a campaign, so unrated campaigns stay visible.
+- Always newest first, ordered by campaign ID descending. There is no user-selectable sort.
 - Filters start fresh when the selector is reopened; changing controls resets list scrolling. No delayed scroll restoration or persisted search hides results.
 - Show a retry action on load failure, and a reset action for an empty filtered result.
 
@@ -18,11 +18,8 @@ Ratings average existing individual ratings across the campaign's currently publ
 
 ## Verification
 
-- 109 unit-test files, 693 tests passed.
-- 34 campaign API integration tests passed against the isolated test database, including sample-size boundaries, all difficulty thresholds, rating aggregation excluding unpublished levels, and ordered campaign previews excluding unpublished levels.
-- Production web build and workspace type checking passed. Web and changed backend/shared files passed lint (existing web warnings remain).
-- Automated Chromium checks against the running app and its real local API: creator search, combined expert and 4+ rating filters, empty state and reset, reopening with fresh filters, no horizontal overflow at 390px, no emoji text, and no page errors.
+- PR CI: unit tests (web + shared), backend tests, typecheck, client build, and lint all passed.
+- Chromium checks against the running web client and the live campaign API: search, the Expert difficulty chip, and the empty state with its reset action. The status/rating/sort controls and the result-count line are gone, and the dialog does not overflow at 390px.
+- The selector unit tests assert that only the search field and difficulty chips remain, that campaigns list newest first, and that search and difficulty still combine and reset.
 
-The PNGs in this directory were captured from that real local app/API session. They are anonymous views of existing local campaigns; no responses were mocked or screenshots fabricated.
-
-The local campaigns in these captures have no stored opening-level thumbnail, so the fallback is visible. Preview selection and missing-image handling are covered by the API integration tests.
+The PNGs in this directory were captured from that session. They are anonymous views of public campaigns; no responses were mocked or screenshots fabricated.
