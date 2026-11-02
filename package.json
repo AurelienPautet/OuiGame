@@ -88,7 +88,7 @@
   "license": "ISC",
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
-    "@commitlint/config-conventional": "^21.0.2",
+    "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^9.39.5",
     "@ouigame/config-ts": "workspace:*",
     "@swc/core": "^1.16.20",
