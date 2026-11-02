@@ -22,7 +22,7 @@
     "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
-    "@radix-ui/react-tooltip": "^1.2.8",
+    "@radix-ui/react-tooltip": "^1.4.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.90.20",
     "@tonaljs/tonal": "^4.10.0",
