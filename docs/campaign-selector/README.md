@@ -18,11 +18,8 @@ Ratings average existing individual ratings across the campaign's currently publ
 
 ## Verification
 
-- 109 unit-test files, 693 tests passed.
-- 34 campaign API integration tests passed against the isolated test database, including sample-size boundaries, all difficulty thresholds, rating aggregation excluding unpublished levels, and ordered campaign previews excluding unpublished levels.
-- Production web build and workspace type checking passed. Web and changed backend/shared files passed lint (existing web warnings remain).
-- Automated Chromium checks against the running app and its real local API: creator search, combined expert and 4+ rating filters, empty state and reset, reopening with fresh filters, no horizontal overflow at 390px, no emoji text, and no page errors.
+- PR CI: unit tests (web + shared), backend tests, typecheck, client build, and lint all passed.
+- Chromium checks against the running web client and the live campaign API: search, the Expert difficulty chip, and the empty state with its reset action. The status/rating/sort controls and the result-count line are gone, and the dialog does not overflow at 390px.
+- The selector unit tests assert that only the search field and difficulty chips remain, that campaigns list newest first, and that search and difficulty still combine and reset.
 
-The PNGs in this directory were captured from that real local app/API session. They are anonymous views of existing local campaigns; no responses were mocked or screenshots fabricated.
-
-The local campaigns in these captures have no stored opening-level thumbnail, so the fallback is visible. Preview selection and missing-image handling are covered by the API integration tests.
+The PNGs in this directory were captured from that session. They are anonymous views of public campaigns; no responses were mocked or screenshots fabricated.
