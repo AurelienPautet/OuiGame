@@ -1,12 +1,12 @@
 # Campaign browser
 
-The selector uses the shared Oui Tank input, select, button, card, filter chips, and five-star rating. Level and campaign cards reuse the same ListCardPreview frame and ListCardStat badges. Campaign previews use the first public level's thumbnail in campaign order, with a stack fallback when it has no image. Difficulty chips stay visible; progress, minimum rating, and sort controls have explicit labels. Cards show the name, creator, length, description, observed difficulty, level-rating average, and finished-run statistics. Only started campaigns show a progress bar. Owner play/edit/delete actions remain available.
+The selector uses the shared Oui Tank input, button, card, filter chips, and five-star rating. Level and campaign cards reuse the same ListCardPreview frame and ListCardStat badges. Campaign previews use the first public level's thumbnail in campaign order, with a stack fallback when it has no image. Browsing is search plus difficulty chips only: there is no status, rating, or sort control, and no result count line. Cards show the name, creator, length, description, observed difficulty, level-rating average, and finished-run statistics. Only started campaigns show a progress bar. Owner play/edit/delete actions remain available.
 
 ## Discovery rules
 
 - Fetch the complete list for the active mode; search names, creators, and descriptions locally. A server name-only search would discard valid creator/description matches.
-- Combine search, difficulty, progress, and minimum rating. Unrated campaigns do not pass a minimum-rating filter.
-- Default to newest first. Highest rated breaks ties by rating count, then campaign ID. Unknown difficulty stays last for both easiest-first and hardest-first.
+- Combine search and difficulty. Progress and rating never hide a campaign, so unrated campaigns stay visible.
+- Always newest first, ordered by campaign ID descending. There is no user-selectable sort.
 - Filters start fresh when the selector is reopened; changing controls resets list scrolling. No delayed scroll restoration or persisted search hides results.
 - Show a retry action on load failure, and a reset action for an empty filtered result.
 
