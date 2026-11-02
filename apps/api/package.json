@@ -14,7 +14,7 @@
     "@ouigame/shared": "workspace:*",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.6",
-    "dotenv": "^18.0.8",
+    "dotenv": "^18.0.9",
     "drizzle-orm": "^0.45.4",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.2",
