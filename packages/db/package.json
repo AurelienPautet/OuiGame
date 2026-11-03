@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
-    "pg": "^8.21.0"
+    "pg": "^8.23.1"
   },
   "scripts": {
     "build": "tsc -p tsconfig.dts.json",
