@@ -75,6 +75,10 @@ const PANIC_DIST = 140;
 const PANIC_COOLDOWN_FACTOR = 0.4;
 const PANIC_TOL_FACTOR = 3;
 const SOLUTION_STALE_TICKS = 18;
+// How long a bot keeps its turret on the last place it saw a target after
+// losing line of sight. Long enough to feel deliberate, short enough that a
+// flank is rewarded.
+const LAST_SEEN_AIM_TICKS = 180;
 
 // Mine policy gates.
 const MINE_MIN_SPACING = 170; // no plant near an existing blast centre
@@ -104,6 +108,12 @@ export class Brain {
   wasUrgent = false;
   lowUrgencySince = -1;
   losLostSince = -1;
+  // Perception memory: the turret may only track a target it can currently
+  // see. When sight is lost it holds the last seen point instead of aiming
+  // through the wall at the live position.
+  lastSeenX = 0;
+  lastSeenY = 0;
+  lastSeenTick = -1e9;
   strafeSign: 1 | -1 = 1;
   nextStrafeFlip = 0;
   headOnSign: 1 | -1 = 1;
@@ -152,6 +162,9 @@ export class Brain {
     this.wasUrgent = false;
     this.lowUrgencySince = -1;
     this.losLostSince = -1;
+    this.lastSeenX = 0;
+    this.lastSeenY = 0;
+    this.lastSeenTick = -1e9;
     this.strafeSign = 1;
     this.nextStrafeFlip = 0;
     this.headOnSign = 1;
@@ -170,6 +183,20 @@ function centerX(p: Player): number {
 }
 function centerY(p: Player): number {
   return p.position.y + p.size.h / 2;
+}
+
+// Fire-control visibility gate. Direct shots need a live sighting; bank shots
+// may be released blind, but only while the last sighting is still warm.
+export function canReleaseShot(
+  kind: 0 | 1 | 2,
+  targetVisible: boolean,
+  tick: number,
+  lastSeenTick: number
+): boolean {
+  if (kind === 0) return false;
+  return kind === 2
+    ? tick - lastSeenTick <= LAST_SEEN_AIM_TICKS
+    : targetVisible;
 }
 
 // One simulation tick of decisions for `bot`. Runs BEFORE Player.update so a
@@ -208,8 +235,16 @@ export function brainTick(
     }
   }
 
+  const previousTargetId = brain.targetId;
   const target = pickTarget(bot, room, s, brain.targetId);
   brain.targetId = target ? target.socketid : null;
+  if (brain.targetId !== previousTargetId) {
+    // Do not let a newly selected, unseen player inherit the previous
+    // target's last-seen warmth (or its remembered point).
+    brain.lastSeenX = 0;
+    brain.lastSeenY = 0;
+    brain.lastSeenTick = -1e9;
+  }
   if (target && brain.solution.kind !== 0) {
     if (
       brain.solution.targetId !== target.socketid ||
@@ -220,6 +255,24 @@ export function brainTick(
     }
   } else if (!target) {
     brain.solution.clear();
+  }
+
+  // -- sight (every tick) --
+  // Targeting/pathing may know where a player is; the turret may not. Keep a
+  // last-seen point for the aim controller when sight is broken.
+  const targetVisible = target
+    ? hasLOS(
+        s.grid,
+        centerX(bot),
+        centerY(bot),
+        centerX(target),
+        centerY(target)
+      )
+    : false;
+  if (target && targetVisible) {
+    brain.lastSeenX = centerX(target);
+    brain.lastSeenY = centerY(target);
+    brain.lastSeenTick = tick;
   }
 
   // -- think (staggered cadence) --
@@ -260,7 +313,14 @@ export function brainTick(
   const ema = target ? s.velEMA.get(target.socketid) : undefined;
   const tvx = ema ? ema.vx : 0;
   const tvy = ema ? ema.vy : 0;
-  if (brain.solution.kind !== 0 && target) {
+  if (
+    brain.solution.kind === 2 &&
+    target &&
+    tick - brain.lastSeenTick <= LAST_SEEN_AIM_TICKS
+  ) {
+    // A deliberate bank shot is the sniper's identity: it may keep its plan
+    // while direct sight is blocked, but only while the target is still
+    // "warm" from a recent sighting.
     brain.desiredWorld = desiredAngleFor(
       s.grid,
       bot,
@@ -271,11 +331,30 @@ export function brainTick(
       brain.solution,
       brain.desiredWorld
     );
-  } else if (target) {
-    // No firing solution: track the target anyway (turret-seek feel).
+  } else if (target && targetVisible) {
+    if (brain.solution.kind !== 0) {
+      brain.desiredWorld = desiredAngleFor(
+        s.grid,
+        bot,
+        target,
+        tvx,
+        tvy,
+        ai,
+        brain.solution,
+        brain.desiredWorld
+      );
+    } else {
+      brain.desiredWorld = Math.atan2(
+        centerY(target) - centerY(bot),
+        centerX(target) - centerX(bot)
+      );
+    }
+  } else if (target && tick - brain.lastSeenTick <= LAST_SEEN_AIM_TICKS) {
+    // Sight is broken: hold the last seen point instead of tracking the live
+    // position through the wall. No lead — we cannot see the target move.
     brain.desiredWorld = Math.atan2(
-      centerY(target) - centerY(bot),
-      centerX(target) - centerX(bot)
+      brain.lastSeenY - centerY(bot),
+      brain.lastSeenX - centerX(bot)
     );
   } else {
     // Idle scan sweep.
@@ -298,8 +377,17 @@ export function brainTick(
     const sol = brain.solution;
     const aligned = Math.abs(angleDiff(brain.turretWorld, brain.desiredWorld));
     const cooldownOk = tick - brain.lastShotTick >= ai.cooldownTicks;
+    // Direct fire requires sight; a bank may be released blind only while the
+    // target is still warm from the last sighting.
+    const sightOk = canReleaseShot(
+      sol.kind,
+      targetVisible,
+      tick,
+      brain.lastSeenTick
+    );
     if (
       sol.kind !== 0 &&
+      sightOk &&
       cooldownOk &&
       aligned <= ai.aimTolRad &&
       tick - sol.acquiredTick >= ai.reactionTicks &&
