@@ -467,13 +467,18 @@ export class GameEngine {
     // Editor test: build the room straight from the in-memory layout. Synthesize
     // the metadata the end screen reads (the level has no persisted name/owner).
     if (localLayout) {
+      // The room OWNS the grid it loads: mine blasts rewrite cells to rubble
+      // (destructible blocks become debris), so hand it a copy. Without this,
+      // an editor test run would mutate the editor's layout — and the retry
+      // source — and the creator would publish a level they never cleared.
+      const grid = [...localLayout];
       this.levelMetadata = {
-        data: localLayout,
+        data: grid,
         level_name: "Test Level",
         level_creator_name: playerName,
         level_img: null,
       };
-      await this._loadSoloRoom(levelId, localLayout, playerName, tankColors);
+      await this._loadSoloRoom(levelId, grid, playerName, tankColors);
       this._startLoops();
       return;
     }

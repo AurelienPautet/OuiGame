@@ -491,6 +491,12 @@
       "nameEmpty": "Levelname darf nicht leer sein!",
       "nameTooLong": "Levelname darf nicht länger als 30 Zeichen sein!"
     },
+    "clearPrompt": {
+      "title": "Spiele das Level zuerst durch",
+      "body": "Spiele das Level in einem Test durch, bevor du es veröffentlichst. Jetzt spielen?"
+    },
+    "clearFirstHint": "Spiele das Level in einem Test durch, um es zu veröffentlichen",
+    "clearedHint": "Level geschafft — bereit zum Veröffentlichen",
     "hintPlace": "Linksklick: platzieren",
     "hintErase": "Rechtsklick: löschen",
     "spawnCount": "{{count}} / 8 Spawns"

@@ -493,6 +493,12 @@
       "nameEmpty": "Level name cannot be empty!",
       "nameTooLong": "Level name cannot be longer than 30 characters!"
     },
+    "clearPrompt": {
+      "title": "Finish the level first",
+      "body": "Clear the level in a test run before publishing it. Play it now?"
+    },
+    "clearFirstHint": "Clear the level in a test run to publish it",
+    "clearedHint": "Level cleared — ready to publish",
     "hintPlace": "Left click: place",
     "hintErase": "Right click: erase",
     "spawnCount": "{{count}} / 8 spawns"

@@ -493,6 +493,12 @@
       "nameEmpty": "Le nom du niveau ne peut pas être vide !",
       "nameTooLong": "Le nom du niveau ne peut pas dépasser 30 caractères !"
     },
+    "clearPrompt": {
+      "title": "Termine d'abord le niveau",
+      "body": "Termine le niveau en test avant de le publier. Le jouer maintenant ?"
+    },
+    "clearFirstHint": "Termine le niveau en test pour le publier",
+    "clearedHint": "Niveau terminé — prêt à publier",
     "hintPlace": "Clic gauche : placer",
     "hintErase": "Clic droit : effacer",
     "spawnCount": "{{count}} / 8 points d'apparition"
