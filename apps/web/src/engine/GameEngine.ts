@@ -57,7 +57,7 @@ import {
   type FuseMine,
   type SoundEvents,
 } from "./SoundManager.js";
-import { setMusicIntensity } from "../audio";
+import { setMusicTanks } from "../audio";
 import { PostProcessor, tryCreatePostProcessor } from "./PostProcessor.js";
 import type { EnvBlock, EnvHole } from "./PostProcessor.js";
 import type { EffectSettings } from "../lib/settings";
@@ -739,24 +739,38 @@ export class GameEngine {
     const alpha = clamp(this.simAccumulator / SIM_STEP_MS, 0, 1);
     this._render(alpha);
 
-    this._updateMusicIntensity();
+    this._updateMusicArrangement();
 
     this.animationId = requestAnimationFrame(this._frame);
   }
 
-  // Feed the adaptive soundtrack the on-screen intensity — the number of living
-  // enemy tanks — so it layers up as a round heats up and thins out as you clear
-  // them. Throttled; the music engine ignores it outside game mode. Frozen while
+  // Feed the adaptive soundtrack the living enemy tanks (their colours/kinds)
+  // so it can pick the Wii Tanks! stem arrangement for the strongest one. Bot
+  // colours are the nine Wii kinds; in an all-human FFA their skins stand in.
+  // Throttled; the music engine ignores it outside game mode. Frozen while
   // paused so the menu music holds its level.
   private _musicFrame = 0;
-  private _updateMusicIntensity() {
+  private _updateMusicArrangement() {
     if (this.paused) return;
     if (++this._musicFrame % 15 !== 0) return;
-    let alive = 0;
+    const bots: string[] = [];
+    const humans: string[] = [];
+    let storyBots = false;
     for (const id in this.players) {
-      if (id !== this.mysocketid && this.players[id]?.alive) alive++;
+      if (id === this.mysocketid) continue;
+      const player = this.players[id];
+      if (!player) continue;
+      // Level bots carry a bot<N> kind; host-added "match" bots are player-equal.
+      if (typeof player.kind === "string" && player.kind.startsWith("bot"))
+        storyBots = true;
+      if (!player.alive) continue;
+      const color = typeof player.turretc === "string" ? player.turretc : "";
+      if (player.is_bot === true) bots.push(color);
+      else humans.push(color);
     }
-    setMusicIntensity(alive);
+    // In solo/coop the level's bots are the whole enemy force and the other
+    // humans are allies. A human-only FFA fields every opponent instead.
+    setMusicTanks(storyBots ? bots : [...bots, ...humans]);
   }
 
   // One fixed simulation step. Solo advances the local authoritative room;

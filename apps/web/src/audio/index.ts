@@ -17,6 +17,6 @@ export {
   startMenuMusic,
   startGameMusic,
   stopMusic,
-  setMusicIntensity,
+  setMusicTanks,
 } from "./music";
 export type { VoiceName } from "./voices";

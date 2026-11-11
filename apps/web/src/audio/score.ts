@@ -9,21 +9,60 @@
  * The harmonic content comes from Tonal (chord voicings and MIDI notes); the
  * melodic material is a seeded random walk that favours chord tones on strong
  * beats and stepwise motion everywhere else. Different seeds produce different
- * phrases while the chord grid and the intensity layer gates stay fixed.
+ * phrases while the chord grid stays fixed.
+ *
+ * The arrangement — which stems are audible — is not a function of a generic
+ * "intensity" dial. It follows the adaptive system of Wii Play's Tanks! (as
+ * charted by BigKitty1011 and explained in Scruffy's video): the soundtrack is
+ * one loop, and the strongest enemy tank alive selects a set of stems, with
+ * extra stems unlocking as more tanks share the field. See `layersForTanks`.
  */
 import { Chord, Note } from "@tonaljs/tonal";
 
 export type MusicMode = "menu" | "game";
 
+/**
+ * One stem of the arrangement. Names map 1:1 onto the instruments in the Wii
+ * Tanks! chart:
+ *
+ * | layer      | chart stem     |
+ * | ---------- | -------------- |
+ * | `melody`   | Flute (basic)  |
+ * | `snare`    | Snare drum     |
+ * | `metronome`| Metronome      |
+ * | `cymbal`   | Cymbals        |
+ * | `kick`     | Bass drum      |
+ * | `bass`     | Tuba           |
+ * | `bells`    | Tubular bells  |
+ * | `synth`    | Synthesizer    |
+ * | `timpaniA` | Timpani A      |
+ * | `timpaniB` | Timpani B      |
+ */
 export type LayerName =
   | "melody"
-  | "bass"
-  | "arp"
-  | "timpani"
-  | "kick"
   | "snare"
-  | "hat"
-  | "cymbal";
+  | "metronome"
+  | "cymbal"
+  | "kick"
+  | "bass"
+  | "bells"
+  | "synth"
+  | "timpaniA"
+  | "timpaniB";
+
+/** Order used when ramping gains, so iteration is deterministic. */
+export const LAYER_NAMES: readonly LayerName[] = [
+  "melody",
+  "bass",
+  "bells",
+  "synth",
+  "metronome",
+  "snare",
+  "kick",
+  "cymbal",
+  "timpaniA",
+  "timpaniB",
+];
 
 export const STEPS_PER_BAR = 16;
 export const BARS = 8;
@@ -52,23 +91,23 @@ export interface Score {
   fifth: number[];
   /** Arpeggio notes per bar (octave 4–5). */
   arp: number[][];
-  /** Timpani note per bar. */
+  /** Low timpani note per bar. */
   timpani: number[];
+  /** High timpani note per bar (a fifth above the low drum). */
+  timpaniHigh: number[];
 }
 
 export interface NoteStepEvent {
-  layer: "melody" | "bass" | "arp" | "timpani";
+  layer: "melody" | "bass" | "bells" | "synth" | "timpaniA" | "timpaniB";
   midi: number;
   duration: number;
   velocity: number;
 }
 
 export interface DrumStepEvent {
-  layer: "kick" | "snare" | "hat" | "cymbal";
+  layer: "kick" | "snare" | "metronome" | "cymbal";
   duration: number;
   velocity: number;
-  /** Open hats ring a little longer and brighter. */
-  open?: boolean;
 }
 
 export type StepEvent = NoteStepEvent | DrumStepEvent;
@@ -246,6 +285,8 @@ export function buildScore(mode: MusicMode, seed: number): Score {
     true
   );
 
+  const roots = chordTones.map((voicing) => bassNote(voicing[0] ?? 48));
+
   return {
     mode,
     seed,
@@ -254,15 +295,325 @@ export function buildScore(mode: MusicMode, seed: number): Score {
     chords,
     chordTones,
     melody: [...first, ...second, ...repeat, ...answer],
-    bass: chordTones.map((voicing) => bassNote(voicing[0] ?? 48)),
-    fifth: chordTones.map((voicing) => bassNote(voicing[0] ?? 48) + 7),
+    bass: roots,
+    fifth: roots.map((root) => root + 7),
     arp: chordTones.map((voicing) => {
       const root = voicing[0] ?? 48;
       return [...voicing.map((note) => note + 12), root + 24];
     }),
-    timpani: chordTones.map((voicing) => bassNote(voicing[0] ?? 48) + 12),
+    timpani: roots.map((root) => root + 12),
+    timpaniHigh: roots.map((root) => root + 19),
   };
 }
+
+// ---------------------------------------------------------------------------
+// The tank → stem chart
+// ---------------------------------------------------------------------------
+
+/** The nine Wii tank kinds, in the game's own naming. */
+export type TankKind =
+  | "match"
+  | "brown"
+  | "grey"
+  | "teal"
+  | "pink"
+  | "yellow"
+  | "purple"
+  | "green"
+  | "white"
+  | "black";
+
+/**
+ * Priority, least → most. Only the strongest tank alive picks the arrangement
+ * (the chart's "greater priority replaces lesser"), while the *total* number of
+ * surviving tanks chooses that tank's tier.
+ *
+ * `match` sits below brown: it is this game's fallback for player tanks in an
+ * all-human FFA, where there is no Wii tank kind to read, so it simply grows
+ * with the number of opponents.
+ */
+export const TANK_PRIORITY: readonly TankKind[] = [
+  "match",
+  "brown",
+  "grey",
+  "teal",
+  "pink",
+  "yellow",
+  "purple",
+  "green",
+  "white",
+  "black",
+];
+
+const PRIORITY_INDEX: Record<TankKind, number> = TANK_PRIORITY.reduce(
+  (acc, kind, index) => {
+    acc[kind] = index;
+    return acc;
+  },
+  {} as Record<TankKind, number>
+);
+
+interface TankTier {
+  /** Minimum number of enemy tanks alive for this tier. */
+  minTanks: number;
+  layers: readonly LayerName[];
+}
+
+/**
+ * BigKitty1011's corrected chart (the one the video's pinned correction links
+ * to). Each row is the set of stems that plays while that kind is the strongest
+ * tank alive, at the given survivor count. Everything not listed is silent.
+ */
+const TANK_CHART: Record<TankKind, readonly TankTier[]> = {
+  // Not part of the Wii chart: an all-human FFA has no enemy tank kinds, so the
+  // opponents themselves build a plain groove, one layer per survivor.
+  match: [
+    { minTanks: 1, layers: ["melody", "snare"] },
+    { minTanks: 2, layers: ["melody", "snare", "metronome", "cymbal"] },
+    {
+      minTanks: 3,
+      layers: ["melody", "snare", "metronome", "cymbal", "kick", "bass"],
+    },
+    {
+      minTanks: 4,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "bells",
+        "synth",
+      ],
+    },
+    {
+      minTanks: 5,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "bells",
+        "synth",
+        "timpaniB",
+      ],
+    },
+  ],
+  brown: [{ minTanks: 1, layers: ["melody", "snare"] }],
+  grey: [
+    { minTanks: 1, layers: ["melody", "snare", "metronome"] },
+    { minTanks: 3, layers: ["melody", "snare", "metronome", "timpaniA"] },
+  ],
+  teal: [
+    {
+      minTanks: 1,
+      layers: ["melody", "metronome", "cymbal", "timpaniA"],
+    },
+    {
+      minTanks: 2,
+      layers: ["melody", "snare", "metronome", "cymbal", "timpaniA"],
+    },
+    {
+      minTanks: 4,
+      layers: ["melody", "snare", "metronome", "cymbal", "timpaniB"],
+    },
+  ],
+  pink: [
+    { minTanks: 1, layers: ["melody", "snare", "timpaniB"] },
+    { minTanks: 2, layers: ["melody", "snare", "cymbal", "timpaniB"] },
+    {
+      minTanks: 3,
+      layers: ["melody", "snare", "metronome", "cymbal", "timpaniB"],
+    },
+  ],
+  yellow: [
+    {
+      minTanks: 1,
+      layers: ["melody", "metronome", "cymbal", "kick", "timpaniA"],
+    },
+    {
+      minTanks: 2,
+      layers: ["melody", "snare", "metronome", "cymbal", "kick", "timpaniA"],
+    },
+    {
+      minTanks: 3,
+      layers: ["melody", "snare", "metronome", "cymbal", "kick", "timpaniB"],
+    },
+  ],
+  purple: [
+    { minTanks: 1, layers: ["melody", "cymbal", "bass", "timpaniA"] },
+    {
+      minTanks: 2,
+      layers: ["melody", "snare", "cymbal", "kick", "bass", "timpaniA"],
+    },
+    {
+      minTanks: 3,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "timpaniB",
+      ],
+    },
+  ],
+  green: [
+    { minTanks: 1, layers: ["melody", "cymbal", "bass", "bells", "timpaniA"] },
+    {
+      minTanks: 2,
+      layers: ["melody", "cymbal", "kick", "bass", "bells", "timpaniA"],
+    },
+    {
+      minTanks: 3,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "bells",
+        "timpaniA",
+      ],
+    },
+    {
+      minTanks: 4,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "bells",
+        "timpaniB",
+      ],
+    },
+  ],
+  white: [
+    { minTanks: 1, layers: ["melody", "snare", "bass", "synth", "timpaniA"] },
+    {
+      minTanks: 2,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "kick",
+        "bass",
+        "synth",
+        "timpaniB",
+      ],
+    },
+    {
+      minTanks: 3,
+      layers: [
+        "melody",
+        "snare",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "synth",
+        "timpaniB",
+      ],
+    },
+  ],
+  black: [
+    {
+      minTanks: 1,
+      layers: [
+        "melody",
+        "metronome",
+        "cymbal",
+        "kick",
+        "bass",
+        "bells",
+        "synth",
+        "timpaniB",
+      ],
+    },
+  ],
+};
+
+/**
+ * Colour/kind names the game actually carries on a tank (`turretc`, and the
+ * `kind` ids bots spawn with) mapped onto the chart's tank kinds.
+ */
+const TANK_ALIASES: Record<string, TankKind> = {
+  brown: "brown",
+  grey: "grey",
+  gray: "grey",
+  dimgray: "grey",
+  teal: "teal",
+  turquoise: "teal",
+  pink: "pink",
+  magenta: "pink",
+  red: "pink",
+  yellow: "yellow",
+  purple: "purple",
+  violet: "purple",
+  green: "green",
+  white: "white",
+  black: "black",
+  // Player-tank paints that aren't one of the nine kinds.
+  match: "match",
+  blue: "match",
+  orange: "match",
+  bluef: "match",
+  bot1: "brown",
+  bot2: "grey",
+  bot3: "teal",
+  bot4: "green",
+  bot5: "yellow",
+  bot6: "purple",
+  bot7: "pink",
+  bot8: "white",
+  bot9: "black",
+};
+
+/** Map any tank colour/kind to a chart kind; unknown paint falls back to match. */
+export function tankKindFrom(value: string | undefined): TankKind {
+  if (!value) return "match";
+  return TANK_ALIASES[value.trim().toLowerCase()] ?? "match";
+}
+
+/**
+ * The stems that should be audible for the living enemy tanks.
+ *
+ * The strongest tank present (per `TANK_PRIORITY`) owns the arrangement, and
+ * the total survivor count selects its tier. An empty field leaves just the
+ * flute/basic track. The result is order-independent and stable, so the caller
+ * can compare it against the currently playing set to detect a real change.
+ */
+export function layersForTanks(tanks: readonly string[]): LayerName[] {
+  if (tanks.length === 0) return ["melody"];
+
+  let strongest = tankKindFrom(tanks[0]);
+  for (const tank of tanks) {
+    const kind = tankKindFrom(tank);
+    if (PRIORITY_INDEX[kind] > PRIORITY_INDEX[strongest]) strongest = kind;
+  }
+
+  const tiers = TANK_CHART[strongest];
+  let tier = tiers[0]!;
+  for (const candidate of tiers) {
+    if (tanks.length >= candidate.minTanks) tier = candidate;
+  }
+  return [...tier.layers];
+}
+
+/** The menu loop: the basic track plus a calm synth/bell/tuba pad. */
+export const MENU_LAYERS: readonly LayerName[] = [
+  "melody",
+  "bass",
+  "bells",
+  "synth",
+];
 
 /** Tiny deterministic value in [-1, 1) used to humanise velocities. */
 function jitter(seed: number, step: number): number {
@@ -273,127 +624,182 @@ function jitter(seed: number, step: number): number {
 }
 
 /**
- * The notes/percussion for one sixteenth step, given the live intensity
- * (0 = quiet … 4 = mayhem). This is the contract the game feeds through
- * `setMusicIntensity`, and it is deliberately pure so the layer gates can be
- * tested without an AudioContext.
+ * The notes/percussion for one sixteenth step, given the currently audible
+ * stems. Pure, so the chart mapping and every stem's pattern can be tested
+ * without an AudioContext.
  */
 export function eventsForStep(
   score: Score,
   step: number,
-  intensity: number
+  layers: ReadonlySet<LayerName>
 ): StepEvent[] {
-  const level = Math.max(0, Math.min(4, Math.round(intensity)));
-  const game = score.mode === "game";
   const bar = Math.floor(step / STEPS_PER_BAR) % BARS;
   const inBar = step % STEPS_PER_BAR;
   const events: StepEvent[] = [];
   const human = jitter(score.seed, step);
+  const chord = score.arp[bar] ?? [];
 
-  // Melody — every eighth, with a touch of velocity movement.
-  if (inBar % 2 === 0) {
+  // Flute — the basic track: the melody every eighth, with a touch of movement.
+  // The chart's basic-track icon is a pair of flutes, so each phrase note is
+  // doubled a diatonic third below at a softer level.
+  if (layers.has("melody") && inBar % 2 === 0) {
     const midi = score.melody[bar * SLOTS_PER_BAR + inBar / 2];
     if (midi != null) {
       const accent = inBar === 0 ? 0.08 : 0;
+      const velocity = clamp01(0.5 + accent + human * 0.035);
       events.push({
         layer: "melody",
         midi,
-        duration: 0.18,
-        velocity: clamp01(0.52 + level * 0.05 + accent + human * 0.04),
+        duration: 0.26,
+        velocity,
+      });
+      const harmony = scaleStep(midi, -2);
+      if (harmony !== midi && harmony >= 55) {
+        events.push({
+          layer: "melody",
+          midi: harmony,
+          duration: 0.24,
+          velocity: clamp01(velocity * 0.6),
+        });
+      }
+    }
+  }
+
+  // Tuba — root on beat 1, fifth on beat 3, plus a short push into the next bar.
+  if (layers.has("bass")) {
+    if (inBar === 0) {
+      events.push({
+        layer: "bass",
+        midi: score.bass[bar] ?? 36,
+        duration: 0.34,
+        velocity: 0.62,
+      });
+    } else if (inBar === 8) {
+      events.push({
+        layer: "bass",
+        midi: score.fifth[bar] ?? 43,
+        duration: 0.3,
+        velocity: 0.55,
+      });
+    } else if (inBar === 14) {
+      events.push({
+        layer: "bass",
+        midi: score.bass[bar] ?? 36,
+        duration: 0.12,
+        velocity: 0.42,
       });
     }
   }
 
-  // Bass — root on beat 1, fifth on beat 3 (the marching oom-pah).
-  if (inBar === 0) {
-    events.push({
-      layer: "bass",
-      midi: score.bass[bar] ?? 36,
-      duration: 0.3,
-      velocity: 0.62,
-    });
-  }
-  if (inBar === 8) {
-    events.push({
-      layer: "bass",
-      midi: score.fifth[bar] ?? 43,
-      duration: 0.3,
-      velocity: 0.55,
-    });
-  }
-
-  // Arp — calm eighths on the menus, sixteenths once a round is busy.
-  const arpActive = game ? level >= 3 : true;
-  if (arpActive && (game || inBar % 2 === 0)) {
-    const chord = score.arp[bar] ?? [];
-    const index = game
-      ? inBar % Math.max(1, chord.length)
-      : (inBar / 2) % Math.max(1, chord.length);
-    const midi = chord[index];
+  // Tubular bells — sparse, ringing off-beat punctuation high above the melody.
+  if (layers.has("bells") && (inBar === 2 || inBar === 10)) {
+    const midi =
+      chord[(bar + (inBar === 10 ? 1 : 0)) % Math.max(1, chord.length)];
     if (midi != null) {
       events.push({
-        layer: "arp",
-        midi,
-        duration: 0.12,
-        velocity: clamp01(0.34 + level * 0.025 + human * 0.02),
+        layer: "bells",
+        midi: midi + 12,
+        duration: 0.6,
+        velocity: clamp01(0.26 + human * 0.02),
       });
     }
   }
 
-  // Soft shaker — eighths, doubling to sixteenths at full intensity.
-  const hatActive = game ? level >= 2 : true;
-  const sixteenthHats = game && level >= 4;
-  if (hatActive && (sixteenthHats || inBar % 2 === 0)) {
-    const open = inBar === 6 || inBar === 14;
+  // Synthesizer — a steady eighth-note arpeggio through the chord.
+  if (layers.has("synth") && inBar % 2 === 0 && chord.length > 0) {
+    const midi = chord[(inBar / 2 + bar) % chord.length];
+    if (midi != null) {
+      events.push({
+        layer: "synth",
+        midi,
+        duration: 0.12,
+        velocity: clamp01(0.3 + human * 0.02),
+      });
+    }
+  }
+
+  // Metronome — a dry quarter-note tick, accented on the downbeat.
+  if (layers.has("metronome") && inBar % 4 === 0) {
     events.push({
-      layer: "hat",
-      open,
-      duration: open ? 0.06 : 0.025,
-      velocity: open ? 0.22 : 0.16,
+      layer: "metronome",
+      duration: 0.02,
+      velocity: inBar === 0 ? 0.28 : 0.2,
     });
   }
 
-  if (game) {
-    // Kick on 1 & 3, plus a couple of syncopated pushes when things get loud.
-    if (level >= 1 && (inBar === 0 || inBar === 8)) {
-      events.push({ layer: "kick", duration: 0.16, velocity: 0.8 });
-    }
-    if (level >= 3 && (inBar === 10 || inBar === 14)) {
-      events.push({ layer: "kick", duration: 0.1, velocity: 0.45 });
-    }
-
-    // Backbeat on 2 & 4, with a small fill at the end of every fourth bar.
-    if (level >= 2 && (inBar === 4 || inBar === 12)) {
+  // Snare — backbeat on 2 & 4, with a small fill at the end of every fourth bar.
+  if (layers.has("snare")) {
+    if (inBar === 4 || inBar === 12) {
       events.push({ layer: "snare", duration: 0.12, velocity: 0.55 });
     }
-    if (level >= 2 && bar % 4 === 3 && (inBar === 14 || inBar === 15)) {
+    if (bar % 4 === 3 && (inBar === 14 || inBar === 15)) {
       events.push({
         layer: "snare",
         duration: 0.1,
         velocity: 0.35 + (inBar - 14) * 0.1,
       });
     }
+  }
 
-    // Cymbal wash at the top of alternate bars.
-    if (level >= 3 && inBar === 0 && bar % 2 === 0) {
-      events.push({ layer: "cymbal", duration: 0.5, velocity: 0.3 });
-    }
-
-    // Timpani downbeat, plus a pickup into the second half.
-    if (level >= 1 && inBar === 0) {
+  // Bass drum — 1 & 3, with a syncopated push before the turnaround.
+  if (layers.has("kick")) {
+    if (inBar === 0 || inBar === 8) {
       events.push({
-        layer: "timpani",
+        layer: "kick",
+        duration: 0.18,
+        velocity: inBar === 0 ? 0.82 : 0.68,
+      });
+    }
+    if (inBar === 14) {
+      events.push({ layer: "kick", duration: 0.1, velocity: 0.4 });
+    }
+  }
+
+  // Cymbals — a wash at the top of alternate bars, brushed on the off bars.
+  if (layers.has("cymbal")) {
+    if (inBar === 0 && bar % 2 === 0) {
+      events.push({ layer: "cymbal", duration: 0.5, velocity: 0.3 });
+    } else if (inBar === 8 && bar % 2 === 1) {
+      events.push({ layer: "cymbal", duration: 0.3, velocity: 0.18 });
+    }
+  }
+
+  // Timpani A — the low drum on the downbeat, plus a pickup into the phrase end.
+  if (layers.has("timpaniA")) {
+    if (inBar === 0) {
+      events.push({
+        layer: "timpaniA",
         midi: score.timpani[bar] ?? 48,
         duration: 0.35,
         velocity: 0.6,
       });
     }
-    if (level >= 3 && bar % 4 === 3 && inBar === 8) {
+    if (bar % 4 === 3 && inBar === 8) {
       events.push({
-        layer: "timpani",
+        layer: "timpaniA",
         midi: score.timpani[bar] ?? 48,
         duration: 0.25,
         velocity: 0.4,
+      });
+    }
+  }
+
+  // Timpani B — the higher drum answers with off-beat hits and a turnaround.
+  if (layers.has("timpaniB")) {
+    if (inBar === 0) {
+      events.push({
+        layer: "timpaniB",
+        midi: score.timpaniHigh[bar] ?? 55,
+        duration: 0.3,
+        velocity: 0.55,
+      });
+    }
+    if (inBar === 6 || inBar === 14) {
+      events.push({
+        layer: "timpaniB",
+        midi: score.timpaniHigh[bar] ?? 55,
+        duration: 0.2,
+        velocity: 0.38,
       });
     }
   }

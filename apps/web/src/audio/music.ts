@@ -1,23 +1,29 @@
 /**
  * MusicEngine — the adaptive, fully procedural soundtrack.
  *
- * The composition itself lives in `score.ts` (Tonal chord progressions + a
- * seeded melody generator); this file is the instrument/mix layer. Tone.js
- * synths replace the old bare oscillators, and a small effects chain
- * (low-pass → chorus → delay → convolution reverb) gives the soundtrack a
- * produced, warm character. The reverb impulse is generated at runtime, so
- * there are still no audio assets to download.
+ * The composition lives in `score.ts` (Tonal chord progressions + a seeded
+ * melody generator, and the Wii Tanks! stem chart); this file is the
+ * instrument/mix layer. Tone.js synths replace the old bare oscillators, and a
+ * small effects chain (low-pass → chorus → delay → convolution reverb) gives
+ * the soundtrack a produced, warm character. The reverb impulse is generated at
+ * runtime, so there are still no audio assets to download.
  *
- * The game still drives the arrangement: `GameEngine` calls
- * `setMusicIntensity(aliveEnemies)` every few frames, which crossfades the
- * percussion/harmony layers and changes the note density exactly as before.
- * The Transport schedules sixteenth steps against the shared audio clock.
+ * The game drives the *arrangement*: `GameEngine` periodically reports which
+ * enemy tanks are alive, and `setMusicTanks` maps them onto the stem chart.
+ * The strongest tank alive picks the set of stems, with extra stems unlocking
+ * as more tanks survive — exactly the system in Wii Play's Tanks!. Changes are
+ * quantised to the next bar so stems enter and leave on the beat instead of
+ * crossfading mid-phrase.
  */
 import type * as ToneNS from "tone";
 import { audioBus } from "./AudioBus";
 import {
+  LAYER_NAMES,
+  MENU_LAYERS,
+  STEPS_PER_BAR,
   buildScore,
   eventsForStep,
+  layersForTanks,
   midiToFreq,
   type LayerName,
   type MusicMode,
@@ -29,26 +35,41 @@ import { getTone } from "./tone";
 const MENU_SEED = 0x51ce;
 
 interface Voices {
+  /** Flute — the always-present basic track. */
   melody: ToneNS.PolySynth<ToneNS.FMSynth>;
+  /** Tuba. */
   bass: ToneNS.MonoSynth;
-  arp: ToneNS.PolySynth<ToneNS.Synth>;
+  /** Tubular bells. */
+  bells: ToneNS.PolySynth<ToneNS.FMSynth>;
+  /** Synthesizer arpeggio. */
+  synth: ToneNS.PolySynth<ToneNS.Synth>;
+  /** Bass drum. */
   kick: ToneNS.MembraneSynth;
   snareNoise: ToneNS.NoiseSynth;
   snareBody: ToneNS.MembraneSynth;
-  hat: ToneNS.NoiseSynth;
-  hatOpen: ToneNS.NoiseSynth;
+  /** Metronome tick. */
+  metronome: ToneNS.NoiseSynth;
   cymbal: ToneNS.NoiseSynth;
-  timpani: ToneNS.MembraneSynth;
+  /** Low timpani. */
+  timpaniA: ToneNS.MembraneSynth;
+  /** High timpani. */
+  timpaniB: ToneNS.MembraneSynth;
 }
+
+const sameLayers = (a: ReadonlySet<LayerName>, b: readonly LayerName[]) =>
+  a.size === b.length && b.every((layer) => a.has(layer));
 
 class MusicEngine {
   private mode: MusicMode = "menu";
-  private intensity = 0;
   private playing = false;
   private step = 0;
   private score: Score = buildScore("menu", MENU_SEED);
   private layers: Record<LayerName, ToneNS.Gain> | null = null;
   private voices: Voices | null = null;
+  /** Stems currently sounding. */
+  private active: Set<LayerName> = new Set(MENU_LAYERS);
+  /** Arrangement waiting for the next bar line. */
+  private pending: LayerName[] | null = null;
 
   /** Build the Tone graph once, sharing the bus context. */
   private ensureGraph(): boolean {
@@ -79,53 +100,65 @@ class MusicEngine {
       gain.connect(bus);
       return gain;
     };
-    const layers: Record<LayerName, ToneNS.Gain> = {
-      melody: layer(),
-      bass: layer(),
-      arp: layer(),
-      timpani: layer(),
-      kick: layer(),
-      snare: layer(),
-      hat: layer(),
-      cymbal: layer(),
-    };
+    const layers = Object.fromEntries(
+      LAYER_NAMES.map((name) => [name, layer()])
+    ) as Record<LayerName, ToneNS.Gain>;
 
-    // Music-box-ish lead: FM gives it harmonics without sounding 8-bit.
+    // Flute — a soft, breathy sine lead. Kept pure so the basic track can sit
+    // alone under the opening of a round without feeling thin.
     const melody = new T.PolySynth(T.FMSynth, {
-      harmonicity: 2.5,
-      modulationIndex: 4,
+      harmonicity: 2,
+      modulationIndex: 2.8,
       oscillator: { type: "sine" },
-      envelope: { attack: 0.004, decay: 0.22, sustain: 0.07, release: 0.5 },
+      envelope: { attack: 0.03, decay: 0.18, sustain: 0.24, release: 0.3 },
       modulation: { type: "triangle" },
       modulationEnvelope: {
-        attack: 0.01,
+        attack: 0.08,
         decay: 0.2,
-        sustain: 0.06,
-        release: 0.4,
+        sustain: 0.12,
+        release: 0.3,
       },
     }).connect(layers.melody);
-    melody.volume.value = -6;
+    melody.volume.value = -8;
 
+    // Tuba — a round, brassy low end with a fast filter bloom.
     const bass = new T.MonoSynth({
-      oscillator: { type: "triangle" },
-      filter: { type: "lowpass", Q: 2, rolloff: -24 },
-      envelope: { attack: 0.008, decay: 0.28, sustain: 0.22, release: 0.4 },
+      oscillator: { type: "sawtooth" },
+      filter: { type: "lowpass", Q: 1.4, rolloff: -24 },
+      envelope: { attack: 0.02, decay: 0.26, sustain: 0.2, release: 0.3 },
       filterEnvelope: {
-        attack: 0.01,
-        decay: 0.22,
-        sustain: 0.18,
-        release: 0.4,
-        baseFrequency: 110,
-        octaves: 2.4,
+        attack: 0.015,
+        decay: 0.2,
+        sustain: 0.15,
+        release: 0.3,
+        baseFrequency: 90,
+        octaves: 2.2,
       },
     }).connect(layers.bass);
-    bass.volume.value = -6;
+    bass.volume.value = -7;
 
-    const arp = new T.PolySynth(T.Synth, {
-      oscillator: { type: "triangle8" },
-      envelope: { attack: 0.003, decay: 0.18, sustain: 0.04, release: 0.2 },
-    }).connect(layers.arp);
-    arp.volume.value = -12;
+    // Tubular bells — long, inharmonic FM ring for the high punctuation.
+    const bells = new T.PolySynth(T.FMSynth, {
+      harmonicity: 3.5,
+      modulationIndex: 8,
+      oscillator: { type: "sine" },
+      envelope: { attack: 0.002, decay: 1.1, sustain: 0.04, release: 1.3 },
+      modulation: { type: "sine" },
+      modulationEnvelope: {
+        attack: 0.002,
+        decay: 0.6,
+        sustain: 0,
+        release: 0.8,
+      },
+    }).connect(layers.bells);
+    bells.volume.value = -14;
+
+    // Synthesizer — a bright but reined-in saw arpeggio.
+    const synth = new T.PolySynth(T.Synth, {
+      oscillator: { type: "sawtooth" },
+      envelope: { attack: 0.004, decay: 0.12, sustain: 0.05, release: 0.14 },
+    }).connect(layers.synth);
+    synth.volume.value = -19;
 
     const kick = new T.MembraneSynth({
       pitchDecay: 0.045,
@@ -147,17 +180,13 @@ class MusicEngine {
     }).connect(layers.snare);
     snareBody.volume.value = -12;
 
-    const hat = new T.NoiseSynth({
+    // Metronome — a dry, high tick: noise through a steep high-pass.
+    const metronomeFilter = new T.Filter({ type: "highpass", frequency: 2800 });
+    const metronome = new T.NoiseSynth({
       noise: { type: "white" },
-      envelope: { attack: 0.001, decay: 0.03, sustain: 0 },
-    }).connect(layers.hat);
-    hat.volume.value = -16;
-
-    const hatOpen = new T.NoiseSynth({
-      noise: { type: "white" },
-      envelope: { attack: 0.001, decay: 0.18, sustain: 0 },
-    }).connect(layers.hat);
-    hatOpen.volume.value = -18;
+      envelope: { attack: 0.001, decay: 0.018, sustain: 0 },
+    }).chain(metronomeFilter, layers.metronome);
+    metronome.volume.value = -17;
 
     const cymbalFilter = new T.Filter({
       type: "highpass",
@@ -169,25 +198,35 @@ class MusicEngine {
     }).chain(cymbalFilter, layers.cymbal);
     cymbal.volume.value = -18;
 
-    const timpani = new T.MembraneSynth({
+    // Timpani A/B — low and high drums; B is shorter and brighter so the two
+    // patterns read as a call and an answer.
+    const timpaniA = new T.MembraneSynth({
       pitchDecay: 0.12,
       octaves: 3.5,
       envelope: { attack: 0.002, decay: 0.4, sustain: 0.05, release: 0.5 },
-    }).connect(layers.timpani);
-    timpani.volume.value = -8;
+    }).connect(layers.timpaniA);
+    timpaniA.volume.value = -8;
+
+    const timpaniB = new T.MembraneSynth({
+      pitchDecay: 0.07,
+      octaves: 3,
+      envelope: { attack: 0.002, decay: 0.28, sustain: 0.03, release: 0.3 },
+    }).connect(layers.timpaniB);
+    timpaniB.volume.value = -10;
 
     this.layers = layers;
     this.voices = {
       melody,
       bass,
-      arp,
+      bells,
+      synth,
       kick,
       snareNoise,
       snareBody,
-      hat,
-      hatOpen,
+      metronome,
       cymbal,
-      timpani,
+      timpaniA,
+      timpaniB,
     };
 
     const transport = T.getTransport();
@@ -198,38 +237,36 @@ class MusicEngine {
     return true;
   }
 
-  /** Crossfade every layer toward the level its (mode, intensity) calls for. */
-  private updateLayers(): void {
-    const T = getTone();
-    if (!this.layers || !T) return;
-    const game = this.mode === "game";
-    const I = this.intensity;
-    const targets: Record<LayerName, number> = {
-      melody: 0.5,
-      bass: 0.4,
-      arp: game ? (I >= 3 ? 0.14 : 0) : 0.16,
-      hat: game ? (I >= 2 ? 0.16 : 0) : 0.1,
-      kick: game && I >= 1 ? 0.6 : 0,
-      snare: game && I >= 2 ? 0.4 : 0,
-      cymbal: game && I >= 3 ? 0.26 : 0,
-      timpani: game && I >= 1 ? 0.4 : 0,
-    };
-    this.rampLayers(targets, 0.18);
-  }
-
-  private rampLayers(
-    targets: Record<LayerName, number>,
-    seconds: number
-  ): void {
+  /**
+   * Ramp every stem's gain toward the current arrangement. Passing `at` (an
+   * audio-clock time) finishes the ramp exactly there, so callers can prepare a
+   * change to be complete on a bar line.
+   */
+  private updateLayers(seconds = 0.35, at?: number): void {
     const T = getTone();
     if (!this.layers || !T) return;
     const now = T.getContext().currentTime;
-    for (const name of Object.keys(targets) as LayerName[]) {
+    const end = at === undefined ? now + seconds : at;
+    const start = Math.max(now, end - seconds);
+    const duration = Math.max(0.01, end - start);
+    for (const name of LAYER_NAMES) {
       const gain = this.layers[name].gain;
-      gain.cancelScheduledValues(now);
-      gain.setValueAtTime(gain.value, now);
-      gain.linearRampToValueAtTime(targets[name] ?? 0, now + seconds);
+      const target = this.active.has(name) ? 1 : 0;
+      gain.cancelScheduledValues(start);
+      gain.setValueAtTime(gain.value, start);
+      gain.linearRampToValueAtTime(target, start + duration);
     }
+  }
+
+  /** Adopt an arrangement now (used on start and at bar lines). */
+  private applyArrangement(
+    next: readonly LayerName[],
+    seconds = 0.35,
+    at?: number
+  ): void {
+    this.active = new Set(next);
+    this.pending = null;
+    this.updateLayers(seconds, at);
   }
 
   private trigger(event: StepEvent, time: number): void {
@@ -252,16 +289,32 @@ class MusicEngine {
           event.velocity
         );
         break;
-      case "arp":
-        voices.arp.triggerAttackRelease(
+      case "bells":
+        voices.bells.triggerAttackRelease(
           midiToFreq(event.midi),
           event.duration,
           time,
           event.velocity
         );
         break;
-      case "timpani":
-        voices.timpani.triggerAttackRelease(
+      case "synth":
+        voices.synth.triggerAttackRelease(
+          midiToFreq(event.midi),
+          event.duration,
+          time,
+          event.velocity
+        );
+        break;
+      case "timpaniA":
+        voices.timpaniA.triggerAttackRelease(
+          midiToFreq(event.midi),
+          event.duration,
+          time,
+          event.velocity
+        );
+        break;
+      case "timpaniB":
+        voices.timpaniB.triggerAttackRelease(
           midiToFreq(event.midi),
           event.duration,
           time,
@@ -289,8 +342,8 @@ class MusicEngine {
           event.velocity * 0.5
         );
         break;
-      case "hat":
-        (event.open ? voices.hatOpen : voices.hat).triggerAttackRelease(
+      case "metronome":
+        voices.metronome.triggerAttackRelease(
           event.duration,
           time,
           event.velocity
@@ -309,7 +362,12 @@ class MusicEngine {
   /** Transport callback: schedule one sixteenth, then advance. */
   private onStep(time: number): void {
     if (!this.playing) return;
-    const events = eventsForStep(this.score, this.step, this.intensity);
+    // Stem changes land on the bar line, never mid-phrase, and the crossfade is
+    // finished *by* the downbeat so the incoming stem's first accent is heard.
+    if (this.pending && this.step % STEPS_PER_BAR === 0) {
+      this.applyArrangement(this.pending, 0.25, time);
+    }
+    const events = eventsForStep(this.score, this.step, this.active);
     for (const event of events) this.trigger(event, time);
     this.step = (this.step + 1) % this.score.totalSteps;
   }
@@ -331,6 +389,7 @@ class MusicEngine {
         mode === "game" ? Math.floor(Math.random() * 0xffffffff) : MENU_SEED;
       this.score = buildScore(mode, seed);
       this.step = 0;
+      this.applyArrangement(mode === "game" ? ["melody"] : MENU_LAYERS, 0.06);
     }
     this.playing = true;
 
@@ -350,26 +409,39 @@ class MusicEngine {
     this.updateLayers();
   }
 
-  /** Set the game intensity (0 = clear, higher = more/stronger enemies). */
-  setIntensity(level: number): void {
-    const clamped = level < 0 ? 0 : level > 4 ? 4 : Math.round(level);
-    if (clamped === this.intensity) return;
-    this.intensity = clamped;
-    if (this.playing && this.mode === "game") this.updateLayers();
+  /**
+   * Report the living enemy tanks (their colours/kinds). The engine picks the
+   * chart row for the strongest one and queues the stem change for the next bar.
+   * Ignored outside game mode so menu music can't be rearranged by stale data.
+   */
+  setTanks(tanks: readonly string[]): void {
+    if (this.mode !== "game") return;
+    const next = layersForTanks(tanks);
+    if (sameLayers(this.active, next)) {
+      this.pending = null;
+      return;
+    }
+    if (!this.playing) {
+      this.applyArrangement(next, 0.06);
+      return;
+    }
+    // If we're sitting exactly on a bar line, apply immediately; otherwise the
+    // next `onStep` at step 0 picks it up.
+    if (this.step % STEPS_PER_BAR === 0) this.applyArrangement(next);
+    else this.pending = next;
   }
 
-  /** Stop the soundtrack, fading the layers out. */
+  /** Stop the soundtrack, fading every stem out. */
   stop(): void {
     this.playing = false;
     this.step = 0;
+    this.pending = null;
     const T = getTone();
     if (!T || !this.layers) return;
     T.getTransport().stop();
     T.getTransport().position = 0;
-    const targets = Object.fromEntries(
-      (Object.keys(this.layers) as LayerName[]).map((name) => [name, 0])
-    ) as Record<LayerName, number>;
-    this.rampLayers(targets, 0.25);
+    this.active = new Set();
+    this.updateLayers(0.25);
   }
 }
 
@@ -381,6 +453,6 @@ export const startMenuMusic = (): void => music.start("menu");
 export const startGameMusic = (): void => music.start("game");
 /** Stop the soundtrack (fading out). */
 export const stopMusic = (): void => music.stop();
-/** Drive the in-game intensity (0 = clear … 4 = mayhem). */
-export const setMusicIntensity = (level: number): void =>
-  music.setIntensity(level);
+/** Report the living enemy tanks so the arrangement follows the fight. */
+export const setMusicTanks = (tanks: readonly string[]): void =>
+  music.setTanks(tanks);

@@ -79,7 +79,7 @@ apps/web/
     │   │                     LevelSelector, MyLevels, TankSelect, Campaign* …
     │   ├── landing/          LandingPage (always visible behind overlays)
     │   └── game/             GameCanvas (the React↔engine bridge), EndGameScreen, …
-    ├── audio/                Tone.js + Tonal: procedural synth voices, adaptive score, AudioBus
+    ├── audio/                Tone.js + Tonal: procedural synth voices, tank-driven arrangement, AudioBus
     ├── engine/               GameEngine · Renderer · InputHandler · ParticleSystem · SoundManager
     │                         interpolation.ts (server-timeline clock) · prediction.ts (local tank)
     └── pages/                LevelEditor, CampaignEditor (full-screen, route-based)

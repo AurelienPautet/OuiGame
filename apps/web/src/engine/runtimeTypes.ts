@@ -10,6 +10,12 @@
 /** A single player/bot living inside a Room (keyed by socket id). */
 export interface RoomPlayer {
   alive?: boolean;
+  /** Turret paint name — for bots this is the Wii tank kind (brown, grey, …). */
+  turretc?: string;
+  /** True for AI combatants; rides the tick snapshot. */
+  is_bot?: boolean;
+  /** Bot archetype id (`bot1`…`bot9`, or `match`), when present. */
+  kind?: string;
   direction?: { x: number; y: number };
   aim?: { x: number; y: number };
   bulletcount?: number;

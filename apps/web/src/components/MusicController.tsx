@@ -9,8 +9,8 @@ import {
 
 /**
  * Drives the adaptive soundtrack from React state: the calm menu/UI loop on the
- * menus, the in-game loop while a round is playing (the GameEngine feeds it the
- * intensity). Renders nothing.
+ * menus, the in-game loop while a round is playing (the GameEngine reports the
+ * living enemy tanks, which pick the stem arrangement). Renders nothing.
  *
  * Music only becomes audible after the first user gesture unlocks the
  * AudioContext (browser autoplay policy) and honours the "Music" setting via
