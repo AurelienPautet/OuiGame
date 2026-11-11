@@ -491,6 +491,12 @@
       "nameEmpty": "¡El nombre del nivel no puede estar vacío!",
       "nameTooLong": "¡El nombre del nivel no puede tener más de 30 caracteres!"
     },
+    "clearPrompt": {
+      "title": "Completa el nivel primero",
+      "body": "Completa el nivel en una prueba antes de publicarlo. ¿Jugarlo ahora?"
+    },
+    "clearFirstHint": "Completa el nivel en una prueba para publicarlo",
+    "clearedHint": "Nivel completado — listo para publicar",
     "hintPlace": "Clic izquierdo: colocar",
     "hintErase": "Clic derecho: borrar",
     "spawnCount": "{{count}} / 8 apariciones"

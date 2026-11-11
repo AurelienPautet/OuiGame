@@ -9,13 +9,27 @@ import {
   useGame,
 } from "../contexts";
 import { useSaveLevel, useLevel } from "../hooks/api";
-import { Save, X, Trash2, Play, PencilRuler, Flag } from "lucide-react";
+import {
+  Save,
+  X,
+  Trash2,
+  Play,
+  PencilRuler,
+  Flag,
+  CircleCheck,
+  CircleAlert,
+} from "lucide-react";
 import { GameCanvas } from "../components/game";
 import {
   IoTitle,
   Input,
   IconButton,
   SegmentedControl,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "../components/ui/primitives";
 import { cn } from "../lib/cn";
 import {
@@ -194,6 +208,14 @@ export const LevelEditor = () => {
   const [mouseGridPos, setMouseGridPos] = useState({ x: -1, y: -1 });
   const [onCanvas, setOnCanvas] = useState(false);
   const [saving, setSaving] = useState(false);
+  // True once the creator has cleared the current layout in a test run. A solo
+  // level can't be published until then, so a run is the one proof that the
+  // level is actually beatable. Every edit revokes it (place/erase, clear,
+  // mode switch, loading another level).
+  const [cleared, setCleared] = useState(false);
+  // Publishing a solo level without a clear opens this prompt instead of
+  // silently saving: the creator is asked to play the level first.
+  const [showClearPrompt, setShowClearPrompt] = useState(false);
 
   const saveLevelMutation = useSaveLevel();
 
@@ -207,6 +229,8 @@ export const LevelEditor = () => {
       setLayout(levelJson?.data || createEmptyLayout());
       setLevelName(levelData.level_name || "");
       setMode(levelData.level_type || "online");
+      // A freshly loaded level has never been played in this session.
+      setCleared(false);
     }
   }, [levelData]);
 
@@ -352,7 +376,9 @@ export const LevelEditor = () => {
         gridY < GRID_ROWS - 1
       ) {
         if (button === 0) {
-          // Left click - place block
+          // Left click - place block. Any edit revokes an earlier clear: the
+          // run only vouches for the exact layout that was played.
+          setCleared(false);
           setLayout((prev) => {
             const newLayout = [...prev];
             newLayout[index] = selectedBlock;
@@ -360,6 +386,7 @@ export const LevelEditor = () => {
           });
         } else if (button === 2) {
           // Right click - remove block
+          setCleared(false);
           setLayout((prev) => {
             const newLayout = [...prev];
             newLayout[index] = BLOCKS.EMPTY;
@@ -415,6 +442,9 @@ export const LevelEditor = () => {
   // Toggle mode handler
   const handleModeChange = (newMode: string) => {
     setMode(newMode);
+    // The grid changes meaning with the mode (online strips bot spawns), so an
+    // earlier clear no longer applies.
+    setCleared(false);
     if (newMode === "online") {
       // Remove bot spawns when switching to online (players only, no bots)
       setLayout((prev) =>
@@ -430,6 +460,7 @@ export const LevelEditor = () => {
   // Clear level with confirmation
   const handleClear = () => {
     if (window.confirm(t("levelEditor.confirmClear"))) {
+      setCleared(false);
       setLayout(createEmptyLayout());
     }
   };
@@ -502,6 +533,14 @@ export const LevelEditor = () => {
         t("levelEditor.toast.title"),
         t("levelEditor.toast.nameTooLong")
       );
+      return;
+    }
+
+    // Publishing gate: saving makes the level public, so a solo level must have
+    // been finished in a test run first. Online levels have no bots to defeat,
+    // so they can't be "finished" this way and are exempt.
+    if (mode === "solo" && !cleared) {
+      setShowClearPrompt(true);
       return;
     }
 
@@ -691,24 +730,85 @@ export const LevelEditor = () => {
               <span className="truncate">{t("levelEditor.hintPlace")}</span>
               <span className="truncate">{t("levelEditor.hintErase")}</span>
             </div>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 shrink-0",
-                spawnCount > 8 && "text-red-d"
+            <div className="flex items-center gap-4 shrink-0">
+              {/* Solo levels only: online levels can't be cleared in a test run. */}
+              {mode === "solo" && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5",
+                    cleared ? "text-green-d" : "text-ink-soft"
+                  )}
+                >
+                  {cleared ? (
+                    <CircleCheck size={14} />
+                  ) : (
+                    <CircleAlert size={14} />
+                  )}
+                  {t(
+                    cleared
+                      ? "levelEditor.clearedHint"
+                      : "levelEditor.clearFirstHint"
+                  )}
+                </span>
               )}
-            >
-              <Flag size={14} />
-              {t("levelEditor.spawnCount", { count: spawnCount })}
-            </span>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5",
+                  spawnCount > 8 && "text-red-d"
+                )}
+              >
+                <Flag size={14} />
+                {t("levelEditor.spawnCount", { count: spawnCount })}
+              </span>
+            </div>
           </div>
         </section>
       </div>
+
+      {/* Publishing prompt: the creator tried to save a solo level they haven't
+          finished yet. Offer to jump straight into the test run. */}
+      <Dialog open={showClearPrompt} onOpenChange={setShowClearPrompt}>
+        <DialogContent widthClassName="w-[min(92vw,460px)]">
+          <DialogTitle className="text-xl font-extrabold mb-2">
+            {t("levelEditor.clearPrompt.title")}
+          </DialogTitle>
+          <DialogDescription className="text-ink-soft text-sm mb-5">
+            {t("levelEditor.clearPrompt.body")}
+          </DialogDescription>
+          <div className="flex justify-end gap-2.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowClearPrompt(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="green"
+              size="sm"
+              onClick={() => {
+                setShowClearPrompt(false);
+                handleTest();
+              }}
+            >
+              <Play size={16} />
+              {t("levelEditor.testLevel")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Test run: the full game overlaid on the editor (which stays mounted, so
           the layout survives). Quitting the run flips isPlaying back to false. */}
       {isPlaying && (
         <div className="absolute inset-0 z-50">
-          <GameCanvas />
+          <GameCanvas
+            onTestResult={(result) => {
+              // Only a win counts as finishing the level; a loss changes
+              // nothing (the run can be retried from the end screen).
+              if (result.result === "win") setCleared(true);
+            }}
+          />
         </div>
       )}
     </div>

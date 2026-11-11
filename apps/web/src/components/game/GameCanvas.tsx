@@ -54,7 +54,14 @@ const exposeEngineForDev = (engine: GameEngine) => {
   }
 };
 
-export const GameCanvas = () => {
+interface GameCanvasProps {
+  // Editor test runs only: reports the finished run back to the editor, which
+  // gates publishing on the creator actually clearing the level. Never called
+  // for a normal solo/online/campaign play.
+  onTestResult?: (result: SoloGameResult) => void;
+}
+
+export const GameCanvas = ({ onTestResult }: GameCanvasProps = {}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fadingCanvasRef = useRef<HTMLCanvasElement | null>(null);
   // WebGL output canvas. The two 2D canvases above become texture sources for
@@ -270,6 +277,10 @@ export const GameCanvas = () => {
     (result: SoloGameResult) => {
       const isWin = result.result === "win";
 
+      // An editor test run reports its outcome to the editor (which requires a
+      // clear before publishing). Nothing is submitted or paid out for it.
+      if (isTest) onTestResult?.(result);
+
       // Per-level solo stats (works for both solo and campaign levels). Skipped
       // for an editor test run: the level has no id, so there's nothing to log.
       if (levelId && !isTest) {
@@ -393,6 +404,7 @@ export const GameCanvas = () => {
     [
       levelId,
       isTest,
+      onTestResult,
       mode,
       campaignId,
       campaignIndex,

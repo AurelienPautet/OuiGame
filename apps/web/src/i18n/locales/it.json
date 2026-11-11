@@ -491,6 +491,12 @@
       "nameEmpty": "Il nome del livello non può essere vuoto!",
       "nameTooLong": "Il nome del livello non può essere più lungo di 30 caratteri!"
     },
+    "clearPrompt": {
+      "title": "Completa prima il livello",
+      "body": "Completa il livello in una prova prima di pubblicarlo. Vuoi giocarlo ora?"
+    },
+    "clearFirstHint": "Completa il livello in una prova per pubblicarlo",
+    "clearedHint": "Livello completato — pronto da pubblicare",
     "hintPlace": "Clic sinistro: posiziona",
     "hintErase": "Clic destro: cancella",
     "spawnCount": "{{count}} / 8 punti di spawn"
